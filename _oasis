@@ -1,0 +1,61 @@
+# +-------------------------------------------------------------------+
+# | Package parameters                                                |
+# +-------------------------------------------------------------------+
+
+OASISFormat: 0.1
+Name: krobot
+Version: 1.0
+LicenseFile: LICENSE
+License: BSD3
+Authors: Jérémie Dimino
+Homepage: http://sourceforge.net/apps/mediawiki/krobot/index.php?title=Main_Page
+BuildTools: ocamlbuild
+Plugins: DevFiles (0.2), META (0.2)
+Synopsis: [Kro]bot
+Description: Control program for the Eurobot robotic cup.
+
+# +-------------------------------------------------------------------+
+# | Libraries                                                         |
+# +-------------------------------------------------------------------+
+
+Library krobot
+  FindlibName: krobot
+  BuildDepends: lwt.unix, lwt.syntax
+  XMETADescription: The [Kro]bot library
+  XMETARequires: lwt.unix
+  Path: src/lib
+  Install: true
+
+Library can
+  FindlibName: can
+  FindlibParent: krobot
+  BuildDepends: lwt.unix, lwt.syntax
+  XMETADescription: CAN interface using SocketCAN
+  XMETARequires: lwt.unix
+  Path: src/can
+  Install: true
+  Modules: CAN
+  CSources: can_stubs.c
+
+# +-------------------------------------------------------------------+
+# | Doc                                                               |
+# +-------------------------------------------------------------------+
+
+Document "krobot-api"
+  Title: API reference for [Kro]bot
+  Type: ocamlbuild (0.2)
+  Install: true
+  InstallDir: $htmldir/api
+  DataFiles: style.css
+  BuildTools: ocamldoc
+  XOCamlbuildPath: ./
+  XOCamlbuildLibraries: krobot.can
+
+# +-------------------------------------------------------------------+
+# | Misc                                                              |
+# +-------------------------------------------------------------------+
+
+SourceRepository head
+  Type: git
+  Location: git://krobot.git.sourceforge.net/gitroot/krobot/krobot
+  Browser: http://krobot.git.sourceforge.net/git/gitweb.cgi?p=krobot/krobot;a=summary

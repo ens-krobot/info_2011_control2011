@@ -1,0 +1,16 @@
+<**/*.ml>: syntax_camlp4o
+
+# OASIS_START
+# DO NOT EDIT (digest: d603b4bf64803246215300604de4811c)
+# Library can
+"src/can": include
+<src/can/can.{cma,cmxa}>: use_libcan
+<src/can/*.ml{,i}>: pkg_lwt.unix
+<src/can/*.ml{,i}>: pkg_lwt.syntax
+"src/can/can_stubs.c": pkg_lwt.unix
+"src/can/can_stubs.c": pkg_lwt.syntax
+# Library krobot
+"src/lib": include
+<src/lib/*.ml{,i}>: pkg_lwt.unix
+<src/lib/*.ml{,i}>: pkg_lwt.syntax
+# OASIS_STOP

@@ -1,0 +1,18 @@
+# OASIS_START
+# DO NOT EDIT (digest: b8a3cf2aa3128061e6b14e115c71f269)
+version = "1.0"
+description = "The [Kro]bot library"
+requires = "lwt.unix"
+archive(byte) = "krobot.cma"
+archive(native) = "krobot.cmxa"
+exists_if = "krobot.cma"
+package "can" (
+ version = "1.0"
+ description = "CAN interface using SocketCAN"
+ requires = "lwt.unix"
+ archive(byte) = "can.cma"
+ archive(native) = "can.cmxa"
+ exists_if = "can.cma"
+)
+# OASIS_STOP
+
