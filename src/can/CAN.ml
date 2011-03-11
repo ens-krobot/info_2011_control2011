@@ -40,7 +40,7 @@ end
    | Openning/closing                                                |
    +-----------------------------------------------------------------+ *)
 
-external open_can_file_descr : string -> Unix.file_descr = "ocaml_can_open_file_descr"
+external open_can_file_descr : string -> Unix.file_descr = "ocaml_can_open_can_file_descr"
 
 let open_can iface =
   let fd = open_can_file_descr iface in

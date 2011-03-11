@@ -1,7 +1,7 @@
 <**/*.ml>: syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: d603b4bf64803246215300604de4811c)
+# DO NOT EDIT (digest: 113a86794ede4d5625a352637c66e020)
 # Library can
 "src/can": include
 <src/can/can.{cma,cmxa}>: use_libcan
@@ -13,4 +13,11 @@
 "src/lib": include
 <src/lib/*.ml{,i}>: pkg_lwt.unix
 <src/lib/*.ml{,i}>: pkg_lwt.syntax
+# Executable dump-can
+<examples/dump_can.{native,byte}>: use_can
+<examples/dump_can.{native,byte}>: pkg_lwt.unix
+<examples/dump_can.{native,byte}>: pkg_lwt.syntax
+<examples/*.ml{,i}>: use_can
+<examples/*.ml{,i}>: pkg_lwt.unix
+<examples/*.ml{,i}>: pkg_lwt.syntax
 # OASIS_STOP
