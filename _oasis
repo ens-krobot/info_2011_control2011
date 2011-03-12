@@ -25,6 +25,8 @@ Library krobot
   XMETARequires: lwt.unix
   Path: src/lib
   Install: true
+  Modules:
+    Krobot_can
 
 Library can
   FindlibName: can
@@ -36,6 +38,17 @@ Library can
   Install: true
   Modules: CAN
   CSources: can_stubs.c
+
+# +-------------------------------------------------------------------+
+# | Tools                                                            |
+# +-------------------------------------------------------------------+
+
+Executable "krobot-plot"
+  Path: tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_plot.ml
+  BuildDepends: krobot.can
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |

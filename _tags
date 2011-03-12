@@ -1,7 +1,7 @@
 <**/*.ml>: syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 113a86794ede4d5625a352637c66e020)
+# DO NOT EDIT (digest: 200dda8d045efcc8ee7a55164709cd5f)
 # Library can
 "src/can": include
 <src/can/can.{cma,cmxa}>: use_libcan
@@ -20,4 +20,11 @@
 <examples/*.ml{,i}>: use_can
 <examples/*.ml{,i}>: pkg_lwt.unix
 <examples/*.ml{,i}>: pkg_lwt.syntax
+# Executable krobot-plot
+<tools/krobot_plot.{native,byte}>: use_can
+<tools/krobot_plot.{native,byte}>: pkg_lwt.unix
+<tools/krobot_plot.{native,byte}>: pkg_lwt.syntax
+<tools/*.ml{,i}>: use_can
+<tools/*.ml{,i}>: pkg_lwt.unix
+<tools/*.ml{,i}>: pkg_lwt.syntax
 # OASIS_STOP
