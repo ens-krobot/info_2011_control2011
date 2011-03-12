@@ -51,6 +51,17 @@ Library "krobot-interfaces"
     Krobot_interface_can
 
 # +-------------------------------------------------------------------+
+# | The driver                                                        |
+# +-------------------------------------------------------------------+
+
+Executable "krobot-driver"
+  Path: src/driver
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_driver.ml
+  BuildDepends: krobot.can-bus, lwt.syntax
+
+# +-------------------------------------------------------------------+
 # | Tools                                                            |
 # +-------------------------------------------------------------------+
 
