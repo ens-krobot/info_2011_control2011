@@ -113,3 +113,41 @@ let put_sint32 str ofs v =
   str.[ofs + 1] <- Char.unsafe_chr (v lsr 24)
 
 let put_uint32 = put_sint32
+
+(* +-----------------------------------------------------------------+
+   | D-Bus value conversion                                          |
+   +-----------------------------------------------------------------+ *)
+
+open OBus_value
+
+let typ = C.structure (C.seq5 C.basic_uint32 C.basic_uint32 C.basic_boolean C.basic_uint32 C.byte_array)
+
+let value_of_frame frame =
+  C.make_single
+    typ
+    (Int32.of_int frame.identifier,
+     (match frame.kind with
+        | Data -> 0l
+        | Error -> 1l),
+     frame.remote,
+     (match frame.format with
+        | F11bits -> 0l
+        | F29bits -> 1l),
+     frame.data)
+
+let frame_of_value v =
+  let identifier, kind, remote, format, data = C.cast_single typ v in
+  let identifier = Int32.to_int identifier in
+  let kind =
+    match kind with
+      | 0l -> Data
+      | 1l -> Error
+      | n -> Printf.ksprintf failwith "Krobot_can.frame_of_value: invalid frame kind (%ld)" n
+  in
+  let format =
+    match format with
+      | 0l -> F11bits
+      | 1l -> F29bits
+      | n -> Printf.ksprintf failwith "Krobot_can.frame_of_value: invalid frame format (%ld)" n
+  in
+  frame ~identifier ~kind ~remote ~format ~data

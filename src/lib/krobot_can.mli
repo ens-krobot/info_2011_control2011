@@ -81,3 +81,11 @@ val put_uint16 : string -> int -> int -> unit
 
 val put_sint32 : string -> int -> int -> unit
 val put_uint32 : string -> int -> int -> unit
+
+(** {6 D-Bus frame conversion} *)
+
+val value_of_frame : frame -> OBus_value.V.single
+  (** Converts a can frame into a D-Bus structure. *)
+
+val frame_of_value : OBus_value.V.single -> frame
+  (** Converts a D-Bus structure into a can frame. *)
