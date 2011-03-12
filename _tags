@@ -1,43 +1,54 @@
 <**/*.ml>: syntax_camlp4o
+<src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 7609937b98afdb742ff19d0cf332b911)
+# DO NOT EDIT (digest: 4facc269f4400da42699b09bf69a0df9)
 # Library krobot
 "src/lib": include
 <src/lib/*.ml{,i}>: pkg_obus
 <src/lib/*.ml{,i}>: pkg_lwt.unix
 <src/lib/*.ml{,i}>: pkg_lwt.syntax
-# Library can
+<src/lib/*.ml{,i}>: pkg_krobot.interfaces
+# Library krobot-can-bus
 "src/can": include
-<src/can/can.{cma,cmxa}>: use_libcan
+<src/can/krobot-can-bus.{cma,cmxa}>: use_libkrobot-can-bus
 <src/can/*.ml{,i}>: use_krobot
 <src/can/*.ml{,i}>: pkg_obus
 <src/can/*.ml{,i}>: pkg_lwt.unix
 <src/can/*.ml{,i}>: pkg_lwt.syntax
+<src/can/*.ml{,i}>: pkg_krobot.interfaces
 "src/can/can_stubs.c": use_krobot
 "src/can/can_stubs.c": pkg_obus
 "src/can/can_stubs.c": pkg_lwt.unix
 "src/can/can_stubs.c": pkg_lwt.syntax
+"src/can/can_stubs.c": pkg_krobot.interfaces
+# Library krobot-interfaces
+"src/interfaces": include
+<src/interfaces/*.ml{,i}>: pkg_obus
 # Executable dump-can
-<examples/dump_can.{native,byte}>: use_can
+<examples/dump_can.{native,byte}>: use_krobot-can-bus
 <examples/dump_can.{native,byte}>: use_krobot
 <examples/dump_can.{native,byte}>: pkg_obus
 <examples/dump_can.{native,byte}>: pkg_lwt.unix
 <examples/dump_can.{native,byte}>: pkg_lwt.syntax
-<examples/*.ml{,i}>: use_can
+<examples/dump_can.{native,byte}>: pkg_krobot.interfaces
+<examples/*.ml{,i}>: use_krobot-can-bus
 <examples/*.ml{,i}>: use_krobot
 <examples/*.ml{,i}>: pkg_obus
 <examples/*.ml{,i}>: pkg_lwt.unix
 <examples/*.ml{,i}>: pkg_lwt.syntax
+<examples/*.ml{,i}>: pkg_krobot.interfaces
 # Executable krobot-plot
-<tools/krobot_plot.{native,byte}>: use_can
+<tools/krobot_plot.{native,byte}>: use_krobot-can-bus
 <tools/krobot_plot.{native,byte}>: use_krobot
 <tools/krobot_plot.{native,byte}>: pkg_obus
 <tools/krobot_plot.{native,byte}>: pkg_lwt.unix
 <tools/krobot_plot.{native,byte}>: pkg_lwt.syntax
-<tools/*.ml{,i}>: use_can
+<tools/krobot_plot.{native,byte}>: pkg_krobot.interfaces
+<tools/*.ml{,i}>: use_krobot-can-bus
 <tools/*.ml{,i}>: use_krobot
 <tools/*.ml{,i}>: pkg_obus
 <tools/*.ml{,i}>: pkg_lwt.unix
 <tools/*.ml{,i}>: pkg_lwt.syntax
+<tools/*.ml{,i}>: pkg_krobot.interfaces
 # OASIS_STOP

@@ -89,3 +89,12 @@ val value_of_frame : frame -> OBus_value.V.single
 
 val frame_of_value : OBus_value.V.single -> frame
   (** Converts a D-Bus structure into a can frame. *)
+
+(** {6 Sending/receiving frames} *)
+
+val send : OBus_bus.t -> frame -> unit Lwt.t
+  (** [send bus frame] sends the given frame over D-Bus. *)
+
+val frames : OBus_bus.t -> frame OBus_signal.t
+  (** [frames bus] returns is the D-Bus signal which receive CAN
+      frames. *)

@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: f13f32cd7ede2116a9ecbbcf88a9870d) *)
+(* DO NOT EDIT (digest: c1fbc9a81674247e1022c94dba267b98) *)
 module OASISGettext = struct
 # 21 "/home/dim/sources/oasis/src/oasis/OASISGettext.ml"
   
@@ -452,8 +452,12 @@ open Ocamlbuild_plugin;;
 let package_default =
   {
      MyOCamlbuildBase.lib_ocaml =
-       [("src/lib/krobot", ["src/lib"]); ("src/can/can", ["src/can"])];
-     lib_c = [("can", "src/can", [])];
+       [
+          ("src/lib/krobot", ["src/lib"]);
+          ("src/can/krobot-can-bus", ["src/can"]);
+          ("src/interfaces/krobot-interfaces", ["src/interfaces"])
+       ];
+     lib_c = [("krobot-can-bus", "src/can", [])];
      flags = [];
      }
   ;;
@@ -471,6 +475,12 @@ let () =
        match hook with
          | Before_options ->
              Options.make_links := false
+
+         | After_rules ->
+             rule "D-Bus interface generation: .obus -> .ml, .mli"
+               ~dep:"%.obus" ~prods:["%.ml"; "%.mli"]
+               (fun env _ -> Cmd(S[A"obus-gen-interface"; A"-o"; A(env "%"); A(env "%.obus")]))
+
          | _ ->
              ())
 

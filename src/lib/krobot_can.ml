@@ -135,8 +135,7 @@ let value_of_frame frame =
         | F29bits -> 1l),
      frame.data)
 
-let frame_of_value v =
-  let identifier, kind, remote, format, data = C.cast_single typ v in
+let frame_of_values (identifier, kind, remote, format, data) =
   let identifier = Int32.to_int identifier in
   let kind =
     match kind with
@@ -151,3 +150,23 @@ let frame_of_value v =
       | n -> Printf.ksprintf failwith "Krobot_can.frame_of_value: invalid frame format (%ld)" n
   in
   frame ~identifier ~kind ~remote ~format ~data
+
+let frame_of_value v =
+  frame_of_values (C.cast_single typ v)
+
+(* +-----------------------------------------------------------------+
+   | Sending/receiving frames                                        |
+   +-----------------------------------------------------------------+ *)
+
+let send bus frame =
+  OBus_connection.send_message
+    bus
+    (OBus_message.signal
+       ~path:["fr"; "krobot"; "CAN"]
+       ~interface:"fr.krobot.CAN"
+       ~member:"message"
+       [value_of_frame frame])
+
+let frames bus =
+  let proxy = OBus_proxy.make (OBus_peer.anonymous bus) ["fr"; "krobot"; "CAN"] in
+  OBus_signal.map frame_of_values (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message proxy)
