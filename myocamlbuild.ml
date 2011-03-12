@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: c55b11139c906a1165b22ff2f3e11ddc) *)
+(* DO NOT EDIT (digest: f13f32cd7ede2116a9ecbbcf88a9870d) *)
 module OASISGettext = struct
 # 21 "/home/dim/sources/oasis/src/oasis/OASISGettext.ml"
   
@@ -452,7 +452,7 @@ open Ocamlbuild_plugin;;
 let package_default =
   {
      MyOCamlbuildBase.lib_ocaml =
-       [("src/can/can", ["src/can"]); ("src/lib/krobot", ["src/lib"])];
+       [("src/lib/krobot", ["src/lib"]); ("src/can/can", ["src/can"])];
      lib_c = [("can", "src/can", [])];
      flags = [];
      }

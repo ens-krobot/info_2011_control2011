@@ -1,6 +1,6 @@
 (*
- * CAN.ml
- * ------
+ * krobot_can_bus.ml
+ * -----------------
  * Copyright : (c) 2011, Jeremie Dimino <jeremie@dimino.org>
  * Licence   : BSD3
  *
@@ -49,48 +49,16 @@ let open_can iface =
 let close bus = bus#close
 
 (* +-----------------------------------------------------------------+
-   | Frames                                                          |
+   | Sending/receiving frames                                        |
    +-----------------------------------------------------------------+ *)
 
-exception Invalid_frame of string
-
-type frame_type =
-  | Type_data
-  | Type_error
-
-type frame_format =
-  | Format_11bits
-  | Format_29bits
-
-type frame = {
-  frame_identifier : int;
-  frame_type : frame_type;
-  frame_remote : bool;
-  frame_format : frame_format;
-  frame_data : string;
-}
-
-external forge_frame : frame -> string = "ocaml_can_forge_frame"
-external parse_frame : string -> frame = "ocaml_can_parse_frame"
+external forge_frame : Krobot_can.frame -> string = "ocaml_can_forge_frame"
+external parse_frame : string -> Krobot_can.frame = "ocaml_can_parse_frame"
 external get_frame_size : unit -> int = "ocaml_can_get_frame_size" "noalloc"
 
 let frame_size = get_frame_size ()
 
-let check_frame frame =
-  if String.length frame.frame_data > 8 then
-    raise (Invalid_frame "too much data");
-  if frame.frame_identifier < 0 then
-    raise (Invalid_frame "identifier is negative");
-  let max_id =
-    match frame.frame_format with
-      | Format_11bits -> 1 lsl 11 - 1
-      | Format_29bits -> 1 lsl 29 - 1
-  in
-  if frame.frame_identifier > max_id then
-    raise (Invalid_frame "identifier is too big")
-
 let send bus frame =
-  check_frame frame;
   Lwt_io.write bus#oc (forge_frame frame)
 
 let recv bus =

@@ -20,7 +20,7 @@ Description: Control program for the Eurobot robotic cup.
 
 Library krobot
   FindlibName: krobot
-  BuildDepends: lwt.unix, lwt.syntax
+  BuildDepends: lwt.unix, lwt.syntax, obus
   XMETADescription: The [Kro]bot library
   XMETARequires: lwt.unix
   Path: src/lib
@@ -31,12 +31,12 @@ Library krobot
 Library can
   FindlibName: can
   FindlibParent: krobot
-  BuildDepends: lwt.unix, lwt.syntax
+  BuildDepends: krobot, lwt.syntax
   XMETADescription: CAN interface using SocketCAN
-  XMETARequires: lwt.unix
+  XMETARequires: krobot
   Path: src/can
   Install: true
-  Modules: CAN
+  Modules: Krobot_can_bus
   CSources: can_stubs.c
 
 # +-------------------------------------------------------------------+

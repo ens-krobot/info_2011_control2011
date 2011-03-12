@@ -8,7 +8,6 @@
  *)
 
 open Lwt
-open CAN
 open Krobot_can
 
 type data = {
@@ -17,7 +16,7 @@ type data = {
 }
 
 let decode_frame frame =
-  let data = frame.frame_data in
+  let data = Krobot_can.data frame in
   ({ coder_pos = get_uint16 data 0;
      coder_dir = get_uint8 data 4 },
    { coder_pos = get_uint16 data 2;
@@ -25,8 +24,8 @@ let decode_frame frame =
 
 let rec loop bus oc =
   let time = Unix.gettimeofday () in
-  lwt coder1, coder2 = CAN.recv bus >|= decode_frame in
-  lwt coder3, coder4 = CAN.recv bus >|= decode_frame in
+  lwt coder1, coder2 = Krobot_can_bus.recv bus >|= decode_frame in
+  lwt coder3, coder4 = Krobot_can_bus.recv bus >|= decode_frame in
   lwt () =
     Lwt_io.fprintlf oc
       "%f %d %d %d %d %d %d %d %d"
@@ -57,7 +56,7 @@ lwt () =
     exit 2;
   end;
   try_lwt
-    lwt bus = CAN.open_can Sys.argv.(1) and oc = Lwt_io.open_file ~mode:Lwt_io.output "data" in
+    lwt bus = Krobot_can_bus.open_can Sys.argv.(1) and oc = Lwt_io.open_file ~mode:Lwt_io.output "data" in
     loop bus oc
   with Unix.Unix_error(error, func, arg) ->
     Lwt_log.error_f "'%s' failed with: %s" func (Unix.error_message error)
