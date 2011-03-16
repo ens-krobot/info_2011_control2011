@@ -70,7 +70,7 @@ Executable "krobot-plot"
   Install: true
   CompiledObject: best
   MainIs: krobot_plot.ml
-  BuildDepends: krobot.can-bus, lwt.syntax, cairo.lablgtk2, lwt.glib
+  BuildDepends: krobot.can-bus, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |

@@ -85,6 +85,24 @@ let decode_frame time frame =
      direction = if get_uint8 data 5 = 0 then Forward else Backward })
 
 (* +-----------------------------------------------------------------+
+   | Drawing                                                         |
+   +-----------------------------------------------------------------+ *)
+
+let draw window graph =
+  while true do
+    let { Gtk.width; Gtk.height } = window#misc#allocation in
+    let surface = Cairo.image_surface_create Cairo.FORMAT_ARGB32 width height in
+    let ctx = Cairo.create surface in
+    plot ctx (float width) (float height) graph (Unix.gettimeofday ());
+    let ctx = Cairo_lablgtk.create window#misc#window in
+    Cairo.set_source_surface ctx surface 0. 0.;
+    Cairo.rectangle ctx 0. 0. (float width) (float height);
+    Cairo.fill ctx;
+    Cairo.surface_finish surface;
+    ignore (Unix.select [] [] [] (1. /. 25.))
+  done
+
+(* +-----------------------------------------------------------------+
    | Main-loop                                                       |
    +-----------------------------------------------------------------+ *)
 
@@ -102,38 +120,24 @@ lwt () =
 
   let graph = { points = Array.init 4 (fun _ -> Queue.create ()); max = 1 } in
 
+  ignore (Thread.create (fun () -> draw window graph) ());
+
   try_lwt
     lwt bus = Krobot_can_bus.open_can Sys.argv.(1) in
-    join [
-      (* Data reading. *)
-      while_lwt true do
-        (* Read coder positions. *)
-        lwt coder1, coder2 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
-        lwt coder3, coder4 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
-        (* Compute the new maximum. *)
-        graph.max <- List.fold_left max graph.max [coder1.position; coder2.position; coder3.position; coder4.position];
-        (* Add points to the graph. *)
-        Queue.push coder1 graph.points.(0);
-        Queue.push coder2 graph.points.(1);
-        Queue.push coder3 graph.points.(2);
-        Queue.push coder4 graph.points.(3);
-        (* Remove old points. *)
-        update_graph graph (Unix.gettimeofday ());
-        return ()
-      done;
-      (* Drawing. *)
-      while_lwt true do
-        let { Gtk.width; Gtk.height } = window#misc#allocation in
-        let surface = Cairo.image_surface_create Cairo.FORMAT_ARGB32 width height in
-        let ctx = Cairo.create surface in
-        plot ctx (float width) (float height) graph (Unix.gettimeofday ());
-        let ctx = Cairo_lablgtk.create window#misc#window in
-        Cairo.set_source_surface ctx surface 0. 0.;
-        Cairo.rectangle ctx 0. 0. (float width) (float height);
-        Cairo.fill ctx;
-        Cairo.surface_finish surface;
-        Lwt_unix.sleep 0.05
-      done;
-    ]
+    while_lwt true do
+      (* Read coder positions. *)
+      lwt coder1, coder2 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
+      lwt coder3, coder4 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
+      (* Compute the new maximum. *)
+      graph.max <- List.fold_left max graph.max [coder1.position; coder2.position; coder3.position; coder4.position];
+      (* Add points to the graph. *)
+      Queue.push coder1 graph.points.(0);
+      Queue.push coder2 graph.points.(1);
+      Queue.push coder3 graph.points.(2);
+      Queue.push coder4 graph.points.(3);
+      (* Remove old points. *)
+      update_graph graph (Unix.gettimeofday ());
+      return ()
+    done
   with Unix.Unix_error(error, func, arg) ->
     Lwt_log.error_f "'%s' failed with: %s" func (Unix.error_message error)
