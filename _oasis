@@ -62,7 +62,7 @@ Executable "krobot-driver"
   BuildDepends: krobot.can-bus, lwt.syntax
 
 # +-------------------------------------------------------------------+
-# | Tools                                                            |
+# | Tools                                                             |
 # +-------------------------------------------------------------------+
 
 Executable "krobot-plot"
@@ -70,7 +70,7 @@ Executable "krobot-plot"
   Install: true
   CompiledObject: best
   MainIs: krobot_plot.ml
-  BuildDepends: krobot.can-bus, lwt.syntax
+  BuildDepends: krobot.can-bus, lwt.syntax, cairo.lablgtk2, lwt.glib
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
