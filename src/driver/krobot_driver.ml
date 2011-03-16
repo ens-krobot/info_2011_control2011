@@ -27,7 +27,8 @@ lwt () =
   (* D-Bus --> CAN *)
   lwt () =
     OBus_signal.connect (Krobot_can.frames bus)
-    >|= E.notify_s (Krobot_can_bus.send can)
+    >|= E.map_s (Krobot_can_bus.send can)
+    >|= E.keep
   in
 
   (* CAN --> D-Bus *)
