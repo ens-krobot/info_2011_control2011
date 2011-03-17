@@ -36,7 +36,7 @@ let string_of_encoder_state es =
 
 let to_string = function
   | Encoder_state_1_2(c1, c2) -> sprintf "Encoder_state_1_2(%s, %s)" (string_of_encoder_state c1) (string_of_encoder_state c2)
-  | Encoder_state_3_4(c3, c4) -> sprintf "Encoder_state_1_2(%s, %s)" (string_of_encoder_state c3) (string_of_encoder_state c4)
+  | Encoder_state_3_4(c3, c4) -> sprintf "Encoder_state_3_4(%s, %s)" (string_of_encoder_state c3) (string_of_encoder_state c4)
   | Unknown frame -> Krobot_can.string_of_frame frame
 
 (* +-----------------------------------------------------------------+
