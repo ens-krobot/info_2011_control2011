@@ -51,6 +51,17 @@ let frame ~identifier ~kind ~remote ~format ~data =
     raise (Invalid_frame "identifier is too big");
   { identifier; kind; remote; format; data }
 
+let string_of_frame frame =
+  let buf = Buffer.create (String.length frame.data * 4) in
+  String.iter (fun ch -> Printf.bprintf buf "\\x%02x" (Char.code ch)) frame.data;
+  Printf.sprintf
+    "{ identifier = %d; kind = %s; remote = %B; format = %s; data = \"%s\" }"
+    frame.identifier
+    (match frame.kind with Data -> "Data" | Error -> "Error")
+    frame.remote
+    (match frame.format with F11bits -> "F11bits" | F29bits -> "F29bits")
+    (Buffer.contents buf)
+
 (* +-----------------------------------------------------------------+
    | Reading/writing numbers                                         |
    +-----------------------------------------------------------------+ *)
@@ -169,7 +180,7 @@ let send bus frame =
        ~member:"message"
        [value_of_frame frame])
 
-let frames bus =
+let recv bus =
   let proxy = OBus_proxy.make (OBus_peer.anonymous (Krobot_bus.to_bus bus)) ["fr"; "krobot"; "CAN"] in
   E.fmap
     (fun (ctx, frame) ->

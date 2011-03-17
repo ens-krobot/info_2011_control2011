@@ -27,7 +27,8 @@ Library krobot
   Install: true
   Modules:
     Krobot_can,
-    Krobot_bus
+    Krobot_bus,
+    Krobot_message
 
 Library "krobot-can-bus"
   FindlibName: can-bus

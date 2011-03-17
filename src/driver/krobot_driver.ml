@@ -25,7 +25,7 @@ lwt () =
   lwt bus = Krobot_bus.get () in
 
   (* D-Bus --> CAN *)
-  E.keep (E.map_s (Krobot_can_bus.send can) (Krobot_can.frames bus));
+  E.keep (E.map_s (Krobot_can_bus.send can) (Krobot_can.recv bus));
 
   (* CAN --> D-Bus *)
   while_lwt true do
