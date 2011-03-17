@@ -12,17 +12,15 @@
 open Lwt
 open Lwt_react
 
+let device = ref "slcan0"
+
+let () = Krobot_init.arg "-device" (Arg.Set_string device) "<device> The device to use"
+
 lwt () =
-  if Array.length Sys.argv <> 2 then begin
-    print_endline "usage: krobot-driver <interface>";
-    exit 2;
-  end;
+  lwt bus = Krobot_init.init_service "Driver" in
 
   (* Open the CAN bus. *)
-  lwt can = Krobot_can_bus.open_can Sys.argv.(1) in
-
-  (* Open the D-Bus connection. *)
-  lwt bus = Krobot_bus.get () in
+  lwt can = Krobot_can_bus.open_can !device in
 
   (* D-Bus --> CAN *)
   E.keep (E.map_s (Krobot_can_bus.send can) (Krobot_can.recv bus));
