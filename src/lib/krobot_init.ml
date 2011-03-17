@@ -27,7 +27,7 @@ let () =
            None)
 
 let program_name = Filename.basename Sys.executable_name
-let usage = Printf.sprintf "%s <options>" program_name
+let usage = Printf.sprintf "Usage: %s <options>\noptions are:" program_name
 
 (* +-----------------------------------------------------------------+
    | Command line arguments                                          |

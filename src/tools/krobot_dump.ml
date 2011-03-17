@@ -13,7 +13,7 @@ open Lwt
 open Lwt_react
 
 lwt () =
-  lwt bus = Krobot_bus.get () in
+  lwt bus = Krobot_init.init_program "Dump" in
 
   E.keep
     (E.map_s
