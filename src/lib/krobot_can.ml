@@ -7,6 +7,8 @@
  * This file is a part of [kro]bot.
  *)
 
+open Lwt_react
+
 (* +-----------------------------------------------------------------+
    | CAN Frames                                                      |
    +-----------------------------------------------------------------+ *)
@@ -160,7 +162,7 @@ let frame_of_value v =
 
 let send bus frame =
   OBus_connection.send_message
-    bus
+    (Krobot_bus.to_bus bus)
     (OBus_message.signal
        ~path:["fr"; "krobot"; "CAN"]
        ~interface:"fr.krobot.CAN"
@@ -168,5 +170,16 @@ let send bus frame =
        [value_of_frame frame])
 
 let frames bus =
-  let proxy = OBus_proxy.make (OBus_peer.anonymous bus) ["fr"; "krobot"; "CAN"] in
-  OBus_signal.map frame_of_values (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message proxy)
+  let proxy = OBus_proxy.make (OBus_peer.anonymous (Krobot_bus.to_bus bus)) ["fr"; "krobot"; "CAN"] in
+  E.fmap
+    (fun (ctx, frame) ->
+       (* Filter messages comming from us. *)
+       if OBus_peer.name (OBus_context.sender ctx) = OBus_bus.name (Krobot_bus.to_bus bus) then
+         None
+       else
+         Some frame)
+    (E.delay
+       (OBus_signal.connect
+          (OBus_signal.with_context
+             (OBus_signal.map frame_of_values
+                (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message proxy)))))

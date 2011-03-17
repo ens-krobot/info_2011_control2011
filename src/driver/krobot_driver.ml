@@ -22,14 +22,10 @@ lwt () =
   lwt can = Krobot_can_bus.open_can Sys.argv.(1) in
 
   (* Open the D-Bus connection. *)
-  lwt bus = OBus_bus.of_addresses [OBus_address.make "unix" [("abstract", "krobot")]] in
+  lwt bus = Krobot_bus.get () in
 
   (* D-Bus --> CAN *)
-  lwt () =
-    OBus_signal.connect (Krobot_can.frames bus)
-    >|= E.map_s (Krobot_can_bus.send can)
-    >|= E.keep
-  in
+  E.keep (E.map_s (Krobot_can_bus.send can) (Krobot_can.frames bus));
 
   (* CAN --> D-Bus *)
   while_lwt true do

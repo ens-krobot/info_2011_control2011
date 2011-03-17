@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: d98a33b89f62609605f3f7bf4a819b3e)
+# DO NOT EDIT (digest: b8ba0ca76dda0f0ea7a89e80fb26e67b)
 # Library krobot
 "src/lib": include
 <src/lib/*.ml{,i}>: pkg_obus
@@ -52,7 +52,6 @@
 <examples/*.ml{,i}>: pkg_lwt.syntax
 <examples/*.ml{,i}>: pkg_krobot.interfaces
 # Executable krobot-plot
-<src/tools/krobot_plot.{native,byte}>: use_krobot-can-bus
 <src/tools/krobot_plot.{native,byte}>: use_krobot
 <src/tools/krobot_plot.{native,byte}>: pkg_threads
 <src/tools/krobot_plot.{native,byte}>: pkg_obus
@@ -61,7 +60,6 @@
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.glib
 <src/tools/krobot_plot.{native,byte}>: pkg_krobot.interfaces
 <src/tools/krobot_plot.{native,byte}>: pkg_cairo.lablgtk2
-<src/tools/*.ml{,i}>: use_krobot-can-bus
 <src/tools/*.ml{,i}>: use_krobot
 <src/tools/*.ml{,i}>: pkg_threads
 <src/tools/*.ml{,i}>: pkg_obus

@@ -26,7 +26,8 @@ Library krobot
   Path: src/lib
   Install: true
   Modules:
-    Krobot_can
+    Krobot_can,
+    Krobot_bus
 
 Library "krobot-can-bus"
   FindlibName: can-bus
@@ -70,7 +71,7 @@ Executable "krobot-plot"
   Install: true
   CompiledObject: best
   MainIs: krobot_plot.ml
-  BuildDepends: krobot.can-bus, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
+  BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |

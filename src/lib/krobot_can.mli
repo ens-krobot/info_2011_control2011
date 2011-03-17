@@ -92,9 +92,9 @@ val frame_of_value : OBus_value.V.single -> frame
 
 (** {6 Sending/receiving frames} *)
 
-val send : OBus_bus.t -> frame -> unit Lwt.t
+val send : Krobot_bus.t -> frame -> unit Lwt.t
   (** [send bus frame] sends the given frame over D-Bus. *)
 
-val frames : OBus_bus.t -> frame OBus_signal.t
-  (** [frames bus] returns is the D-Bus signal which receive CAN
-      frames. *)
+val frames : Krobot_bus.t -> frame React.event
+  (** [frames bus] returns is the event which occurs whan a CAN frame
+      is received. *)

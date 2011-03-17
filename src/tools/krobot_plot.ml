@@ -8,6 +8,7 @@
  *)
 
 open Lwt
+open Lwt_react
 open Krobot_can
 
 type direction = Forward | Backward
@@ -84,6 +85,18 @@ let decode_frame time frame =
      position = get_uint16 data 2;
      direction = if get_uint8 data 5 = 0 then Forward else Backward })
 
+let process_frame graph frame i1 i2 =
+  let time = Unix.gettimeofday () in
+  (* Read coder positions. *)
+  let coder1, coder2 = decode_frame time frame in
+  (* Compute the new maximum. *)
+  graph.max <- max graph.max (max coder1.position coder2.position);
+  (* Add points to the graph. *)
+  Queue.push coder1 graph.points.(i1);
+  Queue.push coder2 graph.points.(i2);
+  (* Remove old points. *)
+  update_graph graph (Unix.gettimeofday ())
+
 (* +-----------------------------------------------------------------+
    | Drawing                                                         |
    +-----------------------------------------------------------------+ *)
@@ -114,30 +127,29 @@ lwt () =
   ignore (GMain.init ());
   Lwt_glib.install ();
 
+  let waiter, wakener = wait () in
+
+  (* GTK stuff. *)
   let window = GWindow.window ~title:"Krobot coders positions" () in
-  ignore (window#connect#destroy ~callback:(fun () -> exit 0));
+  ignore (window#connect#destroy ~callback:(wakeup wakener));
   window#show ();
 
+  (* Create the graph. *)
   let graph = { points = Array.init 4 (fun _ -> Queue.create ()); max = 1 } in
 
+  (* Draw in a separate thread. *)
   ignore (Thread.create (fun () -> draw window graph) ());
 
-  try_lwt
-    lwt bus = Krobot_can_bus.open_can Sys.argv.(1) in
-    while_lwt true do
-      (* Read coder positions. *)
-      lwt coder1, coder2 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
-      lwt coder3, coder4 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
-      (* Compute the new maximum. *)
-      graph.max <- List.fold_left max graph.max [coder1.position; coder2.position; coder3.position; coder4.position];
-      (* Add points to the graph. *)
-      Queue.push coder1 graph.points.(0);
-      Queue.push coder2 graph.points.(1);
-      Queue.push coder3 graph.points.(2);
-      Queue.push coder4 graph.points.(3);
-      (* Remove old points. *)
-      update_graph graph (Unix.gettimeofday ());
-      return ()
-    done
-  with Unix.Unix_error(error, func, arg) ->
-    Lwt_log.error_f "'%s' failed with: %s" func (Unix.error_message error)
+  lwt bus = Krobot_bus.get () in
+
+  E.keep
+    (E.map
+       (fun frame ->
+          if frame.identifier = 100 then
+            process_frame graph frame 0 1
+          else if frame.identifier = 101 then
+            process_frame graph frame 2 3;
+          return ())
+       (Krobot_can.frames bus));
+
+  waiter
