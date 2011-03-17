@@ -91,10 +91,6 @@ let draw window graph =
    +-----------------------------------------------------------------+ *)
 
 lwt () =
-  if Array.length Sys.argv <> 2 then begin
-    print_endline "usage: krobot-plot <interface>";
-    exit 2;
-  end;
   ignore (GMain.init ());
   Lwt_glib.install ();
 
