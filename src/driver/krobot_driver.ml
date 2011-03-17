@@ -26,12 +26,8 @@ lwt () =
 
   (* D-Bus --> CAN *)
   lwt () =
-    OBus_signal.connect (OBus_signal.with_context (Krobot_can.frames bus))
-    >|= E.map_s (fun (ctx, frame) ->
-                   if OBus_peer.name (OBus_context.sender ctx) = OBus_connection.name bus then
-                     return ()
-                   else
-                     Krobot_can_bus.send can frame)
+    OBus_signal.connect (Krobot_can.frames bus)
+    >|= E.map_s (Krobot_can_bus.send can)
     >|= E.keep
   in
 
