@@ -7,6 +7,8 @@
  * This file is a part of [kro]bot.
  *)
 
+open Lwt_react
+
 (* +-----------------------------------------------------------------+
    | CAN Frames                                                      |
    +-----------------------------------------------------------------+ *)
@@ -48,6 +50,17 @@ let frame ~identifier ~kind ~remote ~format ~data =
   if identifier > max_id then
     raise (Invalid_frame "identifier is too big");
   { identifier; kind; remote; format; data }
+
+let string_of_frame frame =
+  let buf = Buffer.create (String.length frame.data * 4) in
+  String.iter (fun ch -> Printf.bprintf buf "\\x%02x" (Char.code ch)) frame.data;
+  Printf.sprintf
+    "{ identifier = %d; kind = %s; remote = %B; format = %s; data = \"%s\" }"
+    frame.identifier
+    (match frame.kind with Data -> "Data" | Error -> "Error")
+    frame.remote
+    (match frame.format with F11bits -> "F11bits" | F29bits -> "F29bits")
+    (Buffer.contents buf)
 
 (* +-----------------------------------------------------------------+
    | Reading/writing numbers                                         |
@@ -160,13 +173,24 @@ let frame_of_value v =
 
 let send bus frame =
   OBus_connection.send_message
-    bus
+    (Krobot_bus.to_bus bus)
     (OBus_message.signal
        ~path:["fr"; "krobot"; "CAN"]
        ~interface:"fr.krobot.CAN"
        ~member:"message"
        [value_of_frame frame])
 
-let frames bus =
-  let proxy = OBus_proxy.make (OBus_peer.anonymous bus) ["fr"; "krobot"; "CAN"] in
-  OBus_signal.map frame_of_values (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message proxy)
+let recv bus =
+  let proxy = OBus_proxy.make (OBus_peer.anonymous (Krobot_bus.to_bus bus)) ["fr"; "krobot"; "CAN"] in
+  E.fmap
+    (fun (ctx, frame) ->
+       (* Filter messages comming from us. *)
+       if OBus_peer.name (OBus_context.sender ctx) = OBus_bus.name (Krobot_bus.to_bus bus) then
+         None
+       else
+         Some frame)
+    (E.delay
+       (OBus_signal.connect
+          (OBus_signal.with_context
+             (OBus_signal.map frame_of_values
+                (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message proxy)))))

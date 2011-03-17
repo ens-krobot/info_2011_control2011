@@ -8,11 +8,8 @@
  *)
 
 open Lwt
-open Krobot_can
-
-type direction = Forward | Backward
-
-type point = { time : float; position : int; direction : direction }
+open Lwt_react
+open Krobot_message
 
 (* +-----------------------------------------------------------------+
    | Graphs                                                          |
@@ -23,7 +20,7 @@ let graph_duration = 10.0
 
 (* Type of graphs. *)
 type graph = {
-  points : point Queue.t array;
+  points : (float * int) Queue.t array;
   (* Queue of points with their time. They are ordered by increasing
      date. *)
   mutable max : int;
@@ -34,7 +31,7 @@ type graph = {
 let update_graph graph time =
   Array.iter
     (fun q ->
-       while not (Queue.is_empty q) && (Queue.top q).time +. graph_duration < time do
+       while not (Queue.is_empty q) && fst (Queue.top q) +. graph_duration < time do
          ignore (Queue.take q)
        done)
     graph.points
@@ -57,9 +54,9 @@ let plot ctx width height graph time =
        Cairo.set_source_rgb ctx r g b;
        let prev = ref None in
        Queue.iter
-         (fun point ->
-            let x = (point.time -. (time -. graph_duration)) /. graph_duration *. width
-            and y = height -. height *. (float point.position /. float graph.max) in
+         (fun (date, position) ->
+            let x = (date -. (time -. graph_duration)) /. graph_duration *. width
+            and y = height -. height *. (float position /. float graph.max) in
             match !prev with
               | None ->
                   prev := Some(x, y)
@@ -70,19 +67,6 @@ let plot ctx width height graph time =
                   Cairo.stroke ctx)
          q)
     graph.points
-
-(* +-----------------------------------------------------------------+
-   | Decoding frames                                                 |
-   +-----------------------------------------------------------------+ *)
-
-let decode_frame time frame =
-  let data = Krobot_can.data frame in
-  ({ time = time;
-     position = get_uint16 data 0;
-     direction = if get_uint8 data 4 = 0 then Forward else Backward },
-   { time = time;
-     position = get_uint16 data 2;
-     direction = if get_uint8 data 5 = 0 then Forward else Backward })
 
 (* +-----------------------------------------------------------------+
    | Drawing                                                         |
@@ -107,37 +91,41 @@ let draw window graph =
    +-----------------------------------------------------------------+ *)
 
 lwt () =
-  if Array.length Sys.argv <> 2 then begin
-    print_endline "usage: krobot-plot <interface>";
-    exit 2;
-  end;
   ignore (GMain.init ());
   Lwt_glib.install ();
 
+  let waiter, wakener = wait () in
+
+  (* GTK stuff. *)
   let window = GWindow.window ~title:"Krobot coders positions" () in
-  ignore (window#connect#destroy ~callback:(fun () -> exit 0));
+  ignore (window#connect#destroy ~callback:(wakeup wakener));
   window#show ();
 
+  (* Create the graph. *)
   let graph = { points = Array.init 4 (fun _ -> Queue.create ()); max = 1 } in
 
+  (* Draw in a separate thread. *)
   ignore (Thread.create (fun () -> draw window graph) ());
 
-  try_lwt
-    lwt bus = Krobot_can_bus.open_can Sys.argv.(1) in
-    while_lwt true do
-      (* Read coder positions. *)
-      lwt coder1, coder2 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
-      lwt coder3, coder4 = Krobot_can_bus.recv bus >|= (fun frame -> decode_frame (Unix.gettimeofday ()) frame) in
-      (* Compute the new maximum. *)
-      graph.max <- List.fold_left max graph.max [coder1.position; coder2.position; coder3.position; coder4.position];
-      (* Add points to the graph. *)
-      Queue.push coder1 graph.points.(0);
-      Queue.push coder2 graph.points.(1);
-      Queue.push coder3 graph.points.(2);
-      Queue.push coder4 graph.points.(3);
-      (* Remove old points. *)
-      update_graph graph (Unix.gettimeofday ());
-      return ()
-    done
-  with Unix.Unix_error(error, func, arg) ->
-    Lwt_log.error_f "'%s' failed with: %s" func (Unix.error_message error)
+  lwt bus = Krobot_bus.get () in
+
+  E.keep
+    (E.map
+       (function
+          | Encoder_state_1_2(enc1, enc2) ->
+              let time = Unix.gettimeofday () in
+              graph.max <- max graph.max (max enc1.es_position enc2.es_position);
+              Queue.push (time, enc1.es_position) graph.points.(0);
+              Queue.push (time, enc2.es_position) graph.points.(1);
+              update_graph graph time
+          | Encoder_state_3_4(enc3, enc4) ->
+              let time = Unix.gettimeofday () in
+              graph.max <- max graph.max (max enc3.es_position enc4.es_position);
+              Queue.push (time, enc3.es_position) graph.points.(2);
+              Queue.push (time, enc4.es_position) graph.points.(3);
+              update_graph graph time
+          | _ ->
+              ())
+       (Krobot_message.recv bus));
+
+  waiter

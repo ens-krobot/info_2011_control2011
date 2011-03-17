@@ -62,6 +62,9 @@ val frame :
   (** Create a frame. It raises {!Invalid_frame} if the frame is not
       valid. *)
 
+val string_of_frame : frame -> string
+  (** Returns the string representation of a frame. *)
+
 (** {6 Reading/writing numbers} *)
 
 val get_sint8 : string -> int -> int
@@ -92,9 +95,9 @@ val frame_of_value : OBus_value.V.single -> frame
 
 (** {6 Sending/receiving frames} *)
 
-val send : OBus_bus.t -> frame -> unit Lwt.t
+val send : Krobot_bus.t -> frame -> unit Lwt.t
   (** [send bus frame] sends the given frame over D-Bus. *)
 
-val frames : OBus_bus.t -> frame OBus_signal.t
-  (** [frames bus] returns is the D-Bus signal which receive CAN
-      frames. *)
+val recv : Krobot_bus.t -> frame React.event
+  (** [recv bus] returns is the event which occurs whan a CAN frame is
+      received. *)
