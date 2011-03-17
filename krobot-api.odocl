@@ -1,4 +1,7 @@
 # OASIS_START
-# DO NOT EDIT (digest: c46f7c116cbb13ebe71e2f42643fde6d)
-src/interfaces/Krobot_interface_can
+# DO NOT EDIT (digest: f5cc533adaa505f8bedbd5bafe08f3f0)
+src/lib/Krobot_can
+src/lib/Krobot_bus
+src/lib/Krobot_message
+src/can/Krobot_can_bus
 # OASIS_STOP

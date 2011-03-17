@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: c1fbc9a81674247e1022c94dba267b98) *)
+(* DO NOT EDIT (digest: 570b31c8f48685aca9662d28e560f425) *)
 module OASISGettext = struct
 # 21 "/home/dim/sources/oasis/src/oasis/OASISGettext.ml"
   
@@ -453,11 +453,11 @@ let package_default =
   {
      MyOCamlbuildBase.lib_ocaml =
        [
+          ("src/interfaces/krobot-interfaces", ["src/interfaces"]);
           ("src/lib/krobot", ["src/lib"]);
-          ("src/can/krobot-can-bus", ["src/can"]);
-          ("src/interfaces/krobot-interfaces", ["src/interfaces"])
+          ("src/can/krobot-can", ["src/can"])
        ];
-     lib_c = [("krobot-can-bus", "src/can", [])];
+     lib_c = [("krobot-can", "src/can", [])];
      flags = [];
      }
   ;;

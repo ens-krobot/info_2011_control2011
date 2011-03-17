@@ -2,76 +2,76 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 7c3f2099f0f3bd48d27308a1f1e5f1f5)
-# Library krobot
-"src/lib": include
-<src/lib/*.ml{,i}>: pkg_obus
-<src/lib/*.ml{,i}>: pkg_lwt.unix
-<src/lib/*.ml{,i}>: pkg_lwt.syntax
-<src/lib/*.ml{,i}>: pkg_krobot.interfaces
-# Library krobot-can-bus
-"src/can": include
-<src/can/krobot-can-bus.{cma,cmxa}>: use_libkrobot-can-bus
-<src/can/*.ml{,i}>: use_krobot
-<src/can/*.ml{,i}>: pkg_obus
-<src/can/*.ml{,i}>: pkg_lwt.unix
-<src/can/*.ml{,i}>: pkg_lwt.syntax
-<src/can/*.ml{,i}>: pkg_krobot.interfaces
-"src/can/can_stubs.c": use_krobot
-"src/can/can_stubs.c": pkg_obus
-"src/can/can_stubs.c": pkg_lwt.unix
-"src/can/can_stubs.c": pkg_lwt.syntax
-"src/can/can_stubs.c": pkg_krobot.interfaces
-# Executable krobot-dump
-<src/tools/krobot_dump.{native,byte}>: use_krobot
-<src/tools/krobot_dump.{native,byte}>: pkg_obus
-<src/tools/krobot_dump.{native,byte}>: pkg_lwt.unix
-<src/tools/krobot_dump.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_dump.{native,byte}>: pkg_krobot.interfaces
-# Executable krobot-driver
-<src/driver/krobot_driver.{native,byte}>: use_krobot-can-bus
-<src/driver/krobot_driver.{native,byte}>: use_krobot
-<src/driver/krobot_driver.{native,byte}>: pkg_obus
-<src/driver/krobot_driver.{native,byte}>: pkg_lwt.unix
-<src/driver/krobot_driver.{native,byte}>: pkg_lwt.syntax
-<src/driver/krobot_driver.{native,byte}>: pkg_krobot.interfaces
-<src/driver/*.ml{,i}>: use_krobot-can-bus
-<src/driver/*.ml{,i}>: use_krobot
-<src/driver/*.ml{,i}>: pkg_obus
-<src/driver/*.ml{,i}>: pkg_lwt.unix
-<src/driver/*.ml{,i}>: pkg_lwt.syntax
-<src/driver/*.ml{,i}>: pkg_krobot.interfaces
+# DO NOT EDIT (digest: 737f6ffc25aca37ee689df337eca3afe)
 # Library krobot-interfaces
 "src/interfaces": include
 <src/interfaces/*.ml{,i}>: pkg_obus
+# Library krobot
+"src/lib": include
+<src/lib/*.ml{,i}>: use_krobot-interfaces
+<src/lib/*.ml{,i}>: pkg_obus
+<src/lib/*.ml{,i}>: pkg_lwt.unix
+<src/lib/*.ml{,i}>: pkg_lwt.syntax
+# Library krobot-can
+"src/can": include
+<src/can/krobot-can.{cma,cmxa}>: use_libkrobot-can
+<src/can/*.ml{,i}>: use_krobot
+<src/can/*.ml{,i}>: use_krobot-interfaces
+<src/can/*.ml{,i}>: pkg_obus
+<src/can/*.ml{,i}>: pkg_lwt.unix
+<src/can/*.ml{,i}>: pkg_lwt.syntax
+"src/can/can_stubs.c": use_krobot
+"src/can/can_stubs.c": use_krobot-interfaces
+"src/can/can_stubs.c": pkg_obus
+"src/can/can_stubs.c": pkg_lwt.unix
+"src/can/can_stubs.c": pkg_lwt.syntax
+# Executable krobot-dump
+<src/tools/krobot_dump.{native,byte}>: use_krobot
+<src/tools/krobot_dump.{native,byte}>: use_krobot-interfaces
+<src/tools/krobot_dump.{native,byte}>: pkg_obus
+<src/tools/krobot_dump.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_dump.{native,byte}>: pkg_lwt.syntax
+# Executable krobot-driver
+<src/driver/krobot_driver.{native,byte}>: use_krobot-can
+<src/driver/krobot_driver.{native,byte}>: use_krobot
+<src/driver/krobot_driver.{native,byte}>: use_krobot-interfaces
+<src/driver/krobot_driver.{native,byte}>: pkg_obus
+<src/driver/krobot_driver.{native,byte}>: pkg_lwt.unix
+<src/driver/krobot_driver.{native,byte}>: pkg_lwt.syntax
+<src/driver/*.ml{,i}>: use_krobot-can
+<src/driver/*.ml{,i}>: use_krobot
+<src/driver/*.ml{,i}>: use_krobot-interfaces
+<src/driver/*.ml{,i}>: pkg_obus
+<src/driver/*.ml{,i}>: pkg_lwt.unix
+<src/driver/*.ml{,i}>: pkg_lwt.syntax
 # Executable dump-can
-<examples/dump_can.{native,byte}>: use_krobot-can-bus
+<examples/dump_can.{native,byte}>: use_krobot-can
 <examples/dump_can.{native,byte}>: use_krobot
+<examples/dump_can.{native,byte}>: use_krobot-interfaces
 <examples/dump_can.{native,byte}>: pkg_obus
 <examples/dump_can.{native,byte}>: pkg_lwt.unix
 <examples/dump_can.{native,byte}>: pkg_lwt.syntax
-<examples/dump_can.{native,byte}>: pkg_krobot.interfaces
-<examples/*.ml{,i}>: use_krobot-can-bus
+<examples/*.ml{,i}>: use_krobot-can
 <examples/*.ml{,i}>: use_krobot
+<examples/*.ml{,i}>: use_krobot-interfaces
 <examples/*.ml{,i}>: pkg_obus
 <examples/*.ml{,i}>: pkg_lwt.unix
 <examples/*.ml{,i}>: pkg_lwt.syntax
-<examples/*.ml{,i}>: pkg_krobot.interfaces
 # Executable krobot-plot
 <src/tools/krobot_plot.{native,byte}>: use_krobot
+<src/tools/krobot_plot.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_plot.{native,byte}>: pkg_threads
 <src/tools/krobot_plot.{native,byte}>: pkg_obus
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.glib
-<src/tools/krobot_plot.{native,byte}>: pkg_krobot.interfaces
 <src/tools/krobot_plot.{native,byte}>: pkg_cairo.lablgtk2
 <src/tools/*.ml{,i}>: use_krobot
+<src/tools/*.ml{,i}>: use_krobot-interfaces
 <src/tools/*.ml{,i}>: pkg_threads
 <src/tools/*.ml{,i}>: pkg_obus
 <src/tools/*.ml{,i}>: pkg_lwt.unix
 <src/tools/*.ml{,i}>: pkg_lwt.syntax
 <src/tools/*.ml{,i}>: pkg_lwt.glib
-<src/tools/*.ml{,i}>: pkg_krobot.interfaces
 <src/tools/*.ml{,i}>: pkg_cairo.lablgtk2
 # OASIS_STOP

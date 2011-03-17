@@ -30,8 +30,8 @@ Library krobot
     Krobot_bus,
     Krobot_message
 
-Library "krobot-can-bus"
-  FindlibName: can-bus
+Library "krobot-can"
+  FindlibName: can
   FindlibParent: krobot
   BuildDepends: krobot, lwt.syntax
   XMETADescription: CAN interface using SocketCAN
@@ -42,7 +42,7 @@ Library "krobot-can-bus"
   CSources: can_stubs.c
 
 Library "krobot-interfaces"
-  FindlibName: can
+  FindlibName: interfaces
   FindlibParent: krobot
   BuildDepends: obus
   XMETADescription: [Kro]bot D-Bus interfaces
@@ -61,7 +61,7 @@ Executable "krobot-driver"
   Install: true
   CompiledObject: best
   MainIs: krobot_driver.ml
-  BuildDepends: krobot.can-bus, lwt.syntax
+  BuildDepends: krobot.can, lwt.syntax
 
 # +-------------------------------------------------------------------+
 # | Tools                                                             |
@@ -90,7 +90,7 @@ Executable "dump-can"
   Install: false
   CompiledObject: best
   MainIs: dump_can.ml
-  BuildDepends: krobot.can-bus, lwt.syntax
+  BuildDepends: krobot.can, lwt.syntax
 
 # +-------------------------------------------------------------------+
 # | Doc                                                               |
@@ -104,7 +104,7 @@ Document "krobot-api"
   DataFiles: style.css
   BuildTools: ocamldoc
   XOCamlbuildPath: ./
-  XOCamlbuildLibraries: krobot.can
+  XOCamlbuildLibraries: krobot, krobot.can
 
 # +-------------------------------------------------------------------+
 # | Misc                                                              |
