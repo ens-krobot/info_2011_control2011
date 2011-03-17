@@ -67,6 +67,13 @@ Executable "krobot-driver"
 # | Tools                                                             |
 # +-------------------------------------------------------------------+
 
+Executable "krobot-dump"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_dump.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-plot"
   Path: src/tools
   Install: true

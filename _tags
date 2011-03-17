@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: b8ba0ca76dda0f0ea7a89e80fb26e67b)
+# DO NOT EDIT (digest: 7c3f2099f0f3bd48d27308a1f1e5f1f5)
 # Library krobot
 "src/lib": include
 <src/lib/*.ml{,i}>: pkg_obus
@@ -22,6 +22,12 @@
 "src/can/can_stubs.c": pkg_lwt.unix
 "src/can/can_stubs.c": pkg_lwt.syntax
 "src/can/can_stubs.c": pkg_krobot.interfaces
+# Executable krobot-dump
+<src/tools/krobot_dump.{native,byte}>: use_krobot
+<src/tools/krobot_dump.{native,byte}>: pkg_obus
+<src/tools/krobot_dump.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_dump.{native,byte}>: pkg_lwt.syntax
+<src/tools/krobot_dump.{native,byte}>: pkg_krobot.interfaces
 # Executable krobot-driver
 <src/driver/krobot_driver.{native,byte}>: use_krobot-can-bus
 <src/driver/krobot_driver.{native,byte}>: use_krobot
