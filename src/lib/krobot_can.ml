@@ -108,6 +108,20 @@ let get_uint32 str ofs =
   and v3 = Char.code str.[ofs + 3] in
   v0 lor (v1 lsl 8) lor (v2 lsl 16) lor (v3 lsl 24)
 
+let get_float32 str ofs =
+  let v0 = Char.code str.[ofs + 0]
+  and v1 = Char.code str.[ofs + 1]
+  and v2 = Char.code str.[ofs + 2]
+  and v3 = Char.code str.[ofs + 3] in
+  Int32.float_of_bits
+    (Int32.logor
+       (Int32.logor
+          (Int32.of_int v0)
+          (Int32.shift_left (Int32.of_int v1) 8))
+       (Int32.logor
+          (Int32.shift_left (Int32.of_int v2) 16)
+          (Int32.shift_left (Int32.of_int v3) 24)))
+
 let put_sint8 str ofs v =
   str.[ofs] <- Char.unsafe_chr v
 
@@ -126,6 +140,13 @@ let put_sint32 str ofs v =
   str.[ofs + 1] <- Char.unsafe_chr (v lsr 24)
 
 let put_uint32 = put_sint32
+
+let put_float32 str ofs v =
+  let v = Int32.bits_of_float v in
+  str.[ofs + 0] <- Char.unsafe_chr (Int32.to_int v);
+  str.[ofs + 1] <- Char.unsafe_chr (Int32.to_int (Int32.shift_right v 8));
+  str.[ofs + 2] <- Char.unsafe_chr (Int32.to_int (Int32.shift_right v 16));
+  str.[ofs + 3] <- Char.unsafe_chr (Int32.to_int (Int32.shift_right v 24))
 
 (* +-----------------------------------------------------------------+
    | D-Bus value conversion                                          |

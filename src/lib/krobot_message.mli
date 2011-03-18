@@ -12,20 +12,14 @@
 type direction = Forward | Backward
     (** Type of directions. *)
 
-(** Type of state of an encoder. *)
-type encoder_state = {
-  es_position : int;
-  (** The position of the encoder. *)
-  es_direction : direction;
-  (** The direction of the encoder. *)
-}
-
 (** Type of messages. *)
 type t =
-  | Encoder_state_1_2 of encoder_state * encoder_state
-      (** State of the encoder 1 and 2. *)
-  | Encoder_state_3_4 of encoder_state * encoder_state
-      (** State of the encoder 3 and 4. *)
+  | Encoder_position_direction_3_4 of int * direction * int * direction
+      (** The position and direction of encoders 3 and 4. *)
+  | Encoder_position_speed_3 of float * float
+      (** The position and speed of encoder 3. *)
+  | Encoder_position_speed_4 of float * float
+      (** The position and speed of encoder 4. *)
   | Unknown of Krobot_can.frame
       (** An unknown can frame. *)
 

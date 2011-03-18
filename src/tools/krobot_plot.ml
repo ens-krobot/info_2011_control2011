@@ -104,7 +104,7 @@ lwt () =
   window#show ();
 
   (* Create the graph. *)
-  let graph = { points = Array.init 4 (fun _ -> Queue.create ()); max = 1 } in
+  let graph = { points = Array.init 2 (fun _ -> Queue.create ()); max = 1 } in
 
   (* Draw in a separate thread. *)
   ignore (Thread.create (fun () -> draw window graph) ());
@@ -113,15 +113,10 @@ lwt () =
     (E.map
        (fun (timestamp, msg) ->
           match msg with
-            | Encoder_state_1_2(enc1, enc2) ->
-                graph.max <- max graph.max (max enc1.es_position enc2.es_position);
-                Queue.push (timestamp, enc1.es_position) graph.points.(0);
-                Queue.push (timestamp, enc2.es_position) graph.points.(1);
-                update_graph graph timestamp
-            | Encoder_state_3_4(enc3, enc4) ->
-                graph.max <- max graph.max (max enc3.es_position enc4.es_position);
-                Queue.push (timestamp, enc3.es_position) graph.points.(2);
-                Queue.push (timestamp, enc4.es_position) graph.points.(3);
+            | Encoder_position_direction_3_4(pos3, dir3, pos4, dir4) ->
+                graph.max <- max graph.max (max pos3 pos4);
+                Queue.push (timestamp, pos3) graph.points.(0);
+                Queue.push (timestamp, pos4) graph.points.(1);
                 update_graph graph timestamp
             | _ ->
                 ())

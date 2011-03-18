@@ -76,6 +76,8 @@ val get_uint16 : string -> int -> int
 val get_sint32 : string -> int -> int
 val get_uint32 : string -> int -> int
 
+val get_float32 : string -> int -> float
+
 val put_sint8 : string -> int -> int -> unit
 val put_uint8 : string -> int -> int -> unit
 
@@ -84,6 +86,8 @@ val put_uint16 : string -> int -> int -> unit
 
 val put_sint32 : string -> int -> int -> unit
 val put_uint32 : string -> int -> int -> unit
+
+val put_float32 : string -> int -> float -> unit
 
 (** {6 D-Bus frame conversion} *)
 
