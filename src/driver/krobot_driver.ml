@@ -35,6 +35,7 @@ lwt () =
           Krobot_can_bus.recv can >>= Krobot_can.send bus
         done
       with exn ->
+        lwt () = Krobot_can_bus.close can in
         (* Make sure no more messages are sent on the CAN bus. *)
         set_active false;
         (* This is just here to keep a reference to [ev]. *)

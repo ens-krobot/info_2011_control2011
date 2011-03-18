@@ -32,13 +32,19 @@ CAMLprim value ocaml_can_open_can_file_descr(value iface)
   struct ifreq ifr;
   strcpy(ifr.ifr_name, String_val(iface));
   /* ifr.ifr_ifindex gets filled with that device's index */
-  if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) uerror("ioctl", Nothing);
+  if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
+    close(fd);
+    uerror("ioctl", Nothing);
+  }
 
   /* Select that CAN interface, and bind the socket to it. */
   struct sockaddr_can addr;
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
-  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) uerror("bind", Nothing);
+  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    close(fd);
+    uerror("bind", Nothing);
+  }
 
   return Val_int(fd);
 }
