@@ -46,10 +46,10 @@ let close bus = bus#close
    +-----------------------------------------------------------------+ *)
 
 external can_recv : Unix.file_descr -> float * Krobot_can.frame = "ocaml_can_recv"
-external can_send : Unix.file_descr -> float * Krobot_can.frame -> unit = "ocaml_can_send"
+external can_send : Unix.file_descr -> Krobot_can.frame -> unit = "ocaml_can_send"
 
 let recv bus =
   Lwt_unix.wrap_syscall Lwt_unix.Read bus#fd (fun () -> can_recv (Lwt_unix.unix_file_descr bus#fd))
 
-let send bus arg =
-  Lwt_unix.wrap_syscall Lwt_unix.Write bus#fd (fun () -> can_send (Lwt_unix.unix_file_descr bus#fd) arg)
+let send bus (_, frame) =
+  Lwt_unix.wrap_syscall Lwt_unix.Write bus#fd (fun () -> can_send (Lwt_unix.unix_file_descr bus#fd) frame)
