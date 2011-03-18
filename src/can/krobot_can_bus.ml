@@ -15,22 +15,15 @@ open Lwt
 
 exception Closed
 
-class t fd =
-  let ic = Lwt_io.make ~mode:Lwt_io.input (Lwt_bytes.read fd)
-  and oc = Lwt_io.make ~mode:Lwt_io.output (Lwt_bytes.write fd) in
-object
+class t fd = object
   val mutable up = true
 
-  method ic =
-    if up then ic else raise Closed
-
-  method oc =
-    if up then oc else raise Closed
+  method fd =
+    if up then fd else raise Closed
 
   method close =
     if up then begin
       up <- false;
-      lwt () = Lwt_io.close ic and () = Lwt_io.close oc in
       Lwt_unix.close fd
     end else
       return ()
@@ -52,16 +45,11 @@ let close bus = bus#close
    | Sending/receiving frames                                        |
    +-----------------------------------------------------------------+ *)
 
-external forge_frame : Krobot_can.frame -> string = "ocaml_can_forge_frame"
-external parse_frame : string -> Krobot_can.frame = "ocaml_can_parse_frame"
-external get_frame_size : unit -> int = "ocaml_can_get_frame_size" "noalloc"
-
-let frame_size = get_frame_size ()
-
-let send bus frame =
-  Lwt_io.write bus#oc (forge_frame frame)
+external can_recv : Unix.file_descr -> float * Krobot_can.frame = "ocaml_can_recv"
+external can_send : Unix.file_descr -> float * Krobot_can.frame -> unit = "ocaml_can_send"
 
 let recv bus =
-  let buffer = String.create frame_size in
-  lwt () = Lwt_io.read_into_exactly bus#ic buffer 0 frame_size in
-  return (parse_frame buffer)
+  Lwt_unix.wrap_syscall Lwt_unix.Read bus#fd (fun () -> can_recv (Lwt_unix.unix_file_descr bus#fd))
+
+let send bus arg =
+  Lwt_unix.wrap_syscall Lwt_unix.Write bus#fd (fun () -> can_send (Lwt_unix.unix_file_descr bus#fd) arg)

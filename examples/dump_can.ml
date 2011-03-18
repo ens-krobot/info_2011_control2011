@@ -13,17 +13,18 @@ open Lwt
 open Krobot_can
 
 let rec loop bus =
-  lwt frame = Krobot_can_bus.recv bus in
+  lwt timestamp, frame = Krobot_can_bus.recv bus in
   let buf = Buffer.create 24 in
   String.iter (fun ch -> Printf.bprintf buf " %02x" (Char.code ch)) frame.data;
   lwt () =
-    Lwt_io.printf "can frame received:
+    Lwt_io.printf "can frame received at %f:
   id = %d;
   kind = %s;
   remote = %B;
   format = %d bits;
   data[%d] =%s;
 "
+      timestamp
       frame.identifier
       (match frame.kind with
          | Data -> "data"

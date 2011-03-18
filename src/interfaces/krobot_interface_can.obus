@@ -17,6 +17,6 @@ interface fr.krobot.CAN {
       socket
   *)
   signal message : (
-    frame : (uint32 * uint32 * boolean * uint32 * byte array)
+    frame : (double * uint32 * uint32 * boolean * uint32 * byte array)
   )
 }

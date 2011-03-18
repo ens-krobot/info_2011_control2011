@@ -11,6 +11,7 @@
 #include <caml/memory.h>
 #include <caml/alloc.h>
 #include <caml/unixsupport.h>
+#include <caml/fail.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,6 +20,7 @@
 
 #include <linux/can.h>
 #include <string.h>
+#include <stdint.h>
 
 CAMLprim value ocaml_can_open_can_file_descr(value iface)
 {
@@ -41,37 +43,89 @@ CAMLprim value ocaml_can_open_can_file_descr(value iface)
   return Val_int(fd);
 }
 
-CAMLprim value ocaml_can_get_frame_size()
+CAMLprim value ocaml_can_recv(value val_fd)
 {
-  return Val_int(sizeof(struct can_frame));
+  CAMLparam1(val_fd);
+  CAMLlocal3(val_result, val_frame, val);
+
+  struct msghdr msg;
+  struct iovec iov;
+  uint64_t timestamp;
+  struct can_frame frame;
+
+  /* Prepare the IO vector. */
+  iov.iov_base = &frame;
+  iov.iov_len = sizeof(frame);
+
+  /* Prepare the message. */
+  memset(&msg, 0, sizeof(msg));
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = &timestamp;
+  msg.msg_controllen = sizeof(timestamp);
+
+  /* Receive one frame. */
+  int ret = recvmsg(Int_val(val_fd), &msg, 0);
+  if (ret < 0) uerror("recvmsg", Nothing);
+
+  /* It is an error if we do not receive exactly one frame. */
+  if (ret != sizeof(frame)) caml_failwith("recvmsg: invalid size");
+
+  /* Build the caml frame. */
+  val_frame = caml_alloc_tuple(5);
+  Field(val_frame, 0) = Val_int(frame.can_id & CAN_EFF_MASK);
+  Field(val_frame, 1) = Val_int((frame.can_id << 29) & 1);
+  Field(val_frame, 2) = Val_int((frame.can_id << 30) & 1);
+  Field(val_frame, 3) = Val_int((frame.can_id << 31) & 1);
+  val = caml_alloc_string(frame.can_dlc);
+  memcpy(String_val(val), frame.data, frame.can_dlc);
+  Field(val_frame, 4) = val;
+
+  /* Build the result containing the timestamp and the frame. */
+  val_result = caml_alloc_tuple(2);
+  val = caml_copy_double(timestamp * 1e-9);
+  Store_field(val_result, 0, val);
+  Store_field(val_result, 1, val_frame);
+
+  CAMLreturn(val_result);
 }
 
-/* Cast a caml string into a can frame. */
-#define FRAME(v) ((struct can_frame*)String_val(v))
-
-CAMLprim value ocaml_can_forge_frame(value v)
+CAMLprim value ocaml_can_send(value val_fd, value val_arg)
 {
-  CAMLparam1(v);
-  CAMLlocal2(result, data);
-  result = caml_alloc_string(sizeof(struct can_frame));
-  FRAME(result)->can_id = Int_val(Field(v, 0)) | (Int_val(Field(v, 1)) >> 29) | (Int_val(Field(v, 2)) >> 30) | (Int_val(Field(v, 3)) >> 31);
-  data = Field(v, 4);
-  FRAME(result)->can_dlc = caml_string_length(data);
-  memcpy(FRAME(result)->data, String_val(data), caml_string_length(data));
-  CAMLreturn(result);
-}
+  struct msghdr msg;
+  struct iovec iov;
+  uint64_t timestamp;
+  struct can_frame frame;
 
-CAMLprim value ocaml_can_parse_frame(value v)
-{
-  CAMLparam1(v);
-  CAMLlocal2(result, data);
-  result = caml_alloc_tuple(5);
-  Field(result, 0) = Val_int(FRAME(v)->can_id & CAN_EFF_MASK);
-  Field(result, 1) = Val_int((FRAME(v)->can_id << 29) & 1);
-  Field(result, 2) = Val_int((FRAME(v)->can_id << 30) & 1);
-  Field(result, 3) = Val_int((FRAME(v)->can_id << 31) & 1);
-  data = caml_alloc_string(FRAME(v)->can_dlc);
-  memcpy(String_val(data), FRAME(v)->data, FRAME(v)->can_dlc);
-  Field(result, 4) = data;
-  CAMLreturn(result);
+  timestamp = (uint64_t)(Double_val(Field(val_arg, 0)) * 1e9);
+
+  /* Build the can frame. */
+  value val_frame = Field(val_arg, 1);
+  frame.can_id = Int_val(Field(val_frame, 0)) |
+    (Int_val(Field(val_frame, 1)) >> 29) |
+    (Int_val(Field(val_frame, 2)) >> 30) |
+    (Int_val(Field(val_frame, 3)) >> 31);
+  value val_data = Field(val_frame, 4);
+  frame.can_dlc = caml_string_length(val_data);
+  memcpy(frame.data, String_val(val_data), caml_string_length(val_data));
+
+  /* Prepare the IO vector. */
+  iov.iov_base = &frame;
+  iov.iov_len = sizeof(frame);
+
+  /* Prepare the message. */
+  memset(&msg, 0, sizeof(msg));
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = &timestamp;
+  msg.msg_controllen = sizeof(timestamp);
+
+  /* Receive one frame. */
+  int ret = sendmsg(Int_val(val_fd), &msg, 0);
+  if (ret < 0) uerror("sendmsg", Nothing);
+
+  /* It is an error if we do not sent exactly one frame. */
+  if (ret != sizeof(frame)) caml_failwith("sendmsg: invalid size");
+
+  return Val_unit;
 }

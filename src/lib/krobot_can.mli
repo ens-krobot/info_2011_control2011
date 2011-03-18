@@ -87,17 +87,18 @@ val put_uint32 : string -> int -> int -> unit
 
 (** {6 D-Bus frame conversion} *)
 
-val value_of_frame : frame -> OBus_value.V.single
+val value_of_frame : float * frame -> OBus_value.V.single
   (** Converts a can frame into a D-Bus structure. *)
 
-val frame_of_value : OBus_value.V.single -> frame
+val frame_of_value : OBus_value.V.single -> float * frame
   (** Converts a D-Bus structure into a can frame. *)
 
 (** {6 Sending/receiving frames} *)
 
-val send : Krobot_bus.t -> frame -> unit Lwt.t
-  (** [send bus frame] sends the given frame over D-Bus. *)
+val send : Krobot_bus.t -> (float * frame) -> unit Lwt.t
+  (** [send bus (timestamp, frame)] sends the given frame over
+      D-Bus. *)
 
-val recv : Krobot_bus.t -> frame React.event
+val recv : Krobot_bus.t -> (float * frame) React.event
   (** [recv bus] returns is the event which occurs whan a CAN frame is
       received. *)

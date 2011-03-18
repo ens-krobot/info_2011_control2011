@@ -111,21 +111,20 @@ lwt () =
 
   E.keep
     (E.map
-       (function
-          | Encoder_state_1_2(enc1, enc2) ->
-              let time = Unix.gettimeofday () in
-              graph.max <- max graph.max (max enc1.es_position enc2.es_position);
-              Queue.push (time, enc1.es_position) graph.points.(0);
-              Queue.push (time, enc2.es_position) graph.points.(1);
-              update_graph graph time
-          | Encoder_state_3_4(enc3, enc4) ->
-              let time = Unix.gettimeofday () in
-              graph.max <- max graph.max (max enc3.es_position enc4.es_position);
-              Queue.push (time, enc3.es_position) graph.points.(2);
-              Queue.push (time, enc4.es_position) graph.points.(3);
-              update_graph graph time
-          | _ ->
-              ())
+       (fun (timestamp, msg) ->
+          match msg with
+            | Encoder_state_1_2(enc1, enc2) ->
+                graph.max <- max graph.max (max enc1.es_position enc2.es_position);
+                Queue.push (timestamp, enc1.es_position) graph.points.(0);
+                Queue.push (timestamp, enc2.es_position) graph.points.(1);
+                update_graph graph timestamp
+            | Encoder_state_3_4(enc3, enc4) ->
+                graph.max <- max graph.max (max enc3.es_position enc4.es_position);
+                Queue.push (timestamp, enc3.es_position) graph.points.(2);
+                Queue.push (timestamp, enc4.es_position) graph.points.(3);
+                update_graph graph timestamp
+            | _ ->
+                ())
        (Krobot_message.recv bus));
 
   waiter

@@ -22,8 +22,8 @@ val close : t -> unit Lwt.t
 exception Closed
   (** Exception raised when trying to use a closed bus. *)
 
-val send : t -> Krobot_can.frame -> unit Lwt.t
-  (** [send bus frame] sends [frame] over [bus]. *)
+val send : t -> (float * Krobot_can.frame) -> unit Lwt.t
+  (** [send bus (timestamp, frame)] sends [frame] over [bus]. *)
 
-val recv : t -> Krobot_can.frame Lwt.t
+val recv : t -> (float * Krobot_can.frame) Lwt.t
   (** [recv bus] waits and reads one frame from the given bus. *)

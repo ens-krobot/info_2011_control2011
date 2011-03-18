@@ -17,8 +17,8 @@ lwt () =
 
   E.keep
     (E.map_s
-       (fun msg ->
-          Lwt_io.printl (Krobot_message.to_string msg))
+       (fun (timestamp, msg) ->
+          Lwt_io.printlf "%f, %s" timestamp (Krobot_message.to_string msg))
        (Krobot_message.recv bus));
 
   fst (wait ())

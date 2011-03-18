@@ -38,8 +38,9 @@ val encode : t -> Krobot_can.frame
 val decode : Krobot_can.frame -> t
   (** Decode the given CAN frame into a message. *)
 
-val send : Krobot_bus.t -> t -> unit Lwt.t
-  (** [send bus message] sends the given message over D-Bus. *)
+val send : Krobot_bus.t -> (float * t) -> unit Lwt.t
+  (** [send bus (timestamp, message)] sends the given message over
+      D-Bus. *)
 
-val recv : Krobot_bus.t -> t React.event
+val recv : Krobot_bus.t -> (float * t) React.event
   (** [recv bus] is the event which receive messages. *)
