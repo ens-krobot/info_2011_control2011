@@ -12,6 +12,12 @@
 open Lwt
 open Lwt_react
 
+let rec loop bus ic delta prev_timestamp =
+  lwt timestamp, frame = Lwt_io.read_value ic in
+  lwt () = Lwt_unix.sleep (timestamp -. prev_timestamp) in
+  lwt () = Krobot_can.send bus (timestamp +. delta, frame) in
+  loop bus ic delta timestamp
+
 lwt () =
   let file = ref "krobot.record" in
   Krobot_init.arg "-input" (Arg.Set_string file) "<file> input file";
@@ -25,9 +31,6 @@ lwt () =
     (* Compute the difference of time to add to each timestamp. *)
     let delta = Unix.gettimeofday () -. timestamp in
     lwt () = Krobot_can.send bus (timestamp +. delta, frame) in
-    while_lwt true do
-      lwt timestamp, frame = Lwt_io.read_value ic in
-      Krobot_can.send bus (timestamp +. delta, frame)
-    done
+    loop bus ic delta timestamp
   with End_of_file ->
     Lwt_io.close ic
