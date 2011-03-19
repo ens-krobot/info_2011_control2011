@@ -76,6 +76,20 @@ Executable "krobot-dump"
   MainIs: krobot_dump.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-record"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_record.ml
+  BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-replay"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_replay.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-plot"
   Path: src/tools
   Install: true

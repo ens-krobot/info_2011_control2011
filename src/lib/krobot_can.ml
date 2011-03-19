@@ -170,7 +170,7 @@ let value_of_frame (timestamp, frame) =
         | F29bits -> 1l),
      frame.data)
 
-let frame_of_values (timestamp, identifier, kind, remote, format, data) =
+let frame_of_tuple (timestamp, identifier, kind, remote, format, data) =
   let identifier = Int32.to_int identifier in
   let kind =
     match kind with
@@ -187,7 +187,7 @@ let frame_of_values (timestamp, identifier, kind, remote, format, data) =
   (timestamp, frame ~identifier ~kind ~remote ~format ~data)
 
 let frame_of_value v =
-  frame_of_values (C.cast_single typ v)
+  frame_of_tuple (C.cast_single typ v)
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving frames                                        |
@@ -214,5 +214,5 @@ let recv bus =
     (E.delay
        (OBus_signal.connect
           (OBus_signal.with_context
-             (OBus_signal.map frame_of_values
+             (OBus_signal.map frame_of_tuple
                 (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message proxy)))))

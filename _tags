@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 737f6ffc25aca37ee689df337eca3afe)
+# DO NOT EDIT (digest: 404e613a369861087dfd1cb3215a1db4)
 # Library krobot-interfaces
 "src/interfaces": include
 <src/interfaces/*.ml{,i}>: pkg_obus
@@ -44,6 +44,12 @@
 <src/driver/*.ml{,i}>: pkg_obus
 <src/driver/*.ml{,i}>: pkg_lwt.unix
 <src/driver/*.ml{,i}>: pkg_lwt.syntax
+# Executable krobot-replay
+<src/tools/krobot_replay.{native,byte}>: use_krobot
+<src/tools/krobot_replay.{native,byte}>: use_krobot-interfaces
+<src/tools/krobot_replay.{native,byte}>: pkg_obus
+<src/tools/krobot_replay.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_replay.{native,byte}>: pkg_lwt.syntax
 # Executable dump-can
 <examples/dump_can.{native,byte}>: use_krobot-can
 <examples/dump_can.{native,byte}>: use_krobot
@@ -57,6 +63,12 @@
 <examples/*.ml{,i}>: pkg_obus
 <examples/*.ml{,i}>: pkg_lwt.unix
 <examples/*.ml{,i}>: pkg_lwt.syntax
+# Executable krobot-record
+<src/tools/krobot_record.{native,byte}>: use_krobot
+<src/tools/krobot_record.{native,byte}>: use_krobot-interfaces
+<src/tools/krobot_record.{native,byte}>: pkg_obus
+<src/tools/krobot_record.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_record.{native,byte}>: pkg_lwt.syntax
 # Executable krobot-plot
 <src/tools/krobot_plot.{native,byte}>: use_krobot
 <src/tools/krobot_plot.{native,byte}>: use_krobot-interfaces

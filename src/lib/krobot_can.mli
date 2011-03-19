@@ -97,6 +97,9 @@ val value_of_frame : float * frame -> OBus_value.V.single
 val frame_of_value : OBus_value.V.single -> float * frame
   (** Converts a D-Bus structure into a can frame. *)
 
+val frame_of_tuple : float * int32 * int32 * bool * int32 * string -> float * frame
+  (** Converts a tuple into a can frame. *)
+
 (** {6 Sending/receiving frames} *)
 
 val send : Krobot_bus.t -> (float * frame) -> unit Lwt.t
