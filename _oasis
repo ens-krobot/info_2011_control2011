@@ -90,6 +90,20 @@ Executable "krobot-replay"
   MainIs: krobot_replay.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-remote"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_remote.ml
+  BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-local"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_local.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-plot"
   Path: src/tools
   Install: true
