@@ -19,11 +19,13 @@ let rec loop bus ic delta prev_timestamp =
   loop bus ic delta timestamp
 
 lwt () =
-  let file = ref "krobot.record" in
-  Krobot_init.arg "-input" (Arg.Set_string file) "<file> input file";
-  lwt bus = Krobot_init.init_program "Record" in
+  if Array.length Sys.argv <> 2 then begin
+    prerr_endline "Usage: krobot-replay <file>";
+    exit 2
+  end;
 
-  lwt ic = Lwt_io.open_file ~mode:Lwt_io.input !file in
+  lwt bus = Krobot_bus.get () in
+  lwt ic = Lwt_io.open_file ~mode:Lwt_io.input Sys.argv.(1) in
 
   try_lwt
     (* Read the first frame. *)

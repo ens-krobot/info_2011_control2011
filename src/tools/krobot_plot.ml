@@ -91,8 +91,7 @@ let draw window graph =
    +-----------------------------------------------------------------+ *)
 
 lwt () =
-  lwt bus = Krobot_init.init_program "Plot" in
-
+  lwt bus = Krobot_bus.get () in
   ignore (GMain.init ());
   Lwt_glib.install ();
 

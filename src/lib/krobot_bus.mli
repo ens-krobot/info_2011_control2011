@@ -16,8 +16,5 @@ external of_bus : OBus_bus.t -> t = "%identity"
 external to_bus : t -> OBus_bus.t = "%identity"
 
 val get : unit -> t Lwt.t
-  (** [get ()] returns the krobot bus. *)
-
-(**/**)
-
-val address : string ref
+  (** [get ()] returns the krobot bus. It exits the program on
+      errors. *)

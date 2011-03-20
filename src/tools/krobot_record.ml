@@ -13,11 +13,13 @@ open Lwt
 open Lwt_react
 
 lwt () =
-  let file = ref "krobot.record" in
-  Krobot_init.arg "-output" (Arg.Set_string file) "<file> output file";
-  lwt bus = Krobot_init.init_program "Record" in
+  if Array.length Sys.argv <> 2 then begin
+    prerr_endline "Usage: krobot-record <file>";
+    exit 2
+  end;
 
-  lwt oc = Lwt_io.open_file ~mode:Lwt_io.output !file in
+  lwt bus = Krobot_bus.get () in
+  lwt oc = Lwt_io.open_file ~mode:Lwt_io.output Sys.argv.(1) in
 
   (* The proxy for the driver. *)
   let driver = OBus_proxy.make (OBus_peer.make (Krobot_bus.to_bus bus) "fr.krobot.Driver") ["fr"; "krobot"; "CAN"] in

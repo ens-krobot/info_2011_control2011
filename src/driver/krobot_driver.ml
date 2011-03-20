@@ -12,17 +12,47 @@
 open Lwt
 open Lwt_react
 
-let device = ref "slcan0"
+(* +-----------------------------------------------------------------+
+   | Command-line arguments                                          |
+   +-----------------------------------------------------------------+ *)
 
-let () = Krobot_init.arg "-device" (Arg.Set_string device) "<device> The device to use"
+let fork = ref true
+let kill = ref false
+let once = ref false
+
+let options = Arg.align [
+  "-no-fork", Arg.Clear fork, " Run in foreground";
+  "-kill", Arg.Set kill, " Kill any running driver and exit";
+  "-once", Arg.Set once, " Do not reopen the device on errors";
+]
+
+let usage = "\
+Usage: krobot-driver [options] [device]
+<device> defaults to 'slcan0'
+options are:"
+
+(* +-----------------------------------------------------------------+
+   | Entry point                                                     |
+   +-----------------------------------------------------------------+ *)
 
 lwt () =
-  lwt bus = Krobot_init.init_service "Driver" in
+  let args = ref [] in
+  Arg.parse options (fun arg -> args := arg :: !args) usage;
+
+  let device =
+    match !args with
+      | [] -> "slcan0"
+      | [dev] -> dev
+      | _ -> Arg.usage options usage; exit 2
+  in
+
+  lwt bus = Krobot_bus.get () in
+  lwt () = Krobot_service.init bus ~kill:!kill ~fork:!fork "Driver" in
 
   while_lwt true do
     try_lwt
       (* Open the CAN bus. *)
-      lwt can = Krobot_can_bus.open_can !device in
+      lwt can = Krobot_can_bus.open_can device in
 
       let active, set_active = S.create true in
 
@@ -43,6 +73,9 @@ lwt () =
         raise_lwt exn
     with exn ->
       lwt () = Lwt_log.error ~exn "failure" in
-      (* Wait a bit before retrying. *)
-      Lwt_unix.sleep 0.5
+      if !once then
+        exit 0
+      else
+        (* Wait a bit before retrying. *)
+        Lwt_unix.sleep 0.5
   done
