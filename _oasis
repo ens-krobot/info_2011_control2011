@@ -13,6 +13,7 @@ BuildTools: ocamlbuild
 Plugins: DevFiles (0.2), META (0.2)
 Synopsis: [Kro]bot
 Description: Control program for the Eurobot robotic cup.
+FilesAB: src/driver/bus.conf.ab
 
 # +-------------------------------------------------------------------+
 # | Libraries                                                         |
@@ -64,6 +65,7 @@ Executable "krobot-driver"
   CompiledObject: best
   MainIs: krobot_driver.ml
   BuildDepends: krobot.can, lwt.syntax
+  DataFiles: bus.conf
 
 # +-------------------------------------------------------------------+
 # | Tools                                                             |
@@ -110,6 +112,7 @@ Executable "krobot-plot"
   CompiledObject: best
   MainIs: krobot_plot.ml
   BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
+
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
