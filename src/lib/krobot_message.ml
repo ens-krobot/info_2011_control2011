@@ -46,7 +46,7 @@ let to_string = function
         "Encoder_position_speed_4(%f, %f)"
         pos speed
   | Unknown frame ->
-      Krobot_can.string_of_frame frame
+      sprintf "Unknown%s" (Krobot_can.string_of_frame frame)
 
 (* +-----------------------------------------------------------------+
    | Encoding                                                        |
