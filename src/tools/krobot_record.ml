@@ -22,7 +22,7 @@ lwt () =
   lwt oc = Lwt_io.open_file ~mode:Lwt_io.output Sys.argv.(1) in
 
   (* The proxy for the driver. *)
-  let driver = OBus_proxy.make (OBus_peer.make (Krobot_bus.to_bus bus) "fr.krobot.Driver") ["fr"; "krobot"; "CAN"] in
+  let driver = OBus_proxy.make (OBus_peer.make (Krobot_bus.to_bus bus) "fr.krobot.Service.Driver") ["fr"; "krobot"; "CAN"] in
 
   (* Receive frames comming from the driver. *)
   lwt ev = OBus_signal.connect (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message driver) in
