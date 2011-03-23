@@ -12,11 +12,11 @@
 open Lwt
 open Lwt_react
 
-let rec loop bus ic delta prev_timestamp =
+let rec loop bus ic prev_timestamp =
   lwt timestamp, frame = Lwt_io.read_value ic in
   lwt () = Lwt_unix.sleep (timestamp -. prev_timestamp) in
-  lwt () = Krobot_can.send bus (timestamp +. delta, frame) in
-  loop bus ic delta timestamp
+  lwt () = Krobot_can.send bus (Unix.gettimeofday (), frame) in
+  loop bus ic timestamp
 
 lwt () =
   if Array.length Sys.argv <> 2 then begin
@@ -28,11 +28,8 @@ lwt () =
   lwt ic = Lwt_io.open_file ~mode:Lwt_io.input Sys.argv.(1) in
 
   try_lwt
-    (* Read the first frame. *)
     lwt timestamp, frame = Lwt_io.read_value ic in
-    (* Compute the difference of time to add to each timestamp. *)
-    let delta = Unix.gettimeofday () -. timestamp in
-    lwt () = Krobot_can.send bus (timestamp +. delta, frame) in
-    loop bus ic delta timestamp
+    lwt () = Krobot_can.send bus (Unix.gettimeofday (), frame) in
+    loop bus ic timestamp
   with End_of_file ->
     Lwt_io.close ic
