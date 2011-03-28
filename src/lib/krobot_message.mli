@@ -36,6 +36,10 @@ type t =
           - [speed] is in rad/s
           - [acceleration] is in rad/s^2
       *)
+
+  | Req_motor_status
+      (** Request the status of the motors. *)
+
   | Unknown of Krobot_can.frame
       (** An unknown can frame. *)
 
@@ -54,3 +58,9 @@ val send : Krobot_bus.t -> (float * t) -> unit Lwt.t
 
 val recv : Krobot_bus.t -> (float * t) React.event
   (** [recv bus] is the event which receive messages. *)
+
+(** {6 Calls} *)
+
+(** The following functions send a request and wait for the result. *)
+
+val motor_status : Krobot_bus.t -> (float * bool) Lwt.t

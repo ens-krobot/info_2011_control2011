@@ -24,6 +24,7 @@ type t =
   | Motor_status of bool
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
+  | Req_motor_status
   | Unknown of frame
 
 (* +-----------------------------------------------------------------+
@@ -60,6 +61,8 @@ let to_string = function
       sprintf
         "Motor_turn(%f, %f, %f)"
         angle speed acc
+  | Req_motor_status ->
+      "Req_motor_status"
   | Unknown frame ->
       sprintf "Unknown%s" (Krobot_can.string_of_frame frame)
 
@@ -133,6 +136,13 @@ let encode = function
         ~remote:false
         ~format:F11bits
         ~data
+  | Req_motor_status ->
+      frame
+        ~identifier:103
+        ~kind:Data
+        ~remote:true
+        ~format:F11bits
+        ~data:""
   | Unknown frame ->
       frame
 
@@ -141,35 +151,42 @@ let encode = function
    +-----------------------------------------------------------------+ *)
 
 let decode frame =
-  match frame.identifier with
-    | 100 ->
-        Encoder_position_direction_3_4
-          (get_uint16 frame.data 0,
-           (if get_uint8 frame.data 4 = 0 then Forward else Backward),
-           get_uint16 frame.data 2,
-           (if get_uint8 frame.data 5 = 0 then Forward else Backward))
-    | 101 ->
-        Encoder_position_speed_3
-          (get_float32 frame.data 0,
-           get_float32 frame.data 4)
-    | 102 ->
-        Encoder_position_speed_4
-          (get_float32 frame.data 0,
-           get_float32 frame.data 4)
-    | 103 ->
-        Motor_status(get_uint8 frame.data 0 <> 0)
-    | 201 ->
-        Motor_move
-          (float (get_sint32 frame.data 0) /. 1000.,
-           float (get_uint16 frame.data 4) /. 1000.,
-           float (get_uint16 frame.data 6) /. 1000.)
-    | 202 ->
-        Motor_move
-          (float (get_sint32 frame.data 0) *. pi /. 1800.,
-           float (get_uint16 frame.data 4) *. pi /. 1800.,
-           float (get_uint16 frame.data 6) *. pi /. 1800.)
-    | _ ->
-        Unknown frame
+  if frame.remote then
+    match frame.identifier with
+      | 103 ->
+          Req_motor_status
+      | _ ->
+          Unknown frame
+  else
+    match frame.identifier with
+      | 100 ->
+          Encoder_position_direction_3_4
+            (get_uint16 frame.data 0,
+             (if get_uint8 frame.data 4 = 0 then Forward else Backward),
+             get_uint16 frame.data 2,
+             (if get_uint8 frame.data 5 = 0 then Forward else Backward))
+      | 101 ->
+          Encoder_position_speed_3
+            (get_float32 frame.data 0,
+             get_float32 frame.data 4)
+      | 102 ->
+          Encoder_position_speed_4
+            (get_float32 frame.data 0,
+             get_float32 frame.data 4)
+      | 103 ->
+          Motor_status(get_uint8 frame.data 0 <> 0)
+      | 201 ->
+          Motor_move
+            (float (get_sint32 frame.data 0) /. 1000.,
+             float (get_uint16 frame.data 4) /. 1000.,
+             float (get_uint16 frame.data 6) /. 1000.)
+      | 202 ->
+          Motor_move
+            (float (get_sint32 frame.data 0) *. pi /. 1800.,
+             float (get_uint16 frame.data 4) *. pi /. 1800.,
+             float (get_uint16 frame.data 6) *. pi /. 1800.)
+      | _ ->
+          Unknown frame
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |
@@ -177,3 +194,20 @@ let decode frame =
 
 let send bus (timestamp, msg) = Krobot_can.send bus (timestamp, encode msg)
 let recv bus = E.map (fun (timestamp, frame) -> (timestamp, decode frame)) (Krobot_can.recv bus)
+
+(* +-----------------------------------------------------------------+
+   | Calls                                                           |
+   +-----------------------------------------------------------------+ *)
+
+let motor_status bus =
+  let t =
+    E.next
+      (E.fmap
+         (fun (ts, frame) ->
+            match frame with
+              | Motor_status status -> Some(ts, status)
+              | _ -> None)
+         (recv bus))
+  in
+  lwt () = send bus (Unix.gettimeofday (), Req_motor_status) in
+  t
