@@ -2,18 +2,21 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 689823deb2ad1bb10042fed50bc857aa)
+# DO NOT EDIT (digest: 9d263765d4deabae48324e53c88ea807)
 # Library krobot-interfaces
 "src/interfaces": include
+"src/interfaces/krobot-interfaces.cmxs": use_krobot-interfaces
 <src/interfaces/*.ml{,i}>: pkg_obus
 # Library krobot
 "src/lib": include
+"src/lib/krobot.cmxs": use_krobot
 <src/lib/*.ml{,i}>: use_krobot-interfaces
 <src/lib/*.ml{,i}>: pkg_obus
 <src/lib/*.ml{,i}>: pkg_lwt.unix
 <src/lib/*.ml{,i}>: pkg_lwt.syntax
 # Library krobot-can
 "src/can": include
+"src/can/krobot-can.cmxs": use_krobot-can
 <src/can/krobot-can.{cma,cmxa}>: use_libkrobot-can
 <src/can/*.ml{,i}>: use_krobot
 <src/can/*.ml{,i}>: use_krobot-interfaces
