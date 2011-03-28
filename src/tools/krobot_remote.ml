@@ -16,6 +16,7 @@ let rec copy ta tb =
 
 let handle_connection server ta =
   ignore (
+    lwt () = Lwt_log.info "new connection" in
     let process = Lwt_process.open_process ("ssh", [|"ssh"; "krobot"; "krobot-local"|]) in
     try_lwt
       lwt _ = Lwt_io.read_char process#stdout in
