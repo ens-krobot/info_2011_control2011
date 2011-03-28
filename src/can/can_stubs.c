@@ -61,7 +61,7 @@ CAMLprim value ocaml_can_recv(value val_fd)
   if (ret < 0) uerror("recv", Nothing);
 
   /* It is an error if we do not receive exactly one frame. */
-  if (ret != sizeof(frame)) caml_failwith("recvmsg: invalid size");
+  if (ret != sizeof(frame)) caml_failwith("recv: invalid size");
 
   /* Receive the timestamp. */
   struct timeval tv;
@@ -101,10 +101,10 @@ CAMLprim value ocaml_can_send(value val_fd, value val_frame)
 
   /* Send the frame. */
   int ret = send(Int_val(val_fd), &frame, sizeof(frame), 0);
-  if (ret < 0) uerror("sendmsg", Nothing);
+  if (ret < 0) uerror("send", Nothing);
 
   /* It is an error if we do not sent exactly one frame. */
-  if (ret != sizeof(frame)) caml_failwith("sendmsg: invalid size");
+  if (ret != sizeof(frame)) caml_failwith("send: invalid size");
 
   return Val_unit;
 }
