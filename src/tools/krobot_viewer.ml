@@ -178,14 +178,7 @@ module Board = struct
     tolerance : GRange.scale;
     mutable state : state;
     mutable points : (float * float) list;
-  }
-
-  let create bus widget tolerance = {
-    bus;
-    widget;
-    tolerance;
-    state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
-    points = [];
+    mutable event : unit event;
   }
 
   let world_height = 2.1
@@ -477,13 +470,10 @@ module Board = struct
             lwt () = Krobot_message.send board.bus (Unix.gettimeofday (), Motor_move(dist, 0.1, 0.2)) in
             lwt () = wait_done board in
 
-            (* Virtually move the robot. *)
-            board.state <- { x; y; theta = board.state.theta +. alpha };
-
             (* Remove the point. *)
             board.points <- rest;
 
-            (* Redraw everything. *)
+            (* Redraw everything without the last point. *)
             queue_draw board;
 
             loop ()
@@ -491,6 +481,30 @@ module Board = struct
             return ()
     in
     loop ()
+
+  let create bus widget tolerance =
+    let board ={
+      bus;
+      widget;
+      tolerance;
+      state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
+      points = [];
+      event = E.never;
+    } in
+    (* Move the robot on the board when we receive odometry
+       informations. *)
+    board.event <- (
+      E.map
+        (fun (ts, frame) ->
+           match frame with
+             | Odometry(x, y, theta) ->
+                 board.state <- { x; y; theta };
+                 queue_draw board
+             | _ ->
+                 ())
+        (Krobot_message.recv bus)
+    );
+    board
 end
 
 (* +-----------------------------------------------------------------+

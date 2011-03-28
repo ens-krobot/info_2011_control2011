@@ -36,6 +36,9 @@ type t =
           - [speed] is in rad/s
           - [acceleration] is in rad/s^2
       *)
+  | Odometry of float * float * float
+      (** [Odometry(x, y, theta)] the position of the robot on the
+          table. *)
 
   | Req_motor_status
       (** Request the status of the motors. *)
