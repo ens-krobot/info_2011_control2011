@@ -498,8 +498,11 @@ module Board = struct
         (fun (ts, frame) ->
            match frame with
              | Odometry(x, y, theta) ->
-                 board.state <- { x; y; theta };
-                 queue_draw board
+                 let state = { x; y; theta } in
+                 if state <> board.state then begin
+                   board.state <- state;
+                   queue_draw board
+                 end
              | _ ->
                  ())
         (Krobot_message.recv bus)
