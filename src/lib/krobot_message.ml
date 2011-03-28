@@ -88,7 +88,7 @@ let encode = function
         ~identifier:100
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Encoder_position_speed_3(pos, speed) ->
       let data = String.create 8 in
@@ -98,7 +98,7 @@ let encode = function
         ~identifier:101
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Encoder_position_speed_4(pos, speed) ->
       let data = String.create 8 in
@@ -108,7 +108,7 @@ let encode = function
         ~identifier:102
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Motor_status moving ->
       let data = String.create 1 in
@@ -117,7 +117,7 @@ let encode = function
         ~identifier:103
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Odometry(x, y, theta) ->
       let data = String.create 6 in
@@ -128,7 +128,7 @@ let encode = function
         ~identifier:104
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Motor_move(dist, speed, acc) ->
       let data = String.create 8 in
@@ -139,7 +139,7 @@ let encode = function
         ~identifier:201
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Motor_turn(angle, speed, acc) ->
       let data = String.create 8 in
@@ -150,14 +150,14 @@ let encode = function
         ~identifier:202
         ~kind:Data
         ~remote:false
-        ~format:F11bits
+        ~format:F29bits
         ~data
   | Req_motor_status ->
       frame
         ~identifier:103
         ~kind:Data
         ~remote:true
-        ~format:F11bits
+        ~format:F29bits
         ~data:""
   | Unknown frame ->
       frame
