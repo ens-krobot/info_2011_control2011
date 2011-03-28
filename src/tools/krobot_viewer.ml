@@ -9,6 +9,7 @@
 
 open Lwt
 open Lwt_react
+open Krobot_message
 
 let utf8 code =
   let set_byte s o x = String.unsafe_set s o (Char.unsafe_chr x) in
@@ -172,13 +173,15 @@ module Board = struct
   }
 
   type t = {
+    bus : Krobot_bus.t;
     widget : GMisc.drawing_area;
     tolerance : GRange.scale;
     mutable state : state;
     mutable points : (float * float) list;
   }
 
-  let create widget tolerance = {
+  let create bus widget tolerance = {
+    bus;
     widget;
     tolerance;
     state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
@@ -450,6 +453,44 @@ module Board = struct
     let result = List.tl (loop [0; Array.length points - 1]); in
     board.points <- List.map (fun i -> points.(i)) result;
     queue_draw board
+
+  let rec wait_done board =
+    lwt () = Lwt_unix.sleep 0.05 in
+    lwt ts, moving = Krobot_message.motor_status board.bus in
+    if moving then
+      wait_done board
+    else
+      return ()
+
+  let go board =
+    let rec loop () =
+      match board.points with
+        | (x, y) :: rest ->
+            (* Turn the robot. *)
+            let alpha = atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta in
+            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (), Motor_turn(alpha, 0.1, 0.2)) in
+            lwt () = wait_done board in
+
+            (* Move the robot. *)
+            let sqr x = x *. x in
+            let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
+            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (), Motor_move(dist, 0.1, 0.2)) in
+            lwt () = wait_done board in
+
+            (* Virtually move the robot. *)
+            board.state <- { x; y; theta = board.state.theta +. alpha };
+
+            (* Remove the point. *)
+            board.points <- rest;
+
+            (* Redraw everything. *)
+            queue_draw board;
+
+            loop ()
+        | [] ->
+            return ()
+    in
+    loop ()
 end
 
 (* +-----------------------------------------------------------------+
@@ -470,7 +511,7 @@ lwt () =
   let lcd = LCD.create ui#lcd in
   ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw lcd; true));
 
-  let board = Board.create ui#scene ui#tolerance in
+  let board = Board.create bus ui#scene ui#tolerance in
   ignore (ui#scene#event#connect#expose (fun ev -> Board.draw board; true));
   ignore
     (ui#scene#event#connect#button_press
@@ -495,6 +536,19 @@ lwt () =
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
             Board.smooth board;
+          false));
+
+  let moving = ref false in
+  ignore
+    (ui#button_go#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 && not !moving then
+            ignore_result (
+              moving := true;
+              lwt () = Board.go board in
+              moving := false;
+              return ()
+            );
           false));
 
   waiter
