@@ -20,6 +20,22 @@ type t =
       (** The position and speed of encoder 3. *)
   | Encoder_position_speed_4 of float * float
       (** The position and speed of encoder 4. *)
+  | Motor_status of bool
+      (** [true] iff a movement is in progress. *)
+  | Motor_move of float * float * float
+      (** [Motor_move(distance, speed, acceleration)] command to make
+          the robot to move.
+          - [distance] is in m
+          - [speed] is in m/s
+          - [acceleration] is in m/s^2
+      *)
+  | Motor_turn of float * float * float
+      (** [Motor_turn(angle, speed, acceleration)] command to make the
+          robot to turn.
+          - [angle] is in rad
+          - [speed] is in rad/s
+          - [acceleration] is in rad/s^2
+      *)
   | Unknown of Krobot_can.frame
       (** An unknown can frame. *)
 
