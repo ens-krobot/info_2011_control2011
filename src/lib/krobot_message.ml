@@ -202,7 +202,7 @@ let decode frame =
              float (get_uint16 frame.data 4) /. 1000.,
              float (get_uint16 frame.data 6) /. 1000.)
       | 202 ->
-          Motor_move
+          Motor_turn
             (float (get_sint32 frame.data 0) *. pi /. 1800.,
              float (get_uint16 frame.data 4) *. pi /. 1800.,
              float (get_uint16 frame.data 6) *. pi /. 1800.)
