@@ -173,12 +173,14 @@ module Board = struct
 
   type t = {
     widget : GMisc.drawing_area;
+    tolerance : GRange.scale;
     mutable state : state;
     mutable points : (float * float) list;
   }
 
-  let create widget = {
+  let create widget tolerance = {
     widget;
+    tolerance;
     state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
     points = [];
   }
@@ -406,6 +408,48 @@ module Board = struct
   let clear board =
     board.points <- [];
     queue_draw board
+
+  let rec last = function
+    | [] -> failwith "Krobot_viewer.Board.last"
+    | [p] -> p
+    | _ :: l -> last l
+
+  let smooth board =
+    let points = Array.of_list ((board.state.x, board.state.y) :: board.points) in
+    let tolerance = board.tolerance#adjustment#value in
+    let rec loop = function
+      | i1 :: i2 :: rest ->
+          let (x1, y1) = points.(i1) and (x2, y2) = points.(i2) in
+          let a = y2 -. y1 and b = x1 -. x2 and c = x2 *. y1 -. x1 *. y2 in
+          let r = sqrt (a *. a +. b *. b) in
+          if r <> 0. then begin
+            (* Search the furthest point from the line passing by (x1,
+               y1) and (x2, y2) *)
+            let max_dist = ref 0. and at_max = ref i1 in
+            for i = i1 + 1 to i2 - 1 do
+              let (x, y) = points.(i) in
+              let d = abs_float (a *. x +. b *. y +. c) /. r in
+              if d > !max_dist then begin
+                max_dist := d;
+                at_max := i
+              end
+            done;
+            if !max_dist > tolerance then
+              (* The furthest point is out of tolerance, we split the
+                 current region with it. *)
+              loop (i1 :: !at_max :: i2 :: rest)
+            else
+              (* The point is acceptable, we pass the next region. *)
+              i1:: loop (i2 :: rest)
+          end else
+            (* The two point are the same so we drop one. *)
+            loop (i2 :: rest)
+      | rest ->
+          rest
+    in
+    let result = List.tl (loop [0; Array.length points - 1]); in
+    board.points <- List.map (fun i -> points.(i)) result;
+    queue_draw board
 end
 
 (* +-----------------------------------------------------------------+
@@ -426,7 +470,7 @@ lwt () =
   let lcd = LCD.create ui#lcd in
   ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw lcd; true));
 
-  let board = Board.create ui#scene in
+  let board = Board.create ui#scene ui#tolerance in
   ignore (ui#scene#event#connect#expose (fun ev -> Board.draw board; true));
   ignore
     (ui#scene#event#connect#button_press
@@ -444,6 +488,13 @@ lwt () =
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
             Board.clear board;
+          false));
+
+  ignore
+    (ui#button_smooth#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            Board.smooth board;
           false));
 
   waiter
