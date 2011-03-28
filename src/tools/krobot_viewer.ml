@@ -43,6 +43,7 @@ let utf8 code =
 
 module LCD = struct
   type t = {
+    widget : GMisc.drawing_area;
     chars : char array array;
     mutable line : int;
     mutable column : int;
@@ -55,7 +56,8 @@ module LCD = struct
   let inter = 4.
   let border = 2.
 
-  let create () = {
+  let create widget = {
+    widget;
     chars = Array.make_matrix lines columns ' ';
     line = 0;
     column = 0;
@@ -84,9 +86,9 @@ module LCD = struct
   let set_color ctx (r, g, b) =
     Cairo.set_source_rgb ctx r g b
 
-  let draw widget lcd =
+  let draw lcd =
     let colors = if lcd.backlight then colors_light else colors_dark in
-    let { Gtk.width; Gtk.height } = widget#misc#allocation in
+    let { Gtk.width; Gtk.height } = lcd.widget#misc#allocation in
     let surface = Cairo.image_surface_create Cairo.FORMAT_ARGB32 width height in
     let ctx = Cairo.create surface in
     Cairo.select_font_face ctx "Monospace" Cairo.FONT_SLANT_NORMAL Cairo.FONT_WEIGHT_NORMAL;
@@ -116,7 +118,7 @@ module LCD = struct
       Cairo.rectangle ctx x y (fw +. border *. 2.0) (fh +. border *. 2.0);
       Cairo.fill ctx
     end;
-    let ctx = Cairo_lablgtk.create widget#misc#window in
+    let ctx = Cairo_lablgtk.create lcd.widget#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
     Cairo.rectangle ctx 0. 0. (float width) (float height);
     Cairo.fill ctx;
@@ -170,7 +172,15 @@ module Board = struct
   }
 
   type t = {
+    widget : GMisc.drawing_area;
     mutable state : state;
+    mutable points : (float * float) list;
+  }
+
+  let create widget = {
+    widget;
+    state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
+    points = [];
   }
 
   let world_height = 2.1
@@ -202,8 +212,14 @@ module Board = struct
 
   let pi = 4. *. atan 1.
 
-  let draw widget board =
-    let { Gtk.width; Gtk.height } = widget#misc#allocation in
+  let optimal_size width height =
+    if width /. height >= (world_width +. 0.204) /. (world_height +. 0.204) then
+      ((world_width +. 0.204) /. (world_height +. 0.204) *. height, height)
+    else
+      (width, width /. (world_width +. 0.204) *. (world_height +. 0.204))
+
+  let draw board =
+    let { Gtk.width; Gtk.height } = board.widget#misc#allocation in
     let surface = Cairo.image_surface_create Cairo.FORMAT_ARGB32 width height in
     let ctx = Cairo.create surface in
     let width = float width and height = float height in
@@ -214,12 +230,7 @@ module Board = struct
     Cairo.fill ctx;
 
     (* Compute the optimal width and height *)
-    let dw, dh =
-      if width /. height >= (world_width +. 0.204) /. (world_height +. 0.204) then
-        ((world_width +. 0.204) /. (world_height +. 0.204) *. height, height)
-      else
-        (width, width /. (world_width +. 0.204) *. (world_height +. 0.204))
-    in
+    let dw, dh = optimal_size width height in
 
     (* Translation to have the board at the center and scaling to match the window sizes *)
     let x0 = (width -. dw) /. 2. and y0 = (height -. dh) /. 2. in
@@ -345,6 +356,8 @@ module Board = struct
     Cairo.arc ctx 1.675 0.175 0.05 0. (2. *. pi);
     Cairo.fill ctx;
 
+    Cairo.save ctx;
+
     (* Draw the robot *)
     Cairo.translate ctx board.state.x board.state.y;
     Cairo.rotate ctx board.state.theta;
@@ -361,11 +374,38 @@ module Board = struct
     set_color ctx Black;
     Cairo.stroke ctx;
 
-    let ctx = Cairo_lablgtk.create widget#misc#window in
+    Cairo.restore ctx;
+
+    (* Draw points. *)
+    Cairo.set_source_rgb ctx 255. 255. 0.;
+    Cairo.move_to ctx board.state.x board.state.y;
+    List.iter (fun (x, y) -> Cairo.line_to ctx x y) board.points;
+    Cairo.stroke ctx;
+
+    let ctx = Cairo_lablgtk.create board.widget#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
     Cairo.rectangle ctx 0. 0. width height;
     Cairo.fill ctx;
     Cairo.surface_finish surface
+
+  let queue_draw board =
+    GtkBase.Widget.queue_draw board.widget#as_widget
+
+  let add_point board x y =
+    let { Gtk.width; Gtk.height } = board.widget#misc#allocation in
+    let width = float width and height = float height in
+    let dw, dh = optimal_size width height in
+    let scale = dw /. (world_width +. 0.204) in
+    let x0 = (width -. dw) /. 2. and y0 = (height -. dh) /. 2. in
+    let x = (x -. x0) /. scale -. 0.102 and y = world_height -. ((y -. y0) /. scale -. 0.102) in
+    if x >= 0. && x < world_width && y >= 0. && y < world_height then begin
+      board.points <- board.points @ [(x, y)];
+      queue_draw board
+    end
+
+  let clear board =
+    board.points <- [];
+    queue_draw board
 end
 
 (* +-----------------------------------------------------------------+
@@ -383,10 +423,27 @@ lwt () =
   ignore (ui#window#connect#destroy ~callback:(wakeup wakener));
   ui#window#show ();
 
-  let lcd = LCD.create () in
-  ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw ui#lcd lcd; true));
+  let lcd = LCD.create ui#lcd in
+  ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw lcd; true));
 
-  let board = Board.({ state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) } }) in
-  ignore (ui#scene#event#connect#expose (fun ev -> Board.draw ui#scene board; true));
+  let board = Board.create ui#scene in
+  ignore (ui#scene#event#connect#expose (fun ev -> Board.draw board; true));
+  ignore
+    (ui#scene#event#connect#button_press
+       (fun ev ->
+          Board.add_point board (GdkEvent.Button.x ev) (GdkEvent.Button.y ev);
+          true));
+  ignore
+    (ui#scene#event#connect#motion_notify
+       (fun ev ->
+          Board.add_point board (GdkEvent.Motion.x ev) (GdkEvent.Motion.y ev);
+          true));
+
+  ignore
+    (ui#button_clear#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            Board.clear board;
+          false));
 
   waiter

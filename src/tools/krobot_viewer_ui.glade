@@ -153,6 +153,7 @@
               <widget class="GtkDrawingArea" id="scene">
                 <property name="visible">True</property>
                 <property name="app_paintable">True</property>
+                <property name="events">GDK_BUTTON1_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_STRUCTURE_MASK</property>
                 <property name="double_buffered">False</property>
               </widget>
               <packing>
@@ -178,6 +179,30 @@
                   </packing>
                 </child>
                 <child>
+                  <widget class="GtkButton" id="button_clear">
+                    <property name="label" translatable="yes">Clear trajectory</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="button_smooth">
+                    <property name="label" translatable="yes">Smooth trajectory</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
                   <widget class="GtkViewport" id="viewport1">
                     <property name="visible">True</property>
                     <property name="resize_mode">queue</property>
@@ -186,7 +211,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">1</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
               </widget>
