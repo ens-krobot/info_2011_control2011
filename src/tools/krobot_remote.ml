@@ -17,7 +17,7 @@ let rec copy ta tb =
 let handle_connection server ta =
   ignore (
     lwt () = Lwt_log.info "new connection" in
-    let process = Lwt_process.open_process ("ssh", [|"ssh"; "krobot"; "krobot-local"|]) in
+    let process = Lwt_process.open_process ("ssh", [|"ssh"; "krobot"; "/home/krobot/bin/krobot-local"|]) in
     try_lwt
       lwt _ = Lwt_io.read_char process#stdout in
       let tb =
@@ -41,6 +41,7 @@ let handle_connection server ta =
   )
 
 lwt () =
+  Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   lwt server =
     OBus_server.make_lowlevel
       ~addresses:[OBus_address.make "unix" [("abstract", "krobot")]]
