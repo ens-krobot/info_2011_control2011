@@ -84,7 +84,7 @@ let velocities sim =
           (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
 
 let move sim distance velocity acceleration =
-  if velocity <> 0. && acceleration <> 0. then begin
+  if distance <> 0. && velocity > 0. && acceleration > 0. then begin
     let t_acc = velocity /. acceleration in
     let t_end = (velocity *. velocity +. distance *. acceleration) /. (velocity *. acceleration) in
     if t_end > 2. *. t_acc then begin
@@ -95,9 +95,10 @@ let move sim distance velocity acceleration =
       end
     end else begin
       if t_acc <> 0. then begin
-        let t_acc = sqrt (distance /. acceleration) in
+        let t_acc = sqrt (abs_float (distance) /. acceleration) in
         let t_end = 2. *. t_acc in
-        let velocity = acceleration *. t_acc in
+        let sign = if distance >= 0. then 1. else -1. in
+        let velocity = sign *. acceleration *. t_acc in
         sim.command <- Move(t_acc, velocity);
         sim.command_start <- sim.time;
         sim.command_end <- sim.time +. t_end
@@ -106,7 +107,7 @@ let move sim distance velocity acceleration =
   end
 
 let turn sim angle velocity acceleration =
-  if velocity <> 0. && acceleration <> 0. then begin
+  if angle <> 0. && velocity > 0. && acceleration > 0. then begin
     let t_acc = velocity /. acceleration in
     let t_end = (velocity *. velocity +. angle *. acceleration) /. (velocity *. acceleration) in
     if t_end > 2. *. t_acc then begin
