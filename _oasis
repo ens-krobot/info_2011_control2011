@@ -127,6 +127,13 @@ Executable "krobot-viewer"
   MainIs: krobot_viewer.ml
   BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads, lablgtk2.glade
 
+Executable "krobot-simulator"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_simulator.ml
+  BuildDepends: krobot, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+

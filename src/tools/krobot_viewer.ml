@@ -166,6 +166,8 @@ end
    +-----------------------------------------------------------------+ *)
 
 module Board = struct
+  open Krobot_config
+
   type state = {
     x : float;
     y : float;
@@ -179,14 +181,6 @@ module Board = struct
     mutable points : (float * float) list;
     mutable event : unit event;
   }
-
-  let world_height = 2.1
-  let world_width = 3.
-  let robot_size = 0.3
-  let wheels_diam = 0.098
-  let wheels_dist = 0.259
-  let sim_step = 0.01
-  let time = ref 0.
 
   type color =
     | Black
