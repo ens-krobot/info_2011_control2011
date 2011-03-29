@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 9d263765d4deabae48324e53c88ea807)
+# DO NOT EDIT (digest: 8a8ef494b18055a22e7cd7b9c87b8a13)
 # Library krobot-interfaces
 "src/interfaces": include
 "src/interfaces/krobot-interfaces.cmxs": use_krobot-interfaces
@@ -64,6 +64,13 @@
 <src/tools/krobot_viewer.{native,byte}>: pkg_lablgtk2.glade
 <src/tools/krobot_viewer.{native,byte}>: pkg_cairo.lablgtk2
 <src/tools/*.ml{,i}>: pkg_lablgtk2.glade
+# Executable send-can
+<examples/send_can.{native,byte}>: use_krobot-can
+<examples/send_can.{native,byte}>: use_krobot
+<examples/send_can.{native,byte}>: use_krobot-interfaces
+<examples/send_can.{native,byte}>: pkg_obus
+<examples/send_can.{native,byte}>: pkg_lwt.unix
+<examples/send_can.{native,byte}>: pkg_lwt.syntax
 # Executable krobot-remote
 <src/tools/krobot_remote.{native,byte}>: use_krobot
 <src/tools/krobot_remote.{native,byte}>: use_krobot-interfaces

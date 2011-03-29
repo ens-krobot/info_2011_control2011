@@ -138,6 +138,13 @@ Executable "dump-can"
   MainIs: dump_can.ml
   BuildDepends: krobot.can, lwt.syntax
 
+Executable "send-can"
+  Path: examples
+  Install: false
+  CompiledObject: best
+  MainIs: send_can.ml
+  BuildDepends: krobot.can, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Doc                                                               |
 # +-------------------------------------------------------------------+
