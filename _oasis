@@ -16,6 +16,14 @@ Description: Control program for the Eurobot robotic cup.
 FilesAB: src/driver/bus.conf.ab
 
 # +-------------------------------------------------------------------+
+# | Flags                                                             |
+# +-------------------------------------------------------------------+
+
+Flag gtk
+  Description: Enable GTK programs
+  Default: true
+
+# +-------------------------------------------------------------------+
 # | Libraries                                                         |
 # +-------------------------------------------------------------------+
 
@@ -115,14 +123,16 @@ Executable "krobot-local"
 
 Executable "krobot-plot"
   Path: src/tools
-  Install: true
+  Build$: flag(gtk)
+  Install$: flag(gtk)
   CompiledObject: best
   MainIs: krobot_plot.ml
   BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
 
 Executable "krobot-viewer"
   Path: src/tools
-  Install: true
+  Build$: flag(gtk)
+  Install$: flag(gtk)
   CompiledObject: best
   MainIs: krobot_viewer.ml
   BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads, lablgtk2.glade
