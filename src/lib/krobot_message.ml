@@ -9,6 +9,7 @@
 
 open Krobot_can
 open Printf
+open Lwt
 open Lwt_react
 
 (* +-----------------------------------------------------------------+
@@ -220,15 +221,29 @@ let recv bus = E.map (fun (timestamp, frame) -> (timestamp, decode frame)) (Krob
    | Calls                                                           |
    +-----------------------------------------------------------------+ *)
 
-let motor_status bus =
+let wait_timeout = 0.1
+
+let send_and_recv bus req f =
   let t =
     E.next
       (E.fmap
          (fun (ts, frame) ->
-            match frame with
-              | Motor_status status -> Some(ts, status)
-              | _ -> None)
+            match f frame with
+              | Some x -> Some(`Value(ts, x))
+              | None -> None)
          (recv bus))
   in
   lwt () = send bus (Unix.gettimeofday (), Req_motor_status) in
-  t
+  let rec loop () =
+    lwt () = send bus (Unix.gettimeofday (), req) in
+    match_lwt choose [t; Lwt_unix.sleep wait_timeout >|= fun () -> `Timeout] with
+      | `Value x -> return x
+      | `Timeout -> loop ()
+  in
+  loop ()
+
+let motor_status bus =
+  send_and_recv bus Req_motor_status
+    (function
+       | Motor_status status -> Some status
+       | _ -> None)
