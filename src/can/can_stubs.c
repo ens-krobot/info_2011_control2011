@@ -70,9 +70,9 @@ CAMLprim value ocaml_can_recv(value val_fd)
   /* Build the caml frame. */
   val_frame = caml_alloc_tuple(5);
   Field(val_frame, 0) = Val_int(frame.can_id & CAN_EFF_MASK);
-  Field(val_frame, 1) = Val_int((frame.can_id << 29) & 1);
-  Field(val_frame, 2) = Val_int((frame.can_id << 30) & 1);
-  Field(val_frame, 3) = Val_int((frame.can_id << 31) & 1);
+  Field(val_frame, 1) = Val_int((frame.can_id >> 29) & 1);
+  Field(val_frame, 2) = Val_int((frame.can_id >> 30) & 1);
+  Field(val_frame, 3) = Val_int((frame.can_id >> 31) & 1);
   val = caml_alloc_string(frame.can_dlc);
   memcpy(String_val(val), frame.data, frame.can_dlc);
   Field(val_frame, 4) = val;
@@ -92,9 +92,9 @@ CAMLprim value ocaml_can_send(value val_fd, value val_frame)
 
   /* Build the can frame. */
   frame.can_id = Int_val(Field(val_frame, 0)) |
-    (Int_val(Field(val_frame, 1)) >> 29) |
-    (Int_val(Field(val_frame, 2)) >> 30) |
-    (Int_val(Field(val_frame, 3)) >> 31);
+    (Int_val(Field(val_frame, 1)) << 29) |
+    (Int_val(Field(val_frame, 2)) << 30) |
+    (Int_val(Field(val_frame, 3)) << 31);
   value val_data = Field(val_frame, 4);
   frame.can_dlc = caml_string_length(val_data);
   memcpy(frame.data, String_val(val_data), caml_string_length(val_data));
