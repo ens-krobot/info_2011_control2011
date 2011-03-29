@@ -502,9 +502,9 @@ module Board = struct
                    queue_draw board
                  end
              | Motor_status true ->
-                 board.ui#label_moving#set_text "yes"
+                 board.ui#entry_moving#set_text "yes"
              | Motor_status false ->
-                 board.ui#label_moving#set_text "no"
+                 board.ui#entry_moving#set_text "no"
              | _ ->
                  ())
         (Krobot_message.recv bus)
