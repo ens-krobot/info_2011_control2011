@@ -14,6 +14,18 @@ open Lwt_react
 open Krobot_config
 open Krobot_message
 
+let pi = 4. *. atan 1.
+
+let math_mod_float a b =
+  let b2 = b /. 2. in
+  let modf = mod_float a b in
+  if modf > b2 then
+    modf -. b
+  else if modf < -. b2 then
+    modf +. b
+  else
+    modf;;
+
 (* +-----------------------------------------------------------------+
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
@@ -233,7 +245,7 @@ lwt () =
     sim.state <- {
       x = sim.state.x +. dx *. sim_step;
       y = sim.state.y +. dy *. sim_step;
-      theta = sim.state.theta +. dtheta *. sim_step;
+      theta = math_mod_float (sim.state.theta +. dtheta *. sim_step) (2. *. pi);
     };
     sim.internal_state <- {
       theta_l = sim.internal_state.theta_l +. sim_step *. (u1 *. 4. +. u2 *. wheels_distance) /. (2. *. wheels_diameter);
