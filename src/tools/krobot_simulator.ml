@@ -116,9 +116,10 @@ let turn sim angle velocity acceleration =
         sim.command_end <- sim.time +. t_end
       end
     end else begin
-      let t_acc = sqrt (angle /. acceleration) in
+      let t_acc = sqrt (abs_float (angle) /. acceleration) in
       let t_end = 2. *. t_acc in
-      let velocity = acceleration *. t_acc in
+      let sign = if angle >= 0. then 1. else -1. in
+      let velocity = sign *. acceleration *. t_acc in
       if t_acc <> 0. then begin
         sim.command <- Turn(t_acc, velocity);
         sim.command_start <- sim.time;
