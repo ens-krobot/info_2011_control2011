@@ -570,4 +570,8 @@ lwt () =
             );
           false));
 
+  (* Ask for the status of the motor in order to display the correct
+     status initially. *)
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Req_motor_status) in
+
   waiter

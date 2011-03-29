@@ -182,7 +182,7 @@ lwt () =
                     | Move(s, _, e, _) -> (s, e)
                     | Turn(s, _, e, _) -> (s, e)
                 in
-                let t= Unix.gettimeofday () in
+                let t = Unix.gettimeofday () in
                 Krobot_message.send bus (t, Motor_status(s <= t && t < e))
             | _ ->
                 return ())
