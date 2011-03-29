@@ -557,15 +557,14 @@ lwt () =
             Board.smooth board;
           false));
 
-  let moving = ref false in
   ignore
     (ui#button_go#event#connect#button_release
        (fun ev ->
-          if GdkEvent.Button.button ev = 1 && not !moving then
+          if GdkEvent.Button.button ev = 1 then
             ignore_result (
-              moving := true;
+              ui#button_go#misc#set_sensitive false;
               lwt () = Board.go board in
-              moving := false;
+              ui#button_go#misc#set_sensitive true;
               return ()
             );
           false));
