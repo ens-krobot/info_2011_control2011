@@ -44,7 +44,7 @@ let utf8 code =
 
 module LCD = struct
   type t = {
-    widget : GMisc.drawing_area;
+    ui : Krobot_viewer_ui.window;
     chars : char array array;
     mutable line : int;
     mutable column : int;
@@ -57,8 +57,8 @@ module LCD = struct
   let inter = 4.
   let border = 2.
 
-  let create widget = {
-    widget;
+  let create ui = {
+    ui;
     chars = Array.make_matrix lines columns ' ';
     line = 0;
     column = 0;
@@ -89,7 +89,7 @@ module LCD = struct
 
   let draw lcd =
     let colors = if lcd.backlight then colors_light else colors_dark in
-    let { Gtk.width; Gtk.height } = lcd.widget#misc#allocation in
+    let { Gtk.width; Gtk.height } = lcd.ui#lcd#misc#allocation in
     let surface = Cairo.image_surface_create Cairo.FORMAT_ARGB32 width height in
     let ctx = Cairo.create surface in
     Cairo.select_font_face ctx "Monospace" Cairo.FONT_SLANT_NORMAL Cairo.FONT_WEIGHT_NORMAL;
@@ -119,7 +119,7 @@ module LCD = struct
       Cairo.rectangle ctx x y (fw +. border *. 2.0) (fh +. border *. 2.0);
       Cairo.fill ctx
     end;
-    let ctx = Cairo_lablgtk.create lcd.widget#misc#window in
+    let ctx = Cairo_lablgtk.create lcd.ui#lcd#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
     Cairo.rectangle ctx 0. 0. (float width) (float height);
     Cairo.fill ctx;
@@ -174,8 +174,7 @@ module Board = struct
 
   type t = {
     bus : Krobot_bus.t;
-    widget : GMisc.drawing_area;
-    tolerance : GRange.scale;
+    ui : Krobot_viewer_ui.window;
     mutable state : state;
     mutable points : (float * float) list;
     mutable event : unit event;
@@ -217,7 +216,7 @@ module Board = struct
       (width, width /. (world_width +. 0.204) *. (world_height +. 0.204))
 
   let draw board =
-    let { Gtk.width; Gtk.height } = board.widget#misc#allocation in
+    let { Gtk.width; Gtk.height } = board.ui#scene#misc#allocation in
     let surface = Cairo.image_surface_create Cairo.FORMAT_ARGB32 width height in
     let ctx = Cairo.create surface in
     let width = float width and height = float height in
@@ -380,17 +379,17 @@ module Board = struct
     List.iter (fun (x, y) -> Cairo.line_to ctx x y) board.points;
     Cairo.stroke ctx;
 
-    let ctx = Cairo_lablgtk.create board.widget#misc#window in
+    let ctx = Cairo_lablgtk.create board.ui#scene#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
     Cairo.rectangle ctx 0. 0. width height;
     Cairo.fill ctx;
     Cairo.surface_finish surface
 
   let queue_draw board =
-    GtkBase.Widget.queue_draw board.widget#as_widget
+    GtkBase.Widget.queue_draw board.ui#scene#as_widget
 
   let add_point board x y =
-    let { Gtk.width; Gtk.height } = board.widget#misc#allocation in
+    let { Gtk.width; Gtk.height } = board.ui#scene#misc#allocation in
     let width = float width and height = float height in
     let dw, dh = optimal_size width height in
     let scale = dw /. (world_width +. 0.204) in
@@ -412,7 +411,7 @@ module Board = struct
 
   let smooth board =
     let points = Array.of_list ((board.state.x, board.state.y) :: board.points) in
-    let tolerance = board.tolerance#adjustment#value in
+    let tolerance = board.ui#tolerance#adjustment#value in
     let rec loop = function
       | i1 :: i2 :: rest ->
           let (x1, y1) = points.(i1) and (x2, y2) = points.(i2) in
@@ -471,7 +470,7 @@ module Board = struct
             lwt () = wait_done board in
 
             (* Remove the point. *)
-            board.points <- rest;
+            board.points <- List.tl board.points;
 
             (* Redraw everything without the last point. *)
             queue_draw board;
@@ -482,11 +481,10 @@ module Board = struct
     in
     loop ()
 
-  let create bus widget tolerance =
+  let create bus ui =
     let board ={
       bus;
-      widget;
-      tolerance;
+      ui;
       state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
       points = [];
       event = E.never;
@@ -503,6 +501,10 @@ module Board = struct
                    board.state <- state;
                    queue_draw board
                  end
+             | Motor_status true ->
+                 board.ui#label_moving#set_text "yes"
+             | Motor_status false ->
+                 board.ui#label_moving#set_text "no"
              | _ ->
                  ())
         (Krobot_message.recv bus)
@@ -525,10 +527,10 @@ lwt () =
   ignore (ui#window#connect#destroy ~callback:(wakeup wakener));
   ui#window#show ();
 
-  let lcd = LCD.create ui#lcd in
+  let lcd = LCD.create ui in
   ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw lcd; true));
 
-  let board = Board.create bus ui#scene ui#tolerance in
+  let board = Board.create bus ui in
   ignore (ui#scene#event#connect#expose (fun ev -> Board.draw board; true));
   ignore
     (ui#scene#event#connect#button_press
