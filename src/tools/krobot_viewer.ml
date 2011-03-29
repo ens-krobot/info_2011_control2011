@@ -460,13 +460,19 @@ module Board = struct
         | (x, y) :: rest ->
             (* Turn the robot. *)
             let alpha = atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta in
-            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (), Motor_turn(alpha, 0.5, 1.0)) in
+            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
+                                                    Motor_turn(alpha,
+                                                               board.ui#speed#adjustment#value,
+                                                               board.ui#acceleration#adjustment#value)) in
             lwt () = wait_done board in
 
             (* Move the robot. *)
             let sqr x = x *. x in
             let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
-            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (), Motor_move(dist, 0.5, 1.0)) in
+            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
+                                                    Motor_move(dist,
+                                                               board.ui#speed#adjustment#value,
+                                                               board.ui#acceleration#adjustment#value)) in
             lwt () = wait_done board in
 
             (* Remove the point. *)
