@@ -38,6 +38,16 @@ let utf8 code =
   end else
     invalid_arg "utf8"
 
+let math_mod_float a b =
+  let b2 = b /. 2. in
+  let modf = mod_float a b in
+  if modf > b2 then
+    modf -. b
+  else if modf < -. b2 then
+    modf +. b
+  else
+    modf;;
+
 (* +-----------------------------------------------------------------+
    | LCD                                                             |
    +-----------------------------------------------------------------+ *)
@@ -453,7 +463,7 @@ module Board = struct
       match board.points with
         | (x, y) :: rest ->
             (* Turn the robot. *)
-            let alpha = atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta in
+            let alpha = math_mod_float (atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta) (2. *. pi) in
             lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
                                                     Motor_turn(alpha,
                                                                board.ui#rotation_speed#adjustment#value,
@@ -485,7 +495,7 @@ module Board = struct
     let board ={
       bus;
       ui;
-      state = { x = 0.2; y = 1.9; theta = 2. *. atan (-1.) };
+      state = { x = 0.2; y = 1.9; theta = -0.5 *. pi };
       points = [];
       event = E.never;
     } in
@@ -496,7 +506,8 @@ module Board = struct
         (fun (ts, frame) ->
            match frame with
              | Odometry(x, y, theta) ->
-                 let state = { x; y; theta } in
+                 let angle = math_mod_float (theta) (2. *. pi) in
+                 let state = { x; y; theta = angle; } in
                  if state <> board.state then begin
                    board.state <- state;
                    queue_draw board
