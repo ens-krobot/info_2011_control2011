@@ -31,19 +31,29 @@ type internal_state = {
 }
 
 type command =
-  | Speed of float * float * float * float
-      (* [Speed(start_time, end_time, left_velocity, right_velocity)] *)
-  | Turn of float * float * float * float
-      (* [Turn(start_time, t_acc, end_time, velocity)] *)
-  | Move of float * float * float * float
-      (* [Move(start_time, t_acc, end_time, velocity)] *)
+  | Idle
+      (* The robot is doint nothing. *)
+  | Speed of float * float
+      (* [Speed(left_velocity, right_velocity)] *)
+  | Turn of float * float
+      (* [Turn(t_acc, velocity)] *)
+  | Move of float * float
+      (* [Move(t_acc, velocity)] *)
 
 (* Type of simulators. *)
 type simulator = {
   mutable state : state;
+  (* The state of the robot. *)
   mutable internal_state : internal_state;
+  (* The state of the wheels. *)
   mutable command : command;
+  (* The current command. *)
+  mutable command_start : float;
+  (* The start time of the current command. *)
+  mutable command_end : float;
+  (* The end time of the current command. *)
   mutable time : float;
+  (* The current time. *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -52,65 +62,78 @@ type simulator = {
 
 let sim_step = 0.01
 
-let velocities_of_command cmd time =
-  match cmd with
-    | Speed (start, tend, l_v, r_v) ->
-        if time < start || time > tend then
-          (0., 0.)
-        else
-          ((l_v +. r_v) *. wheels_diameter /. 4., (l_v -. r_v) *. wheels_diameter /. wheels_distance)
-    | Turn (start, t_acc, tend, vel) ->
-        if time < start || time > tend then
-          (0., 0.)
-        else if time < (start +. t_acc) then
-          (0., vel *. (time -. start) /. t_acc)
-        else if time < (tend -. t_acc) then
+let velocities sim =
+  match sim.command with
+    | Idle ->
+        (0., 0.)
+    | Speed(l_v, r_v) ->
+        ((l_v +. r_v) *. wheels_diameter /. 4., (l_v -. r_v) *. wheels_diameter /. wheels_distance)
+    | Turn(t_acc, vel) ->
+        if sim.time < (sim.command_start +. t_acc) then
+          (0., vel *. (sim.time -. sim.command_start) /. t_acc)
+        else if sim.time < (sim.command_end -. t_acc) then
           (0., vel)
         else
-          (0., vel *. (tend -. time) /. t_acc)
-    | Move (start, t_acc, tend, vel) ->
-        if time < start || time > tend then
-          (0., 0.)
-        else if time < (start +. t_acc) then
-          (vel *. (time -. start) /. t_acc, 0.)
-        else if time < (tend -. t_acc) then
+          (0., vel *. (sim.command_end -. sim.time) /. t_acc)
+    | Move(t_acc, vel) ->
+        if sim.time < (sim.command_start +. t_acc) then
+          (vel *. (sim.time -. sim.command_start) /. t_acc, 0.)
+        else if sim.time < (sim.command_end -. t_acc) then
           (vel, 0.)
         else
-          (vel *. (tend -. time) /. t_acc, 0.)
+          (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
 
 let move sim distance velocity acceleration =
-  let t_acc = velocity /. acceleration in
-  let t_end = (velocity *. velocity +. distance *. acceleration) /. (velocity *. acceleration) in
-  sim.command <-
-    if t_end > 2. *. t_acc
-    then
-      Move (sim.time, t_acc, sim.time +. t_end, velocity)
-    else begin
-      let t_acc = sqrt (distance /. acceleration) in
-      let t_end = 2. *. t_acc in
-      let velocity = acceleration *. t_acc in
-      Move (sim.time, t_acc, sim.time +. t_end, velocity)
+  if velocity <> 0. && acceleration <> 0. then begin
+    let t_acc = velocity /. acceleration in
+    let t_end = (velocity *. velocity +. distance *. acceleration) /. (velocity *. acceleration) in
+    if t_end > 2. *. t_acc then begin
+      if t_acc <> 0. then begin
+        sim.command <- Move(t_acc, velocity);
+        sim.command_start <- sim.time;
+        sim.command_end <- sim.time +. t_end
+      end
+    end else begin
+      if t_acc <> 0. then begin
+        let t_acc = sqrt (distance /. acceleration) in
+        let t_end = 2. *. t_acc in
+        let velocity = acceleration *. t_acc in
+        sim.command <- Move(t_acc, velocity);
+        sim.command_start <- sim.time;
+        sim.command_end <- sim.time +. t_end
+      end
     end
+  end
 
 let turn sim angle velocity acceleration =
-  let t_acc = velocity /. acceleration in
-  let t_end = (velocity *. velocity +. angle *. acceleration) /. (velocity *. acceleration) in
-  sim.command <-
-    if t_end > 2. *. t_acc
-    then
-      Turn (sim.time, t_acc, sim.time +. t_end, velocity)
-    else begin
+  if velocity <> 0. && acceleration <> 0. then begin
+    let t_acc = velocity /. acceleration in
+    let t_end = (velocity *. velocity +. angle *. acceleration) /. (velocity *. acceleration) in
+    if t_end > 2. *. t_acc then begin
+      if t_acc <> 0. then begin
+        sim.command <- Turn(t_acc, velocity);
+        sim.command_start <- sim.time;
+        sim.command_end <- sim.time +. t_end
+      end
+    end else begin
       let t_acc = sqrt (angle /. acceleration) in
       let t_end = 2. *. t_acc in
       let velocity = acceleration *. t_acc in
-      Turn (sim.time, t_acc, sim.time +. t_end, velocity)
+      if t_acc <> 0. then begin
+        sim.command <- Turn(t_acc, velocity);
+        sim.command_start <- sim.time;
+        sim.command_end <- sim.time +. t_end
+      end
     end
+  end
 
 let set_velocities sim left_velocity right_velocity duration =
-  sim.command <- Speed (sim.time, sim.time +. duration, left_velocity, right_velocity)
+  sim.command <- Speed(left_velocity, right_velocity);
+  sim.command_start <- sim.time;
+  sim.command_end <- sim.time +. duration
 
 let get_velocities sim =
-  let (u1, u2) = velocities_of_command sim.command sim.time in
+  let (u1, u2) = velocities sim in
   let l_v = (4. *. u1 +. wheels_distance *. u2) /. (2. *. wheels_diameter)
   and r_v = (4. *. u1 -. wheels_distance *. u2) /. (2. *. wheels_diameter) in
   (l_v, r_v)
@@ -136,7 +159,10 @@ state:
 internal_state:
   theta_l = %f
   theta_r = %f
-command = %s
+command:
+  start = %f
+  end = %f
+  kind = %s
 "
     sim.time
     sim.state.x
@@ -144,13 +170,17 @@ command = %s
     sim.state.theta
     sim.internal_state.theta_l
     sim.internal_state.theta_r
+    sim.command_start
+    sim.command_end
     (match sim.command with
-       | Speed(s, e, l, r) ->
-           Printf.sprintf "Speed(%f, %f, %f, %f)" s e l r
-       | Move(s, x, e, a) ->
-           Printf.sprintf "Move(%f, %f, %f, %f)" s x e a
-       | Turn(s, x, e, a) ->
-           Printf.sprintf "Turn(%f, %f, %f, %f)" s x e a)
+       | Idle ->
+           "Idle"
+       | Speed(l, r) ->
+           Printf.sprintf "Speed(%f, %f)" l r
+       | Move(t, a) ->
+           Printf.sprintf "Move(%f, %f)" t a
+       | Turn(t, a) ->
+           Printf.sprintf "Turn(%f, %f)" t a)
 
 lwt () =
   lwt bus = Krobot_bus.get () in
@@ -158,7 +188,9 @@ lwt () =
   let sim = {
     state = { x = 0.; y = 0.; theta = 0. };
     internal_state = { theta_l = 0.; theta_r = 0. };
-    command = Speed(0., 0., 0., 0.);
+    command = Idle;
+    command_start = 0.;
+    command_end = 0.;
     time = Unix.gettimeofday ();
   } in
 
@@ -176,14 +208,7 @@ lwt () =
                 turn sim angle speed acc;
                 return ()
             | Req_motor_status ->
-                let s, e =
-                  match sim.command with
-                    | Speed(s, e, _, _) -> (s, e)
-                    | Move(s, _, e, _) -> (s, e)
-                    | Turn(s, _, e, _) -> (s, e)
-                in
-                let t = Unix.gettimeofday () in
-                Krobot_message.send bus (t, Motor_status(s <= t && t < e))
+                Krobot_message.send bus (Unix.gettimeofday (), Motor_status(sim.command <> Idle))
             | _ ->
                 return ())
        (Krobot_message.recv bus));
@@ -191,12 +216,15 @@ lwt () =
   while_lwt true do
     sim.time <- Unix.gettimeofday ();
 
+    (* Put the robot into idle if the last command is terminated. *)
+    if sim.time > sim.command_end then sim.command <- Idle;
+
     (* Sends the state of the robot. *)
     lwt () = Krobot_message.send bus (sim.time, Odometry(sim.state.x, sim.state.y, sim.state.theta)) in
 
     lwt () = print sim in
 
-    let (u1, u2) = velocities_of_command sim.command sim.time in
+    let (u1, u2) = velocities sim in
     let dx = u1 *. (cos sim.state.theta)
     and dy = u1 *. (sin sim.state.theta)
     and dtheta = u2 in
