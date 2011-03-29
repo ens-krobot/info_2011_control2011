@@ -233,7 +233,6 @@ let send_and_recv bus req f =
               | None -> None)
          (recv bus))
   in
-  lwt () = send bus (Unix.gettimeofday (), Req_motor_status) in
   let rec loop () =
     lwt () = send bus (Unix.gettimeofday (), req) in
     match_lwt choose [t; Lwt_unix.sleep wait_timeout >|= fun () -> `Timeout] with
