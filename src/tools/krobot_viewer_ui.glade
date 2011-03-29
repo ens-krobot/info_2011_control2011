@@ -202,7 +202,7 @@
                 </child>
                 <child>
                   <widget class="GtkButton" id="button_smooth">
-                    <property name="label" translatable="yes">Smooth trajectory</property>
+                    <property name="label" translatable="yes">Simplify trajectory</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
