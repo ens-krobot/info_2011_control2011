@@ -223,6 +223,9 @@ lwt () =
                 return ()
             | Req_motor_status ->
                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(sim.command <> Idle))
+            | Set_odometry(x, y, theta) ->
+                sim.state <- { x; y; theta };
+                return ()
             | _ ->
                 return ())
        (Krobot_message.recv bus));

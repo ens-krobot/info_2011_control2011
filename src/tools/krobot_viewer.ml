@@ -38,6 +38,8 @@ let utf8 code =
   end else
     invalid_arg "utf8"
 
+let pi = 4. *. atan 1.
+
 let math_mod_float a b =
   let b2 = b /. 2. in
   let modf = mod_float a b in
@@ -210,8 +212,6 @@ module Board = struct
       | Yellow -> (252., 189., 31.)
     in
     Cairo.set_source_rgb ctx (r /. 255.) (g /. 255.) (b /. 255.)
-
-  let pi = 4. *. atan 1.
 
   let optimal_size width height =
     if width /. height >= (world_width +. 0.204) /. (world_height +. 0.204) then
@@ -577,6 +577,28 @@ lwt () =
               lwt () = Board.go board in
               ui#button_go#misc#set_sensitive true;
               return ()
+            );
+          false));
+
+  ignore
+    (ui#button_start_red#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            ignore_result (
+              Krobot_message.send bus
+                (Unix.gettimeofday (),
+                 Set_odometry(0.2, 1.9, -0.5 *. pi))
+            );
+          false));
+
+  ignore
+    (ui#button_start_blue#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            ignore_result (
+              Krobot_message.send bus
+                (Unix.gettimeofday (),
+                 Set_odometry(Krobot_config.world_width -. 0.2, 1.9, -0.5 *. pi))
             );
           false));
 

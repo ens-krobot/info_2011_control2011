@@ -26,6 +26,7 @@ type t =
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
   | Odometry of float * float * float
+  | Set_odometry of float * float * float
   | Req_motor_status
   | Unknown of frame
 
@@ -66,6 +67,10 @@ let to_string = function
   | Odometry(x, y, theta) ->
       sprintf
         "Odometry(%f, %f, %f)"
+        x y theta
+  | Set_odometry(x, y, theta) ->
+      sprintf
+        "Set_odometry(%f, %f, %f)"
         x y theta
   | Req_motor_status ->
       "Req_motor_status"
@@ -127,6 +132,17 @@ let encode = function
       put_sint16 data 4 (truncate (theta /. pi *. 18000.));
       frame
         ~identifier:104
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Set_odometry(x, y, theta) ->
+      let data = String.create 6 in
+      put_sint16 data 0 (truncate (x *. 1000.));
+      put_sint16 data 2 (truncate (y *. 1000.));
+      put_sint16 data 4 (truncate (theta /. pi *. 18000.));
+      frame
+        ~identifier:105
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -194,6 +210,11 @@ let decode frame =
           Motor_status(get_uint8 frame.data 0 <> 0)
       | 104 ->
           Odometry
+            (float (get_sint16 frame.data 0) /. 1000.,
+             float (get_sint16 frame.data 2) /. 1000.,
+             float (get_sint16 frame.data 4) *. pi /. 18000.)
+      | 105 ->
+          Set_odometry
             (float (get_sint16 frame.data 0) /. 1000.,
              float (get_sint16 frame.data 2) /. 1000.,
              float (get_sint16 frame.data 4) *. pi /. 18000.)

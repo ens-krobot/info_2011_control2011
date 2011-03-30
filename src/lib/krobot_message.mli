@@ -39,6 +39,9 @@ type t =
   | Odometry of float * float * float
       (** [Odometry(x, y, theta)] the position of the robot on the
           table. *)
+  | Set_odometry of float * float * float
+      (** [set_odometry(x, y, theta)] sets the parameters of the
+          odometry to the given ones. *)
 
   | Req_motor_status
       (** Request the status of the motors. *)
