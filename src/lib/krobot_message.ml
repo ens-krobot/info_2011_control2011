@@ -249,33 +249,3 @@ let decode frame =
 
 let send bus (timestamp, msg) = Krobot_can.send bus (timestamp, encode msg)
 let recv bus = E.map (fun (timestamp, frame) -> (timestamp, decode frame)) (Krobot_can.recv bus)
-
-(* +-----------------------------------------------------------------+
-   | Calls                                                           |
-   +-----------------------------------------------------------------+ *)
-
-let wait_timeout = 0.1
-
-let send_and_recv bus req f =
-  let t =
-    E.next
-      (E.fmap
-         (fun (ts, frame) ->
-            match f frame with
-              | Some x -> Some(`Value(ts, x))
-              | None -> None)
-         (recv bus))
-  in
-  let rec loop () =
-    lwt () = send bus (Unix.gettimeofday (), req) in
-    match_lwt choose [t; Lwt_unix.sleep wait_timeout >|= fun () -> `Timeout] with
-      | `Value x -> return x
-      | `Timeout -> loop ()
-  in
-  loop ()
-
-let motor_status bus =
-  send_and_recv bus Req_motor_status
-    (function
-       | Motor_status status -> Some status
-       | _ -> None)

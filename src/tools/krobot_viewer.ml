@@ -192,6 +192,7 @@ module Board = struct
     mutable state : state;
     mutable points : (float * float) list;
     mutable event : unit event;
+    mutable moving : bool;
   }
 
   type color =
@@ -452,8 +453,7 @@ module Board = struct
 
   let rec wait_done board =
     lwt () = Lwt_unix.sleep 0.2 in
-    lwt ts, moving = Krobot_message.motor_status board.bus in
-    if moving then
+    if board.moving then
       wait_done board
     else
       return ()
@@ -498,6 +498,7 @@ module Board = struct
       state = { x = 0.2; y = 1.9; theta = -0.5 *. pi };
       points = [];
       event = E.never;
+      moving = false;
     } in
     (* Move the robot on the board when we receive odometry
        informations. *)
@@ -513,8 +514,10 @@ module Board = struct
                    queue_draw board
                  end
              | Motor_status true ->
+                 board.moving <- true;
                  board.ui#entry_moving#set_text "yes"
              | Motor_status false ->
+                 board.moving <- false;
                  board.ui#entry_moving#set_text "no"
              | _ ->
                  ())
@@ -611,8 +614,11 @@ lwt () =
             );
           false));
 
-  (* Ask for the status of the motor in order to display the correct
-     status initially. *)
-  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Req_motor_status) in
-
-  waiter
+  pick [
+    waiter;
+    (* Sends motor status request continously. *)
+    while_lwt true do
+      lwt () = Krobot_message.send bus (Unix.gettimeofday (), Req_motor_status) in
+      Lwt_unix.sleep 0.2
+    done;
+  ]
