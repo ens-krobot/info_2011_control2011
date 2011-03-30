@@ -451,12 +451,14 @@ module Board = struct
     board.points <- List.map (fun i -> points.(i)) result;
     queue_draw board
 
-  let rec wait_done board =
-    lwt () = Lwt_unix.sleep 0.2 in
-    if board.moving then
-      wait_done board
-    else
-      return ()
+  let wait_done board =
+    lwt () = Lwt_log.info "waiting for the robot to stop moving" in
+    lwt () =
+      while_lwt board.moving do
+        Lwt_unix.sleep 0.2
+      done
+    in
+    Lwt_log.info "trajectory done"
 
   let go board =
     let rec loop () =
@@ -464,6 +466,7 @@ module Board = struct
         | (x, y) :: rest ->
             (* Turn the robot. *)
             let alpha = math_mod_float (atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta) (2. *. pi) in
+            lwt () = Lwt_log.info_f "turning by %f radiants" alpha in
             lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
                                                     Motor_turn(alpha,
                                                                board.ui#rotation_speed#adjustment#value,
@@ -473,6 +476,7 @@ module Board = struct
             (* Move the robot. *)
             let sqr x = x *. x in
             let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
+            lwt () = Lwt_log.info_f "moving by %f meters" dist in
             lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
                                                     Motor_move(dist,
                                                                board.ui#moving_speed#adjustment#value,
