@@ -54,6 +54,9 @@ type t =
 val to_string : t -> string
   (** Returns the string representation of the given message. *)
 
+exception Invalid_frame of Krobot_can.frame
+  (** Exception raised when an invalid frame is encountered. *)
+
 val encode : t -> Krobot_can.frame
   (** Encode the given message into a CAN frame. *)
 

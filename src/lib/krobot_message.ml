@@ -193,7 +193,18 @@ let encode = function
    | Decoding                                                        |
    +-----------------------------------------------------------------+ *)
 
+exception Invalid_frame of Krobot_can.frame
+
+let () =
+  Printexc.register_printer
+    (function
+       | Invalid_frame frame ->
+           Some(Printf.sprintf "Invalid_frame%s" (Krobot_can.string_of_frame frame))
+       | _ ->
+           None)
+
 let decode frame =
+  try
   if frame.remote then
     match frame.identifier with
       | 103 ->
@@ -242,6 +253,8 @@ let decode frame =
           Motor_stop
       | _ ->
           Unknown frame
+  with Invalid_argument _ ->
+    raise (Invalid_frame frame)
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |
