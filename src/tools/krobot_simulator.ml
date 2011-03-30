@@ -72,7 +72,7 @@ type simulator = {
    | Simulation                                                      |
    +-----------------------------------------------------------------+ *)
 
-let sim_step = 0.01
+let sim_step = 1e-3
 
 let velocities sim =
   match sim.command with
@@ -234,7 +234,9 @@ lwt () =
        (Krobot_message.recv bus));
 
   while_lwt true do
-    sim.time <- Unix.gettimeofday ();
+    let time = Unix.gettimeofday () in
+    let delta = time -. sim.time in
+    sim.time <- time;
 
     (* Put the robot into idle if the last command is terminated. *)
     if sim.time > sim.command_end then sim.command <- Idle;
@@ -249,13 +251,13 @@ lwt () =
     and dy = u1 *. (sin sim.state.theta)
     and dtheta = u2 in
     sim.state <- {
-      x = sim.state.x +. dx *. sim_step;
-      y = sim.state.y +. dy *. sim_step;
-      theta = math_mod_float (sim.state.theta +. dtheta *. sim_step) (2. *. pi);
+      x = sim.state.x +. dx *. delta;
+      y = sim.state.y +. dy *. delta;
+      theta = math_mod_float (sim.state.theta +. dtheta *. delta) (2. *. pi);
     };
     sim.internal_state <- {
-      theta_l = sim.internal_state.theta_l +. sim_step *. (u1 *. 4. +. u2 *. wheels_distance) /. (2. *. wheels_diameter);
-      theta_r = sim.internal_state.theta_r +. sim_step *. (u1 *. 4. -. u2 *. wheels_distance) /. (2. *. wheels_diameter);
+      theta_l = sim.internal_state.theta_l +. delta *. (u1 *. 4. +. u2 *. wheels_distance) /. (2. *. wheels_diameter);
+      theta_r = sim.internal_state.theta_r +. delta *. (u1 *. 4. -. u2 *. wheels_distance) /. (2. *. wheels_diameter);
     };
 
     Lwt_unix.sleep sim_step
