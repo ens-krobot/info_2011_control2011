@@ -451,7 +451,7 @@ module Board = struct
     queue_draw board
 
   let rec wait_done board =
-    lwt () = Lwt_unix.sleep 0.05 in
+    lwt () = Lwt_unix.sleep 0.2 in
     lwt ts, moving = Krobot_message.motor_status board.bus in
     if moving then
       wait_done board
