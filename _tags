@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 255c5daac028047b8fd81335cc7a3a1d)
+# DO NOT EDIT (digest: 9d40de9cfde679815e27aa44dbe6939f)
 # Library krobot-interfaces
 "src/interfaces": include
 "src/interfaces/krobot-interfaces.cmxs": use_krobot-interfaces
@@ -56,7 +56,6 @@
 # Executable krobot-viewer
 <src/tools/krobot_viewer.{native,byte}>: use_krobot
 <src/tools/krobot_viewer.{native,byte}>: use_krobot-interfaces
-<src/tools/krobot_viewer.{native,byte}>: pkg_threads
 <src/tools/krobot_viewer.{native,byte}>: pkg_obus
 <src/tools/krobot_viewer.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_viewer.{native,byte}>: pkg_lwt.syntax

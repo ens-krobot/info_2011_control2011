@@ -135,7 +135,7 @@ Executable "krobot-viewer"
   Install$: flag(gtk)
   CompiledObject: best
   MainIs: krobot_viewer.ml
-  BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads, lablgtk2.glade
+  BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, lablgtk2.glade
 
 Executable "krobot-simulator"
   Path: src/tools
