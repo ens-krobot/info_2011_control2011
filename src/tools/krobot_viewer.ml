@@ -535,6 +535,13 @@ end
    +-----------------------------------------------------------------+ *)
 
 lwt () =
+  Lwt_log.default :=
+    Lwt_log.channel
+      ~template:"$(date).$(milliseconds) $(name): $(section): $(message)"
+      ~close_mode:`Keep
+      ~channel:Lwt_io.stderr
+      ();
+
   lwt bus = Krobot_bus.get () in
   ignore (GMain.init ());
   Lwt_glib.install ();
