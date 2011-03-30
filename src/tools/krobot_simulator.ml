@@ -221,6 +221,9 @@ lwt () =
                 lwt () = Lwt_log.info_f "received: turn(%f, %f, %f)" angle speed acc in
                 turn sim angle speed acc;
                 return ()
+            | Motor_stop ->
+                sim.command <- Idle;
+                return ()
             | Req_motor_status ->
                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(sim.command <> Idle))
             | Set_odometry(x, y, theta) ->

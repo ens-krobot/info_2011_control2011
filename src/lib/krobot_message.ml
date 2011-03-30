@@ -25,6 +25,7 @@ type t =
   | Motor_status of bool
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
+  | Motor_stop
   | Odometry of float * float * float
   | Set_odometry of float * float * float
   | Req_motor_status
@@ -64,6 +65,8 @@ let to_string = function
       sprintf
         "Motor_turn(%f, %f, %f)"
         angle speed acc
+  | Motor_stop ->
+      "Motor_stop"
   | Odometry(x, y, theta) ->
       sprintf
         "Odometry(%f, %f, %f)"
@@ -169,6 +172,13 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Motor_stop ->
+      frame
+        ~identifier:203
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:""
   | Req_motor_status ->
       frame
         ~identifier:103
@@ -228,6 +238,8 @@ let decode frame =
             (float (get_sint32 frame.data 0) *. pi /. 18000.,
              float (get_uint16 frame.data 4) *. pi /. 18000.,
              float (get_uint16 frame.data 6) *. pi /. 18000.)
+      | 203 ->
+          Motor_stop
       | _ ->
           Unknown frame
 

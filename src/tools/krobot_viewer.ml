@@ -602,6 +602,15 @@ lwt () =
             );
           false));
 
+  ignore
+    (ui#button_stop#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            ignore_result (
+              Krobot_message.send bus (Unix.gettimeofday (), Motor_stop)
+            );
+          false));
+
   (* Ask for the status of the motor in order to display the correct
      status initially. *)
   lwt () = Krobot_message.send bus (Unix.gettimeofday (), Req_motor_status) in

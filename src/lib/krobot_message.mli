@@ -36,6 +36,8 @@ type t =
           - [speed] is in rad/s
           - [acceleration] is in rad/s^2
       *)
+  | Motor_stop
+      (** Stops the motors. *)
   | Odometry of float * float * float
       (** [Odometry(x, y, theta)] the position of the robot on the
           table. *)
