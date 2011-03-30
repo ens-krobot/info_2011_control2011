@@ -453,6 +453,7 @@ module Board = struct
 
   let wait_done board =
     lwt () = Lwt_log.info "waiting for the robot to stop moving" in
+    lwt () = Lwt_unix.sleep 0.3 in
     lwt () =
       while_lwt board.moving do
         Lwt_unix.sleep 0.2
