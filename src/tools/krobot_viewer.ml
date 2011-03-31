@@ -626,10 +626,12 @@ lwt () =
   ignore
     (ui#button_stop#event#connect#button_release
        (fun ev ->
-          if GdkEvent.Button.button ev = 1 then
+          if GdkEvent.Button.button ev = 1 then begin
+            Board.clear board;
             ignore_result (
               Krobot_message.send bus (Unix.gettimeofday (), Motor_stop)
-            );
+            )
+          end;
           false));
 
   pick [
