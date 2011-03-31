@@ -466,34 +466,38 @@ module Board = struct
     let rec loop () =
       match board.points with
         | (x, y) :: rest ->
-            (* Turn the robot. *)
-            let alpha = math_mod_float (atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta) (2. *. pi) in
-            lwt () = Lwt_log.info_f "turning by %f radiants" alpha in
-            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
-                                                    Motor_turn(alpha,
-                                                               board.ui#rotation_speed#adjustment#value,
-                                                               board.ui#rotation_acceleration#adjustment#value)) in
-            lwt () = wait_done board in
+            let radius = sqrt (2. *. robot_size *. robot_size) in
+            if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
+              (* Turn the robot. *)
+              let alpha = math_mod_float (atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta) (2. *. pi) in
+              lwt () = Lwt_log.info_f "turning by %f radiants" alpha in
+              lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
+                                                      Motor_turn(alpha,
+                                                                 board.ui#rotation_speed#adjustment#value,
+                                                                 board.ui#rotation_acceleration#adjustment#value)) in
+              lwt () = wait_done board in
 
-            (* Move the robot. *)
-            let sqr x = x *. x in
-            let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
-            lwt () = Lwt_log.info_f "moving by %f meters" dist in
-            lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
-                                                    Motor_move(dist,
-                                                               board.ui#moving_speed#adjustment#value,
-                                                               board.ui#moving_acceleration#adjustment#value)) in
-            lwt () = wait_done board in
+              (* Move the robot. *)
+              let sqr x = x *. x in
+              let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
+              lwt () = Lwt_log.info_f "moving by %f meters" dist in
+              lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
+                                                      Motor_move(dist,
+                                                                 board.ui#moving_speed#adjustment#value,
+                                                                 board.ui#moving_acceleration#adjustment#value)) in
+              lwt () = wait_done board in
 
-            (* Remove the point. *)
-            (match board.points with
-               | _ :: l -> board.points <- l
-               | [] -> ());
+              (* Remove the point. *)
+              (match board.points with
+                 | _ :: l -> board.points <- l
+                 | [] -> ());
 
-            (* Redraw everything without the last point. *)
-            queue_draw board;
+              (* Redraw everything without the last point. *)
+              queue_draw board;
 
-            loop ()
+              loop ()
+            end else
+              Lwt_log.warning_f "can not move to (%f, %f)" x y
         | [] ->
             return ()
     in
