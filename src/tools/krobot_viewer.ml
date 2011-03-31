@@ -466,7 +466,8 @@ module Board = struct
     let rec loop () =
       match board.points with
         | (x, y) :: rest ->
-            let radius = sqrt (2. *. robot_size *. robot_size) in
+            let sqr x = x *. x in
+            let radius = sqrt (sqr (max wheels_position (robot_size -. wheels_position)) +. sqr (robot_size /. 2.)) in
             if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
               (* Turn the robot. *)
               let alpha = math_mod_float (atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta) (2. *. pi) in
@@ -478,7 +479,6 @@ module Board = struct
               lwt () = wait_done board in
 
               (* Move the robot. *)
-              let sqr x = x *. x in
               let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
               lwt () = Lwt_log.info_f "moving by %f meters" dist in
               lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
