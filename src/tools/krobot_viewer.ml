@@ -516,6 +516,9 @@ module Board = struct
                  let state = { x; y; theta = angle; } in
                  if state <> board.state then begin
                    board.state <- state;
+                   board.ui#entry_x#set_text (string_of_float x);
+                   board.ui#entry_y#set_text (string_of_float y);
+                   board.ui#entry_theta#set_text (string_of_float theta);
                    queue_draw board
                  end
              | Motor_status true ->
