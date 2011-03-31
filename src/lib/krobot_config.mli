@@ -23,3 +23,7 @@ val wheels_diameter : float
 
 val wheels_distance : float
   (** The distance between the two wheels. *)
+
+val wheels_position : float
+  (** The distance between the axe of the wheels and the back of the
+      robot. *)

@@ -12,3 +12,4 @@ let world_width = 3.
 let robot_size = 0.3
 let wheels_diameter = 0.098
 let wheels_distance = 0.259
+let wheels_position = 0.045

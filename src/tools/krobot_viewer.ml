@@ -363,16 +363,17 @@ module Board = struct
     (* Draw the robot *)
     Cairo.translate ctx board.state.x board.state.y;
     Cairo.rotate ctx board.state.theta;
-    Cairo.rectangle ctx (-. robot_size /. 2.) (-. robot_size /. 2.) robot_size robot_size;
+    Cairo.rectangle ctx (-. wheels_position) (-. robot_size /. 2.) robot_size robot_size;
     set_color ctx White;
     Cairo.fill ctx;
 
     (* Draw an arrow on the robot *)
-    Cairo.move_to ctx (-. robot_size /. 4.) 0.;
-    Cairo.line_to ctx (robot_size /. 4.) 0.;
-    Cairo.line_to ctx 0. (-. robot_size /. 4.);
-    Cairo.line_to ctx 0. (robot_size /. 4.);
-    Cairo.line_to ctx (robot_size /. 4.) 0.;
+    let d = robot_size /. 2. -. wheels_position in
+    Cairo.move_to ctx (d -. robot_size /. 4.) 0.;
+    Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
+    Cairo.line_to ctx d (-. robot_size /. 4.);
+    Cairo.line_to ctx d (robot_size /. 4.);
+    Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
     set_color ctx Black;
     Cairo.stroke ctx;
 
@@ -605,7 +606,7 @@ lwt () =
             ignore_result (
               Krobot_message.send bus
                 (Unix.gettimeofday (),
-                 Set_odometry(0.2, 1.9, -0.5 *. pi))
+                 Set_odometry(0.2, 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position, -0.5 *. pi))
             );
           false));
 
@@ -616,7 +617,7 @@ lwt () =
             ignore_result (
               Krobot_message.send bus
                 (Unix.gettimeofday (),
-                 Set_odometry(Krobot_config.world_width -. 0.2, 1.9, -0.5 *. pi))
+                 Set_odometry(Krobot_config.world_width -. 0.2, 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position, -0.5 *. pi))
             );
           false));
 
