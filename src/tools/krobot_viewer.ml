@@ -589,15 +589,22 @@ lwt () =
             Board.smooth board;
           false));
 
+  let thread_go = ref (return ()) in
   ignore
     (ui#button_go#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
             ignore_result (
               ui#button_go#misc#set_sensitive false;
-              lwt () = Board.go board in
-              ui#button_go#misc#set_sensitive true;
-              return ()
+              try_lwt
+                thread_go := Board.go board;
+                !thread_go
+              with
+                | Canceled ->
+                    return ()
+              finally
+                ui#button_go#misc#set_sensitive true;
+                return ()
             );
           false));
 
@@ -628,6 +635,7 @@ lwt () =
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then begin
             Board.clear board;
+            cancel !thread_go;
             ignore_result (
               Krobot_message.send bus (Unix.gettimeofday (), Motor_stop)
             )
