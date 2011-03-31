@@ -486,7 +486,9 @@ module Board = struct
             lwt () = wait_done board in
 
             (* Remove the point. *)
-            board.points <- List.tl board.points;
+            (match board.points with
+               | _ :: l -> board.points <- l
+               | [] -> ());
 
             (* Redraw everything without the last point. *)
             queue_draw board;
