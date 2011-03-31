@@ -22,7 +22,7 @@ type t =
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
   | Encoder_position_speed_4 of float * float
-  | Motor_status of bool
+  | Motor_status of bool * bool * bool * bool
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
   | Motor_stop
@@ -53,10 +53,10 @@ let to_string = function
       sprintf
         "Encoder_position_speed_4(%f, %f)"
         pos speed
-  | Motor_status moving ->
+  | Motor_status(m1, m2, m3, m4) ->
       sprintf
-        "Motor_status(%B)"
-        moving
+        "Motor_status(%B, %B, %B, %B)"
+        m1 m2 m3 m4
   | Motor_move(dist, speed, acc) ->
       sprintf
         "Motor_move(%f, %f, %f)"
@@ -119,9 +119,14 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Motor_status moving ->
+  | Motor_status(m1, m2, m3, m4) ->
       let data = String.create 1 in
-      put_uint8 data 0 (if moving then 1 else 0);
+      let x = 0 in
+      let x = if m1 then x lor 1 else x in
+      let x = if m2 then x lor 2 else x in
+      let x = if m3 then x lor 4 else x in
+      let x = if m4 then x lor 8 else x in
+      put_uint8 data 0 x;
       frame
         ~identifier:103
         ~kind:Data
@@ -228,7 +233,11 @@ let decode frame =
             (get_float32 frame.data 0,
              get_float32 frame.data 4)
       | 103 ->
-          Motor_status(get_uint8 frame.data 0 <> 0)
+          let x = get_uint8 frame.data 0 in
+          Motor_status(x land 1 <> 0,
+                       x land 2 <> 0,
+                       x land 4 <> 0,
+                       x land 8 <> 0)
       | 104 ->
           Odometry
             (float (get_sint16 frame.data 0) /. 1000.,

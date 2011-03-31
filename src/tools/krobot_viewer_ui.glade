@@ -494,19 +494,6 @@
                       </widget>
                     </child>
                     <child>
-                      <widget class="GtkEntry" id="entry_moving">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="editable">False</property>
-                        <property name="invisible_char">&#x2022;</property>
-                        <property name="text" translatable="yes">no</property>
-                      </widget>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                      </packing>
-                    </child>
-                    <child>
                       <widget class="GtkHBox" id="hbox3">
                         <property name="visible">True</property>
                         <child>
@@ -636,6 +623,67 @@
                         <property name="right_attach">2</property>
                         <property name="top_attach">3</property>
                         <property name="bottom_attach">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkHBox" id="hbox11">
+                        <property name="visible">True</property>
+                        <child>
+                          <widget class="GtkEntry" id="entry_moving1">
+                            <property name="width_request">1</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="editable">False</property>
+                            <property name="invisible_char">&#x2022;</property>
+                            <property name="text" translatable="yes">no</property>
+                          </widget>
+                          <packing>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkEntry" id="entry_moving2">
+                            <property name="width_request">1</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="editable">False</property>
+                            <property name="invisible_char">&#x2022;</property>
+                            <property name="text" translatable="yes">no</property>
+                          </widget>
+                          <packing>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkEntry" id="entry_moving3">
+                            <property name="width_request">1</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="editable">False</property>
+                            <property name="invisible_char">&#x2022;</property>
+                            <property name="text" translatable="yes">no</property>
+                          </widget>
+                          <packing>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkEntry" id="entry_moving4">
+                            <property name="width_request">1</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="editable">False</property>
+                            <property name="invisible_char">&#x2022;</property>
+                            <property name="text" translatable="yes">no</property>
+                          </widget>
+                          <packing>
+                            <property name="position">3</property>
+                          </packing>
+                        </child>
+                      </widget>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
                       </packing>
                     </child>
                   </widget>

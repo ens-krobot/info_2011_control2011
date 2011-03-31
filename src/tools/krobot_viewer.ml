@@ -524,12 +524,12 @@ module Board = struct
                    board.ui#entry_theta#set_text (string_of_float theta);
                    queue_draw board
                  end
-             | Motor_status true ->
-                 board.moving <- true;
-                 board.ui#entry_moving#set_text "yes"
-             | Motor_status false ->
-                 board.moving <- false;
-                 board.ui#entry_moving#set_text "no"
+             | Motor_status(m1, m2, m3, m4) ->
+                 board.moving <- m3 || m4;
+                 board.ui#entry_moving1#set_text (if m1 then "yes" else "no");
+                 board.ui#entry_moving2#set_text (if m2 then "yes" else "no");
+                 board.ui#entry_moving3#set_text (if m3 then "yes" else "no");
+                 board.ui#entry_moving4#set_text (if m4 then "yes" else "no")
              | _ ->
                  ())
         (Krobot_message.recv bus)
