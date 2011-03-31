@@ -717,11 +717,18 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkViewport" id="viewport1">
+                  <widget class="GtkScrolledWindow" id="scrolled_logs">
                     <property name="visible">True</property>
-                    <property name="resize_mode">queue</property>
+                    <property name="can_focus">True</property>
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
                     <child>
-                      <placeholder/>
+                      <widget class="GtkTextView" id="logs">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="editable">False</property>
+                        <property name="cursor_visible">False</property>
+                      </widget>
                     </child>
                   </widget>
                   <packing>
