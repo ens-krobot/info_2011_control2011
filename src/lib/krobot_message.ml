@@ -19,6 +19,8 @@ open Lwt_react
 type direction = Forward | Backward
 
 type t =
+  | Beacon_position of float * float * float
+  | Beacon_lowlevel_position of float * float * int
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
   | Encoder_position_speed_4 of float * float
@@ -40,6 +42,18 @@ let string_of_direction = function
   | Backward -> "Backward"
 
 let to_string = function
+  | Beacon_position(angle, distance, period) ->
+      sprintf
+        "Beacon_position(%f, %f, %f)"
+        angle
+        distance
+        period
+  | Beacon_lowlevel_position(angle, width, period) ->
+      sprintf
+        "Beacon_lowlevel_position(%f, %f, %d)"
+        angle
+        width
+        period
   | Encoder_position_direction_3_4(pos3, dir3, pos4, dir4) ->
       sprintf
         "Encoder_position_direction_3_4(%d, %s, %d, %s)"
@@ -177,6 +191,28 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Beacon_position(angle, length, period) ->
+      let data = String.create 6 in
+      put_uint16 data 0 (truncate (angle *. 10000.));
+      put_uint16 data 2 (truncate (length *. 1000.));
+      put_uint16 data 4 (truncate (period *. 10000.));
+      frame
+        ~identifier:301
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Beacon_lowlevel_position(angle, width, period) ->
+      let data = String.create 6 in
+      put_uint16 data 0 (truncate (angle *. 10000.));
+      put_uint16 data 2 (truncate (width *. 100000.));
+      put_uint16 data 4 period;
+      frame
+        ~identifier:302
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Motor_stop ->
       frame
         ~identifier:204
@@ -260,6 +296,16 @@ let decode frame =
              float (get_sint16 frame.data 4) /. 10000.)
       | 204 ->
           Motor_stop
+      | 301 ->
+           Beacon_position
+             (float (get_uint16 frame.data 0) /. 10000.,
+              float (get_uint16 frame.data 2) /. 1000.,
+              float (get_uint16 frame.data 4) /. 10000.)
+      | 302 ->
+           Beacon_lowlevel_position
+             (float (get_uint16 frame.data 0) /. 10000.,
+              float (get_uint16 frame.data 2) /. 100000.,
+              get_uint16 frame.data 4)
       | _ ->
           Unknown frame
   with Invalid_argument _ ->
