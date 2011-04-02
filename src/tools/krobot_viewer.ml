@@ -186,10 +186,17 @@ module Board = struct
     theta : float;
   }
 
+  type beacon = {
+    xbeacon : float;
+    ybeacon : float;
+    valid : bool;
+  }
+
   type t = {
     bus : Krobot_bus.t;
     ui : Krobot_viewer_ui.window;
     mutable state : state;
+    mutable beacon : beacon;
     mutable points : (float * float) list;
     mutable event : unit event;
     mutable moving : bool;
@@ -202,6 +209,7 @@ module Board = struct
     | Red
     | Blue
     | Yellow
+    | Purple
 
   let set_color ctx color =
     let r, g, b = match color with
@@ -211,6 +219,7 @@ module Board = struct
       | Red -> (199., 23., 18.)
       | Blue -> (0., 59., 128.)
       | Yellow -> (252., 189., 31.)
+      | Purple -> (128., 0., 128.)
     in
     Cairo.set_source_rgb ctx (r /. 255.) (g /. 255.) (b /. 255.)
 
@@ -379,6 +388,13 @@ module Board = struct
 
     Cairo.restore ctx;
 
+    (* Draw the beacon *)
+    if board.beacon.valid then begin
+      Cairo.arc ctx board.beacon.xbeacon board.beacon.ybeacon 0.04 0. (2. *. pi);
+      set_color ctx Purple;
+      Cairo.fill ctx;
+    end;
+
     (* Draw points. *)
     Cairo.set_source_rgb ctx 255. 255. 0.;
     Cairo.move_to ctx board.state.x board.state.y;
@@ -508,6 +524,7 @@ module Board = struct
       bus;
       ui;
       state = { x = 0.2; y = 1.9; theta = -0.5 *. pi };
+      beacon = { xbeacon = 1.; ybeacon = 1.; valid = true };
       points = [];
       event = E.never;
       moving = false;
@@ -534,6 +551,17 @@ module Board = struct
                  board.ui#entry_moving2#set_text (if m2 then "yes" else "no");
                  board.ui#entry_moving3#set_text (if m3 then "yes" else "no");
                  board.ui#entry_moving4#set_text (if m4 then "yes" else "no")
+             | Beacon_position(angle, distance, period) ->
+                 let newangle = math_mod_float (board.state.theta +. angle) (2. *. pi) in
+                 let x = board.state.x +. distance *. cos (newangle) in
+                 let y = board.state.y +. distance *. sin (newangle) in
+                 let valid = distance <> 0. in
+                 let beacon = { xbeacon = x; ybeacon = y; valid; } in
+                 if beacon <> board.beacon then begin
+                   board.beacon <- beacon;
+                   board.ui#entry_beacon#set_text (if valid then "valid" else "invalid");
+                   queue_draw board
+                 end
              | _ ->
                  ())
         (Krobot_message.recv bus)
