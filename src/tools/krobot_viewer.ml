@@ -529,7 +529,7 @@ module Board = struct
                    queue_draw board
                  end
              | Motor_status(m1, m2, m3, m4) ->
-                 board.moving <- m3 || m4;
+                 board.moving <- m1 || m2;
                  board.ui#entry_moving1#set_text (if m1 then "yes" else "no");
                  board.ui#entry_moving2#set_text (if m2 then "yes" else "no");
                  board.ui#entry_moving3#set_text (if m3 then "yes" else "no");

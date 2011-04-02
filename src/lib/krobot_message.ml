@@ -137,7 +137,7 @@ let encode = function
       let data = String.create 6 in
       put_sint16 data 0 (truncate (x *. 1000.));
       put_sint16 data 2 (truncate (y *. 1000.));
-      put_sint16 data 4 (truncate (theta /. pi *. 18000.));
+      put_sint16 data 4 (truncate (theta *. 10000.));
       frame
         ~identifier:104
         ~kind:Data
@@ -157,9 +157,9 @@ let encode = function
         ~data
   | Motor_turn(angle, speed, acc) ->
       let data = String.create 8 in
-      put_sint32 data 0 (truncate (angle /. pi *. 18000.));
-      put_uint16 data 4 (truncate (speed /. pi *. 18000.));
-      put_uint16 data 6 (truncate (acc /. pi *. 18000.));
+      put_sint32 data 0 (truncate (angle *. 10000.));
+      put_uint16 data 4 (truncate (speed *. 1000.));
+      put_uint16 data 6 (truncate (acc *. 1000.));
       frame
         ~identifier:202
         ~kind:Data
@@ -170,7 +170,7 @@ let encode = function
       let data = String.create 6 in
       put_sint16 data 0 (truncate (x *. 1000.));
       put_sint16 data 2 (truncate (y *. 1000.));
-      put_sint16 data 4 (truncate (theta /. pi *. 18000.));
+      put_sint16 data 4 (truncate (theta *. 10000.));
       frame
         ~identifier:203
         ~kind:Data
@@ -242,7 +242,7 @@ let decode frame =
           Odometry
             (float (get_sint16 frame.data 0) /. 1000.,
              float (get_sint16 frame.data 2) /. 1000.,
-             float (get_sint16 frame.data 4) *. pi /. 18000.)
+             float (get_sint16 frame.data 4) /. 10000.)
       | 201 ->
           Motor_move
             (float (get_sint32 frame.data 0) /. 1000.,
@@ -250,14 +250,14 @@ let decode frame =
              float (get_uint16 frame.data 6) /. 1000.)
       | 202 ->
           Motor_turn
-            (float (get_sint32 frame.data 0) *. pi /. 18000.,
-             float (get_uint16 frame.data 4) *. pi /. 18000.,
-             float (get_uint16 frame.data 6) *. pi /. 18000.)
+            (float (get_sint32 frame.data 0) /. 10000.,
+             float (get_uint16 frame.data 4) /. 1000.,
+             float (get_uint16 frame.data 6) /. 1000.)
       | 203 ->
           Set_odometry
             (float (get_sint16 frame.data 0) /. 1000.,
              float (get_sint16 frame.data 2) /. 1000.,
-             float (get_sint16 frame.data 4) *. pi /. 18000.)
+             float (get_sint16 frame.data 4) /. 10000.)
       | 204 ->
           Motor_stop
       | _ ->
