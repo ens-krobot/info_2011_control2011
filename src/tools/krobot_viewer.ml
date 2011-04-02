@@ -369,7 +369,7 @@ module Board = struct
 
     (* Draw an arrow on the robot *)
     let d = robot_size /. 2. -. wheels_position in
-    Cairo.move_to ctx (d -. robot_size /. 4.) 0.;
+    Cairo.move_to ctx 0. 0.;
     Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
     Cairo.line_to ctx d (-. robot_size /. 4.);
     Cairo.line_to ctx d (robot_size /. 4.);
