@@ -129,7 +129,7 @@ let put_uint8 = put_sint8
 
 let put_sint16 str ofs v =
   str.[ofs + 0] <- Char.unsafe_chr v;
-  str.[ofs + 1] <- Char.unsafe_chr (v lsr 8)
+  str.[ofs + 1] <- Char.unsafe_chr (v asr 8)
 
 let put_uint16 = put_sint16
 
@@ -137,7 +137,7 @@ let put_sint32 str ofs v =
   str.[ofs + 0] <- Char.unsafe_chr v;
   str.[ofs + 1] <- Char.unsafe_chr (v lsr 8);
   str.[ofs + 2] <- Char.unsafe_chr (v lsr 16);
-  str.[ofs + 3] <- Char.unsafe_chr (v lsr 24)
+  str.[ofs + 3] <- Char.unsafe_chr (v asr 24)
 
 let put_uint32 = put_sint32
 
