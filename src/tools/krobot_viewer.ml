@@ -523,7 +523,11 @@ module Board = struct
     let board ={
       bus;
       ui;
-      state = { x = 0.2; y = 1.9; theta = -0.5 *. pi };
+      state = { 
+        x = 0.2;
+        y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position;
+        theta = -0.5 *. pi
+      };
       beacon = { xbeacon = 1.; ybeacon = 1.; valid = true };
       points = [];
       event = E.never;
