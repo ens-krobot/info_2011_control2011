@@ -203,10 +203,10 @@ let encode = function
         ~format:F29bits
         ~data
   | Beacon_lowlevel_position(angle, width, period) ->
-      let data = String.create 6 in
+      let data = String.create 8 in
       put_uint16 data 0 (truncate (angle *. 10000.));
       put_uint16 data 2 (truncate (width *. 100000.));
-      put_uint16 data 4 period;
+      put_uint32 data 4 period;
       frame
         ~identifier:302
         ~kind:Data
@@ -305,7 +305,7 @@ let decode frame =
            Beacon_lowlevel_position
              (float (get_uint16 frame.data 0) /. 10000.,
               float (get_uint16 frame.data 2) /. 100000.,
-              get_uint16 frame.data 4)
+              get_uint32 frame.data 4)
       | _ ->
           Unknown frame
   with Invalid_argument _ ->
