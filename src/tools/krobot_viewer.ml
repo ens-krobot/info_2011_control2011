@@ -672,7 +672,7 @@ lwt () =
             ignore_result (
               Krobot_message.send bus
                 (Unix.gettimeofday (),
-                 Set_odometry(0.2, 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position, -0.5 *. pi))
+                 Set_odometry(0.215 -. Krobot_config.robot_size /. 2. +. Krobot_config.wheels_position, 1.885, 0.))
             );
           false));
 
@@ -683,7 +683,7 @@ lwt () =
             ignore_result (
               Krobot_message.send bus
                 (Unix.gettimeofday (),
-                 Set_odometry(Krobot_config.world_width -. 0.2, 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position, -0.5 *. pi))
+                 Set_odometry(Krobot_config.world_width -. (0.215 -. Krobot_config.robot_size /. 2. +. Krobot_config.wheels_position), 1.885, pi))
             );
           false));
 
