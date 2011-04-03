@@ -563,7 +563,10 @@ module Board = struct
                  let beacon = { xbeacon = x; ybeacon = y; valid; } in
                  if beacon <> board.beacon then begin
                    board.beacon <- beacon;
-                   board.ui#entry_beacon#set_text (if valid then "valid" else "invalid");
+                   board.ui#beacon_status#set_text (if valid then "valid" else "invalid");
+                   board.ui#beacon_distance#set_text (string_of_float distance);
+                   board.ui#beacon_angle#set_text (string_of_float angle);
+                   board.ui#beacon_period#set_text (string_of_float period);
                    queue_draw board
                  end
              | _ ->
