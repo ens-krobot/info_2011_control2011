@@ -556,7 +556,7 @@ module Board = struct
                  board.ui#entry_moving3#set_text (if m3 then "yes" else "no");
                  board.ui#entry_moving4#set_text (if m4 then "yes" else "no")
              | Beacon_position(angle, distance, period) ->
-                 let newangle = math_mod_float (board.state.theta +. angle) (2. *. pi) in
+                 let newangle = math_mod_float (board.state.theta +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
                  let x = board.state.x +. distance *. cos (newangle) in
                  let y = board.state.y +. distance *. sin (newangle) in
                  let valid = distance <> 0. in
