@@ -19,6 +19,8 @@ open Lwt_react
 type direction = Forward | Backward
 
 type t =
+  | Battery1_voltages of float * float * float * float
+  | Battery2_voltages of float * float * float * float
   | Beacon_position of float * float * float
   | Beacon_lowlevel_position of float * float * int
   | Encoder_position_direction_3_4 of int * direction * int * direction
@@ -42,6 +44,20 @@ let string_of_direction = function
   | Backward -> "Backward"
 
 let to_string = function
+  | Battery1_voltages(elem1, elem2, elem3, elem4) ->
+      sprintf
+        "Battery1_voltages(%f, %f, %f, %f)"
+        elem1
+        elem2
+        elem3
+        elem4
+  | Battery2_voltages(elem1, elem2, elem3, elem4) ->
+      sprintf
+        "Battery2_voltages(%f, %f, %f, %f)"
+        elem1
+        elem2
+        elem3
+        elem4
   | Beacon_position(angle, distance, period) ->
       sprintf
         "Beacon_position(%f, %f, %f)"
@@ -213,6 +229,30 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Battery1_voltages(elem1, elem2, elem3, elem4) ->
+      let data = String.create 8 in
+      put_uint16 data 0 (truncate (elem1 *. 10000.)); 
+      put_uint16 data 2 (truncate (elem2 *. 10000.)); 
+      put_uint16 data 4 (truncate (elem3 *. 10000.)); 
+      put_uint16 data 5 (truncate (elem4 *. 10000.)); 
+      frame
+        ~identifier:401
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Battery2_voltages(elem1, elem2, elem3, elem4) ->
+      let data = String.create 8 in
+      put_uint16 data 0 (truncate (elem1 *. 10000.)); 
+      put_uint16 data 2 (truncate (elem2 *. 10000.)); 
+      put_uint16 data 4 (truncate (elem3 *. 10000.)); 
+      put_uint16 data 5 (truncate (elem4 *. 10000.)); 
+      frame
+        ~identifier:402
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Motor_stop ->
       frame
         ~identifier:204
@@ -306,6 +346,18 @@ let decode frame =
              (float (get_uint16 frame.data 0) /. 10000.,
               float (get_uint16 frame.data 2) /. 100000.,
               get_uint32 frame.data 4)
+      | 401 ->
+           Battery1_voltages
+             (float (get_uint16 frame.data 0) /. 10000.,
+              float (get_uint16 frame.data 2) /. 10000.,
+              float (get_uint16 frame.data 4) /. 10000.,
+              float (get_uint16 frame.data 6) /. 10000.)
+      | 402 ->
+           Battery2_voltages
+             (float (get_uint16 frame.data 0) /. 10000.,
+              float (get_uint16 frame.data 2) /. 10000.,
+              float (get_uint16 frame.data 4) /. 10000.,
+              float (get_uint16 frame.data 6) /. 10000.)
       | _ ->
           Unknown frame
   with Invalid_argument _ ->
