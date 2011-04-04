@@ -35,6 +35,9 @@ val vector : vertice -> vertice -> vector
 val norm : vector -> float
 val distance : vertice -> vertice -> float
 
+val tangent : vertice -> vertice -> vertice -> vector
+  (** [tangent a b c] returns the tangent to the triangle abc in b. *)
+
 (** {6 Cubic Bezier curves} *)
 
 module Bezier : sig

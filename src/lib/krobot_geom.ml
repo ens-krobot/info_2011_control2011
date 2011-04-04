@@ -71,6 +71,13 @@ let vector a b = {
 let distance a b =
   sqrt (sqr (a.x -. b.x) +. sqr (a.y -. b.y))
 
+let tangent a b c =
+  let a = vector origin a
+  and b = vector origin b
+  and c = vector origin c in
+  let v = (b -| a) +| (b -| c) in
+  v /| norm v
+
 (* +-----------------------------------------------------------------+
    | Cubic bezier curves                                             |
    +-----------------------------------------------------------------+ *)
@@ -108,8 +115,8 @@ module Bezier = struct
     let h2 = 2. *. (h0 *. vs.vx -. g0 *. vs.vy) in
     (* The loop for finding d1 and d2. *)
     let rec loop d1 d2 =
-      let rho_p = 3. *. d1 *. d1 /. (h1 +. d2 *. g1)
-      and rho_s = 3. *. d2 *. d2 /. (h2 +. d1 *. g2) in
+      let rho_p = 3. *. sqr d1 /. (h1 +. d2 *. g1)
+      and rho_s = 3. *. sqr d2 /. (h2 +. d1 *. g2) in
       let err_1 = r_p -. rho_p and err_2 = r_s -. rho_s in
       let error = max (abs_float err_1) (abs_float err_2) in
       if error < error_max then
@@ -117,7 +124,7 @@ module Bezier = struct
         and r = translate s (vs *| d2) in
         of_vertices p q r s
       else
-        loop (d1 +. err_1 /. r_p) (d2 +. err_2 +. r_s)
+        loop (d1 +. err_1 /. r_p) (d2 +. err_2 /. r_s)
     in
     loop 1. 1.
 

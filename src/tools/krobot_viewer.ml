@@ -10,6 +10,7 @@
 open Lwt
 open Lwt_react
 open Krobot_message
+open Krobot_geom
 
 let utf8 code =
   let set_byte s o x = String.unsafe_set s o (Char.unsafe_chr x) in
@@ -181,8 +182,7 @@ module Board = struct
   open Krobot_config
 
   type state = {
-    x : float;
-    y : float;
+    pos : vertice;
     theta : float;
   }
 
@@ -197,7 +197,8 @@ module Board = struct
     ui : Krobot_viewer_ui.window;
     mutable state : state;
     mutable beacon : beacon;
-    mutable points : (float * float) list;
+    mutable points : vertice list;
+    mutable bezier : vertice array list;
     mutable event : unit event;
     mutable moving : bool;
   }
@@ -374,7 +375,7 @@ module Board = struct
     Cairo.save ctx;
 
     (* Draw the robot *)
-    Cairo.translate ctx board.state.x board.state.y;
+    Cairo.translate ctx board.state.pos.x board.state.pos.y;
     Cairo.rotate ctx board.state.theta;
     Cairo.rectangle ctx (-. wheels_position) (-. robot_size /. 2.) robot_size robot_size;
     set_color ctx White;
@@ -404,8 +405,11 @@ module Board = struct
 
     (* Draw points. *)
     Cairo.set_source_rgb ctx 255. 255. 0.;
-    Cairo.move_to ctx board.state.x board.state.y;
-    List.iter (fun (x, y) -> Cairo.line_to ctx x y) board.points;
+    Cairo.move_to ctx board.state.pos.x board.state.pos.y;
+    List.iter (fun { x; y } -> Cairo.line_to ctx x y) board.points;
+    Cairo.stroke ctx;
+    Cairo.set_source_rgb ctx 255. 0. 255.;
+    List.iter (Array.iter (fun { x; y } -> Cairo.line_to ctx x y)) board.bezier;
     Cairo.stroke ctx;
 
     let ctx = Cairo_lablgtk.create board.ui#scene#misc#window in
@@ -425,7 +429,7 @@ module Board = struct
     let x0 = (width -. dw) /. 2. and y0 = (height -. dh) /. 2. in
     let x = (x -. x0) /. scale -. 0.102 and y = world_height -. ((y -. y0) /. scale -. 0.102) in
     if x >= 0. && x < world_width && y >= 0. && y < world_height then begin
-      board.points <- board.points @ [(x, y)];
+      board.points <- board.points @ [{ x; y }];
       queue_draw board
     end
 
@@ -439,11 +443,11 @@ module Board = struct
     | _ :: l -> last l
 
   let smooth board =
-    let points = Array.of_list ((board.state.x, board.state.y) :: board.points) in
+    let points = Array.of_list ({ x = board.state.pos.x; y = board.state.pos.y } :: board.points) in
     let tolerance = board.ui#tolerance#adjustment#value in
     let rec loop = function
       | i1 :: i2 :: rest ->
-          let (x1, y1) = points.(i1) and (x2, y2) = points.(i2) in
+          let { x = x1; y = y1 } = points.(i1) and { x = x2; y = y2 } = points.(i2) in
           let a = y2 -. y1 and b = x1 -. x2 and c = x2 *. y1 -. x1 *. y2 in
           let r = sqrt (a *. a +. b *. b) in
           if r <> 0. then begin
@@ -451,7 +455,7 @@ module Board = struct
                y1) and (x2, y2) *)
             let max_dist = ref 0. and at_max = ref i1 in
             for i = i1 + 1 to i2 - 1 do
-              let (x, y) = points.(i) in
+              let { x; y } = points.(i) in
               let d = abs_float (a *. x +. b *. y +. c) /. r in
               if d > !max_dist then begin
                 max_dist := d;
@@ -473,6 +477,33 @@ module Board = struct
     in
     let result = List.tl (loop [0; Array.length points - 1]); in
     board.points <- List.map (fun i -> points.(i)) result;
+(*
+    let speed = board.ui#moving_speed#adjustment#value
+    and acceleration = board.ui#moving_acceleration#adjustment#value in
+
+    (* Compute cubic bezier curves. *)
+    let rec loop = function
+      |  p :: (q :: r :: s :: _ as rest) ->
+           (* Compute the speed vectors. *)
+           let v1 = tangent p q r and v2 = tangent q r s in
+           let v1 = { vx = -. v1.vy; vy = v1.vx } *| speed
+           and v2 = { vx = v2.vy; vy = -. v2.vx } *| speed in
+
+           (* Create the bezier curve. *)
+           let curve = Bezier.make ~p:q ~s:r ~vp:v1 ~vs:v2 ~a:acceleration ~error_max:0.1 in
+
+           (* Create vertices. *)
+           let vertices = Array.create 101 origin in
+           for i = 0 to 100 do
+             vertices.(i) <- Bezier.vertice curve (float i /. 100.)
+           done;
+
+           vertices :: loop rest
+      | _ ->
+          []
+    in
+    board.bezier <- [||] :: loop board.points;
+*)
     queue_draw board
 
   let wait_done board =
@@ -488,12 +519,12 @@ module Board = struct
   let go board =
     let rec loop () =
       match board.points with
-        | (x, y) :: rest ->
+        | { x; y } :: rest ->
             let sqr x = x *. x in
             let radius = sqrt (sqr (max wheels_position (robot_size -. wheels_position)) +. sqr (robot_size /. 2.)) in
             if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
               (* Turn the robot. *)
-              let alpha = math_mod_float (atan2 (y -. board.state.y) (x -. board.state.x) -. board.state.theta) (2. *. pi) in
+              let alpha = math_mod_float (atan2 (y -. board.state.pos.y) (x -. board.state.pos.x) -. board.state.theta) (2. *. pi) in
               lwt () = Lwt_log.info_f "turning by %f radiants" alpha in
               lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
                                                       Motor_turn(alpha,
@@ -502,7 +533,7 @@ module Board = struct
               lwt () = wait_done board in
 
               (* Move the robot. *)
-              let dist = sqrt (sqr (x -. board.state.x) +. sqr (y -. board.state.y)) in
+              let dist = sqrt (sqr (x -. board.state.pos.x) +. sqr (y -. board.state.pos.y)) in
               lwt () = Lwt_log.info_f "moving by %f meters" dist in
               lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
                                                       Motor_move(dist,
@@ -513,6 +544,9 @@ module Board = struct
               (* Remove the point. *)
               (match board.points with
                  | _ :: l -> board.points <- l
+                 | [] -> ());
+              (match board.bezier with
+                 | _ :: l -> board.bezier <- l
                  | [] -> ());
 
               (* Redraw everything without the last point. *)
@@ -530,13 +564,14 @@ module Board = struct
     let board ={
       bus;
       ui;
-      state = { 
-        x = 0.2;
-        y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position;
+      state = {
+        pos = { x = 0.2;
+                y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position };
         theta = -0.5 *. pi
       };
       beacon = { xbeacon = 1.; ybeacon = 1.; valid = true };
       points = [];
+      bezier = [];
       event = E.never;
       moving = false;
     } in
@@ -548,7 +583,7 @@ module Board = struct
            match frame with
              | Odometry(x, y, theta) ->
                  let angle = math_mod_float (theta) (2. *. pi) in
-                 let state = { x; y; theta = angle; } in
+                 let state = { pos = { x; y }; theta = angle } in
                  if state <> board.state then begin
                    board.state <- state;
                    board.ui#entry_x#set_text (string_of_float x);
@@ -564,8 +599,8 @@ module Board = struct
                  board.ui#entry_moving4#set_text (if m4 then "yes" else "no")
              | Beacon_position(angle, distance, period) ->
                  let newangle = math_mod_float (board.state.theta +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
-                 let x = board.state.x +. distance *. cos (newangle) in
-                 let y = board.state.y +. distance *. sin (newangle) in
+                 let x = board.state.pos.x +. distance *. cos (newangle) in
+                 let y = board.state.pos.y +. distance *. sin (newangle) in
                  let valid = distance <> 0. in
                  let beacon = { xbeacon = x; ybeacon = y; valid; } in
                  if beacon <> board.beacon then begin
