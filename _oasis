@@ -38,7 +38,8 @@ Library krobot
     Krobot_can,
     Krobot_bus,
     Krobot_message,
-    Krobot_service
+    Krobot_service,
+    Krobot_geom
 
 Library "krobot-can"
   FindlibName: can
