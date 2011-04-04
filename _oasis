@@ -130,6 +130,14 @@ Executable "krobot-plot"
   MainIs: krobot_plot.ml
   BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
 
+Executable "krobot-plot-battery"
+  Path: src/tools
+  Build$: flag(gtk)
+  Install$: flag(gtk)
+  CompiledObject: best
+  MainIs: krobot_plot_battery.ml
+  BuildDepends: krobot, lwt.syntax, cairo.lablgtk2, lwt.glib, threads
+
 Executable "krobot-viewer"
   Path: src/tools
   Build$: flag(gtk)

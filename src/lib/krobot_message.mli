@@ -17,7 +17,7 @@ type t =
   | Battery1_voltages of float * float * float * float
       (** The voltages of the elements of the first battery *)
   | Battery2_voltages of float * float * float * float
-      (** The voltages of the elements of the first battery *)
+      (** The voltages of the elements of the second battery *)
   | Beacon_position of float * float * float
       (** The position of the beacon relative to the robot *)
   | Beacon_lowlevel_position of float * float * int

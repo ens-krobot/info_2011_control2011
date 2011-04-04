@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 9d40de9cfde679815e27aa44dbe6939f)
+# DO NOT EDIT (digest: 5cd0fff2e5e7303cfc985c8215a456e0)
 # Library krobot-interfaces
 "src/interfaces": include
 "src/interfaces/krobot-interfaces.cmxs": use_krobot-interfaces
@@ -70,6 +70,15 @@
 <examples/send_can.{native,byte}>: pkg_obus
 <examples/send_can.{native,byte}>: pkg_lwt.unix
 <examples/send_can.{native,byte}>: pkg_lwt.syntax
+# Executable krobot-plot-battery
+<src/tools/krobot_plot_battery.{native,byte}>: use_krobot
+<src/tools/krobot_plot_battery.{native,byte}>: use_krobot-interfaces
+<src/tools/krobot_plot_battery.{native,byte}>: pkg_threads
+<src/tools/krobot_plot_battery.{native,byte}>: pkg_obus
+<src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.syntax
+<src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.glib
+<src/tools/krobot_plot_battery.{native,byte}>: pkg_cairo.lablgtk2
 # Executable krobot-remote
 <src/tools/krobot_remote.{native,byte}>: use_krobot
 <src/tools/krobot_remote.{native,byte}>: use_krobot-interfaces
