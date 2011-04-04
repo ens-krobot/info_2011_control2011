@@ -393,6 +393,9 @@ module Board = struct
       Cairo.arc ctx board.beacon.xbeacon board.beacon.ybeacon 0.04 0. (2. *. pi);
       set_color ctx Purple;
       Cairo.fill ctx;
+      Cairo.arc ctx board.beacon.xbeacon board.beacon.ybeacon 0.04 0. (2. *. pi);
+      set_color ctx Black;
+      Cairo.stroke ctx
     end;
 
     (* Draw points. *)
