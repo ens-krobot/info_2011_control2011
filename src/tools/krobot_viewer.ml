@@ -235,6 +235,8 @@ module Board = struct
     let ctx = Cairo.create surface in
     let width = float width and height = float height in
 
+    Cairo.set_antialias ctx Cairo.ANTIALIAS_NONE;
+
     (* Draw the background *)
     Cairo.rectangle ctx 0. 0. width height;
     set_color ctx White;
@@ -347,6 +349,8 @@ module Board = struct
     Cairo.move_to ctx (world_width -. 0.4) (world_height -. 0.422);
     Cairo.rel_line_to ctx 0.4 0.;
     Cairo.stroke ctx;
+
+    Cairo.set_antialias ctx Cairo.ANTIALIAS_DEFAULT;
 
     (* Draw circles on bonus cases *)
     Cairo.arc ctx 0.975 0.875 0.05 0. (2. *. pi);
