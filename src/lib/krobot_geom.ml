@@ -71,12 +71,10 @@ let vector a b = {
 let distance a b =
   sqrt (sqr (a.x -. b.x) +. sqr (a.y -. b.y))
 
-let tangent a b c =
-  let a = vector origin a
-  and b = vector origin b
-  and c = vector origin c in
-  let v = (b -| a) +| (b -| c) in
-  v /| norm v
+let tangents a b c =
+  let ba = vector b a /| distance b a and bc = vector b c /| distance b c in
+  let v1 = ba -| bc and v2 = bc -| ba in
+  (v1 /| norm v1, v2 /| norm v2)
 
 (* +-----------------------------------------------------------------+
    | Cubic bezier curves                                             |
@@ -97,7 +95,7 @@ module Bezier = struct
     and r = vector origin r
     and s = vector origin s in
     let c = (q -| p) *| 3. in
-    let b = (r -| q) -| c in
+    let b = (r -| q) *| 3. -| c in
     let a = s -| p -| c -| b in
     { p; a; b; c }
 

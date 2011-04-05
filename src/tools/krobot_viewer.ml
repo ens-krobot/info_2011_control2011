@@ -435,6 +435,7 @@ module Board = struct
 
   let clear board =
     board.points <- [];
+    board.bezier <- [];
     queue_draw board
 
   let rec last = function
@@ -477,20 +478,18 @@ module Board = struct
     in
     let result = List.tl (loop [0; Array.length points - 1]); in
     board.points <- List.map (fun i -> points.(i)) result;
-(*
-    let speed = board.ui#moving_speed#adjustment#value
-    and acceleration = board.ui#moving_acceleration#adjustment#value in
 
     (* Compute cubic bezier curves. *)
     let rec loop = function
       |  p :: (q :: r :: s :: _ as rest) ->
-           (* Compute the speed vectors. *)
-           let v1 = tangent p q r and v2 = tangent q r s in
-           let v1 = { vx = -. v1.vy; vy = v1.vx } *| speed
-           and v2 = { vx = v2.vy; vy = -. v2.vx } *| speed in
+           (* Computes tangents with a length that is half of the
+              minimum length of the adjacent segments. *)
+           let _, v1 = tangents p q r and v2, _ = tangents q r s in
+           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
+           and v2 = v2 *| (min (distance q r) (distance r s) /. 2.) in
 
            (* Create the bezier curve. *)
-           let curve = Bezier.make ~p:q ~s:r ~vp:v1 ~vs:v2 ~a:acceleration ~error_max:0.1 in
+           let curve = Bezier.of_vertices q (translate q v1) (translate r v2) r in
 
            (* Create vertices. *)
            let vertices = Array.create 101 origin in
@@ -502,8 +501,8 @@ module Board = struct
       | _ ->
           []
     in
-    board.bezier <- [||] :: loop board.points;
-*)
+    board.bezier <- [||] :: loop ({ x = board.state.pos.x; y = board.state.pos.y } :: board.points);
+
     queue_draw board
 
   let wait_done board =
