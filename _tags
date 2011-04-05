@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 5cd0fff2e5e7303cfc985c8215a456e0)
+# DO NOT EDIT (digest: c5fb31f60362628ba2becc8b6a98c80b)
 # Library krobot-interfaces
 "src/interfaces": include
 "src/interfaces/krobot-interfaces.cmxs": use_krobot-interfaces
@@ -73,7 +73,6 @@
 # Executable krobot-plot-battery
 <src/tools/krobot_plot_battery.{native,byte}>: use_krobot
 <src/tools/krobot_plot_battery.{native,byte}>: use_krobot-interfaces
-<src/tools/krobot_plot_battery.{native,byte}>: pkg_threads
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_obus
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.syntax
@@ -119,13 +118,11 @@
 # Executable krobot-plot
 <src/tools/krobot_plot.{native,byte}>: use_krobot
 <src/tools/krobot_plot.{native,byte}>: use_krobot-interfaces
-<src/tools/krobot_plot.{native,byte}>: pkg_threads
 <src/tools/krobot_plot.{native,byte}>: pkg_obus
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.glib
 <src/tools/krobot_plot.{native,byte}>: pkg_cairo.lablgtk2
-<src/tools/*.ml{,i}>: pkg_threads
 <src/tools/*.ml{,i}>: pkg_lwt.glib
 <src/tools/*.ml{,i}>: pkg_cairo.lablgtk2
 # Executable krobot-simulator

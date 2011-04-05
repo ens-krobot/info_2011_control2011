@@ -16,10 +16,10 @@ let graph_duration = 10.0
 
 (* Type of graphs. *)
 type graph = {
-  points : (float * int) Queue.t array;
+  points : (float * float) Queue.t array;
   (* Queue of points with their time. They are ordered by increasing
      date. *)
-  mutable max : int;
+  mutable max : float;
   (* The maximum reached. *)
 }
 
@@ -27,7 +27,7 @@ type graph = {
 let update_graph graph time =
   Array.iter
     (fun q ->
-       while not (Queue.is_empty q) && fst (Queue.top q) +. graph_duration < time do
+       while not (Queue.is_empty q) && fst (Queue.top q) +. graph_duration *. 1.5 < time do
          ignore (Queue.take q)
        done)
     graph.points
@@ -52,7 +52,7 @@ let plot ctx width height graph time =
        Queue.iter
          (fun (date, position) ->
             let x = (date -. (time -. graph_duration)) /. graph_duration *. width
-            and y = height -. height *. (float position /. float graph.max) in
+            and y = height -. height *. (position /. graph.max) in
             match !prev with
               | None ->
                   prev := Some(x, y)

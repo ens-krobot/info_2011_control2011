@@ -25,19 +25,19 @@ lwt () =
 
   (* Create the graph. *)
   let graph = { Krobot_graph.points = Array.init 2 (fun _ -> Queue.create ());
-                Krobot_graph.max = 1 } in
+                Krobot_graph.max = 14. } in
 
   E.keep
     (E.map
        (fun (timestamp, msg) ->
           match msg with
             | Battery1_voltages(x1, x2, x3, x4) ->
-                let s = int_of_float ((x1 +. x2 +. x3 +. x4) *. 1000.) in
+                let s = x1 +. x2 +. x3 +. x4 in
                 graph.Krobot_graph.max <- max graph.Krobot_graph.max s;
                 Queue.push (timestamp, s) graph.Krobot_graph.points.(0);
                 Krobot_graph.update_graph graph timestamp
             | Battery2_voltages(x1, x2, x3, x4) ->
-                let s = int_of_float ((x1 +. x2 +. x3 +. x4) *. 1000.) in
+                let s = x1 +. x2 +. x3 +. x4 in
                 graph.Krobot_graph.max <- max graph.Krobot_graph.max s;
                 Queue.push (timestamp, s) graph.Krobot_graph.points.(1);
                 Krobot_graph.update_graph graph timestamp
