@@ -569,12 +569,17 @@ module Board = struct
                 y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position };
         theta = -0.5 *. pi
       };
-      beacon = { xbeacon = 1.; ybeacon = 1.; valid = true };
+      beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
       points = [];
       bezier = [];
       event = E.never;
       moving = false;
     } in
+    board.ui#beacon_status#set_text "-";
+    board.ui#beacon_distance#set_text "-";
+    board.ui#beacon_angle#set_text "-";
+    board.ui#beacon_period#set_text "-";
+    queue_draw board;
     (* Move the robot on the board when we receive odometry
        informations. *)
     board.event <- (
@@ -605,7 +610,7 @@ module Board = struct
                  let beacon = { xbeacon = x; ybeacon = y; valid; } in
                  if beacon <> board.beacon then begin
                    board.beacon <- beacon;
-                   board.ui#beacon_status#set_text (if valid then "valid" else "invalid");
+                   board.ui#beacon_status#set_text (if valid then "valid" else "-");
                    board.ui#beacon_distance#set_text (string_of_float distance);
                    board.ui#beacon_angle#set_text (string_of_float angle);
                    board.ui#beacon_period#set_text (string_of_float period);
