@@ -32,6 +32,7 @@ type t =
   | Motor_stop
   | Odometry of float * float * float
   | Set_odometry of float * float * float
+  | Set_controller_mode of bool
   | Req_motor_status
   | Unknown of frame
 
@@ -105,6 +106,10 @@ let to_string = function
       sprintf
         "Set_odometry(%f, %f, %f)"
         x y theta
+  | Set_controller_mode b ->
+      sprintf
+        "Set_controller_mode(%B)"
+        b
   | Req_motor_status ->
       "Req_motor_status"
   | Unknown frame ->
@@ -231,10 +236,10 @@ let encode = function
         ~data
   | Battery1_voltages(elem1, elem2, elem3, elem4) ->
       let data = String.create 8 in
-      put_uint16 data 0 (truncate (elem1 *. 10000.)); 
-      put_uint16 data 2 (truncate (elem2 *. 10000.)); 
-      put_uint16 data 4 (truncate (elem3 *. 10000.)); 
-      put_uint16 data 5 (truncate (elem4 *. 10000.)); 
+      put_uint16 data 0 (truncate (elem1 *. 10000.));
+      put_uint16 data 2 (truncate (elem2 *. 10000.));
+      put_uint16 data 4 (truncate (elem3 *. 10000.));
+      put_uint16 data 5 (truncate (elem4 *. 10000.));
       frame
         ~identifier:401
         ~kind:Data
@@ -243,10 +248,10 @@ let encode = function
         ~data
   | Battery2_voltages(elem1, elem2, elem3, elem4) ->
       let data = String.create 8 in
-      put_uint16 data 0 (truncate (elem1 *. 10000.)); 
-      put_uint16 data 2 (truncate (elem2 *. 10000.)); 
-      put_uint16 data 4 (truncate (elem3 *. 10000.)); 
-      put_uint16 data 5 (truncate (elem4 *. 10000.)); 
+      put_uint16 data 0 (truncate (elem1 *. 10000.));
+      put_uint16 data 2 (truncate (elem2 *. 10000.));
+      put_uint16 data 4 (truncate (elem3 *. 10000.));
+      put_uint16 data 5 (truncate (elem4 *. 10000.));
       frame
         ~identifier:402
         ~kind:Data
@@ -260,6 +265,13 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data:"\x01"
+  | Set_controller_mode b ->
+      frame
+        ~identifier:205
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:(if b then "\x01" else "\x00")
   | Req_motor_status ->
       frame
         ~identifier:103
@@ -336,6 +348,9 @@ let decode frame =
              float (get_sint16 frame.data 4) /. 10000.)
       | 204 ->
           Motor_stop
+      | 205 ->
+          Set_controller_mode
+            (get_uint8 frame.data 0 <> 0)
       | 301 ->
            Beacon_position
              (float (get_uint16 frame.data 0) /. 10000.,
