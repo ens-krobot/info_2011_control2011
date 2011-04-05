@@ -479,6 +479,19 @@ module Board = struct
     let result = List.tl (loop [0; Array.length points - 1]); in
     board.points <- List.map (fun i -> points.(i)) result;
 
+    let bezier_vertices q r v1 v2 =
+      (* Create the bezier curve. *)
+      let curve = Bezier.of_vertices q (translate q v1) (translate r v2) r in
+
+      (* Create vertices. *)
+      let vertices = Array.create 101 origin in
+      for i = 0 to 100 do
+        vertices.(i) <- Bezier.vertice curve (float i /. 100.)
+      done;
+
+      vertices
+    in
+
     (* Compute cubic bezier curves. *)
     let rec loop = function
       |  p :: (q :: r :: s :: _ as rest) ->
@@ -487,21 +500,34 @@ module Board = struct
            let _, v1 = tangents p q r and v2, _ = tangents q r s in
            let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
            and v2 = v2 *| (min (distance q r) (distance r s) /. 2.) in
-
-           (* Create the bezier curve. *)
-           let curve = Bezier.of_vertices q (translate q v1) (translate r v2) r in
-
-           (* Create vertices. *)
-           let vertices = Array.create 101 origin in
-           for i = 0 to 100 do
-             vertices.(i) <- Bezier.vertice curve (float i /. 100.)
-           done;
-
-           vertices :: loop rest
+           bezier_vertices q r v1 v2 :: loop rest
+      | [p; q; r] ->
+           let _, v1 = tangents p q r and v2 = vector r q /| distance q r in
+           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
+           and v2 = v2 *| (distance q r /. 2.) in
+           [bezier_vertices q r v1 v2]
       | _ ->
           []
     in
-    board.bezier <- [||] :: loop ({ x = board.state.pos.x; y = board.state.pos.y } :: board.points);
+    begin
+      match board.points with
+        | r :: s :: _ ->
+            let q = board.state.pos in
+            let v1 = { vx = cos board.state.theta; vy = sin board.state.theta }
+            and v2, _ = tangents q r s in
+            let v1 = v1 *| (distance q r /. 2.)
+            and v2 = v2 *| (distance q r /. 2.) in
+            board.bezier <- bezier_vertices q r v1 v2 :: loop (q :: board.points);
+        | [r] ->
+            let q = board.state.pos in
+            let v1 = { vx = cos board.state.theta; vy = sin board.state.theta }
+            and v2 = vector r q /| distance q r  in
+            let v1 = v1 *| (distance q r /. 2.)
+            and v2 = v2 *| (distance q r /. 2.) in
+            board.bezier <- bezier_vertices q r v1 v2 :: loop (q :: board.points);
+        | [] ->
+            board.bezier <- []
+    end;
 
     queue_draw board
 
