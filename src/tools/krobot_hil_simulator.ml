@@ -135,7 +135,7 @@ lwt () =
     lwt () = print sim in
 
     let u1 = (sim.velocity_l +. sim.velocity_r) *. wheels_diameter /. 4.
-    and u2 = (sim.velocity_l -. sim.velocity_r) *. wheels_diameter /. wheels_distance in
+    and u2 = (sim.velocity_l -. sim.velocity_r) *. wheels_diameter /. wheels_distance /. 2. in
     let dx = u1 *. (cos sim.state.theta)
     and dy = u1 *. (sin sim.state.theta)
     and dtheta = u2 in
