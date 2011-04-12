@@ -641,6 +641,11 @@ module Board = struct
                    board.ui#beacon_period#set_text (string_of_float period);
                    queue_draw board
                  end
+             | Set_controller_mode (hil) ->
+               if hil then
+                 board.ui#menu_mode_hil#set_active true
+               else
+                 board.ui#menu_mode_normal#set_active true
              | _ ->
                  ())
         (Krobot_message.recv bus)
@@ -769,6 +774,28 @@ lwt () =
               Krobot_message.send bus (Unix.gettimeofday (), Motor_stop)
             )
           end;
+          false));
+
+  ignore
+    (ui#menu_mode_normal#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            ignore_result (
+              Krobot_message.send bus
+                (Unix.gettimeofday (),
+                 Set_controller_mode false)
+            );
+          false));
+
+  ignore
+    (ui#menu_mode_hil#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            ignore_result (
+              Krobot_message.send bus
+                (Unix.gettimeofday (),
+                 Set_controller_mode true)
+            );
           false));
 
   pick [

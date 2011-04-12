@@ -121,6 +121,37 @@
               </widget>
             </child>
             <child>
+              <widget class="GtkMenuItem" id="menu_mode">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">_Mode</property>
+                <property name="use_underline">True</property>
+                <child>
+                  <widget class="GtkMenu" id="menu4">
+                    <property name="visible">True</property>
+                    <child>
+                      <widget class="GtkRadioMenuItem" id="menu_mode_normal">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">_Normal</property>
+                        <property name="use_underline">True</property>
+                        <property name="active">True</property>
+                        <property name="draw_as_radio">True</property>
+                        <property name="group">menu_mode_hil</property>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkRadioMenuItem" id="menu_mode_hil">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">_HIL</property>
+                        <property name="use_underline">True</property>
+                        <property name="draw_as_radio">True</property>
+                        <property name="group">menu_mode_normal</property>
+                      </widget>
+                    </child>
+                  </widget>
+                </child>
+              </widget>
+            </child>
+            <child>
               <widget class="GtkMenuItem" id="menuitem4">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Aid_e</property>
