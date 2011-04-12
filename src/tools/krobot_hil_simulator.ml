@@ -122,7 +122,7 @@ lwt () =
                 return ())
        (Krobot_message.recv bus));
 
-(*  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true) in*)
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true) in
 
   while_lwt true do
     let time = Unix.gettimeofday () in
