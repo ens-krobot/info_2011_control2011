@@ -199,6 +199,9 @@ module Board = struct
     ui : Krobot_viewer_ui.window;
     (* The UI of the board. *)
 
+    statusbar_context : GMisc.statusbar_context;
+    (* The context of the statusbar. *)
+
     mutable state : state;
     (* The state of the robot. *)
 
@@ -520,11 +523,13 @@ module Board = struct
       beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
       vertices;
       events = [];
+      statusbar_context = ui#statusbar#new_context "";
     } in
     board.ui#beacon_status#set_text "-";
     board.ui#beacon_distance#set_text "-";
     board.ui#beacon_angle#set_text "-";
     board.ui#beacon_period#set_text "-";
+    board.ui#scene_paned#set_position ((board.ui#window#default_width * 5) / 8);
     queue_draw board;
     (* Move the robot on the board when we receive odometry
        informations. *)
@@ -544,6 +549,20 @@ module Board = struct
                    queue_draw board
                  end
              | Motor_status(m1, m2, m3, m4) ->
+                 let moving = m1 || m2 in
+                 if moving then begin
+                   board.statusbar_context#pop ();
+                   let _ = board.statusbar_context#push
+                     (if m1 then
+                         "Moving..."
+                      else
+                         (if m2 then
+                             "Turning..."
+                          else
+                             "")
+                     ) in ();
+                 end else
+                   board.statusbar_context#pop ();
                  board.ui#entry_moving1#set_text (if m1 then "yes" else "no");
                  board.ui#entry_moving2#set_text (if m2 then "yes" else "no");
                  board.ui#entry_moving3#set_text (if m3 then "yes" else "no");
