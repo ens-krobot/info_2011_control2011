@@ -1,0 +1,36 @@
+(*
+ * krobot_interface_planner.obus
+ * -----------------------------
+ * Copyright : (c) 2011, Jeremie Dimino <jeremie@dimino.org>
+ * Licence   : BSD3
+ *
+ * This file is a part of [kro]bot.
+ *)
+
+(** Interface for the planner. *)
+
+interface fr.krobot.Planner {
+  property_rw vertices : (double * double) array
+    (** Property holding the current list of vertices for the planned
+        trajectory. *)
+
+  method add_vertice : (vertice : (double * double)) -> ()
+    (** Add a new vertice after all current ones to [vertices]. *)
+
+  method simplify : (tolerance : double) -> ()
+    (** Simplify the trajectory using the given tolerance. *)
+
+  (** Move the robot according to the current trajectory. *)
+  method go : (
+    rotation_speed : double,
+    rotation_acceleration : double,
+    moving_speed : double,
+    moving_acceleration : double
+  ) -> ()
+
+  method stop : () -> ()
+    (** Stop the current trajectory. *)
+
+  property_r moving : boolean
+    (** Is the robot currently following a trajectory ? *)
+}

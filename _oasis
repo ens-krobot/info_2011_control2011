@@ -13,7 +13,9 @@ BuildTools: ocamlbuild
 Plugins: DevFiles (0.2), META (0.2)
 Synopsis: [Kro]bot
 Description: Control program for the Eurobot robotic cup.
-FilesAB: src/driver/bus.conf.ab
+FilesAB:
+  src/driver/bus.conf.ab,
+  src/services/fr.krobot.Service.Planner.service.ab
 
 # +-------------------------------------------------------------------+
 # | Flags                                                             |
@@ -39,7 +41,8 @@ Library krobot
     Krobot_bus,
     Krobot_message,
     Krobot_service,
-    Krobot_geom
+    Krobot_geom,
+    Krobot_planner
 
 Library "krobot-can"
   FindlibName: can
@@ -62,7 +65,8 @@ Library "krobot-interfaces"
   Install: true
   Modules:
     Krobot_interface_can,
-    Krobot_interface_service
+    Krobot_interface_service,
+    Krobot_interface_planner
 
 # +-------------------------------------------------------------------+
 # | The driver                                                        |
@@ -159,6 +163,18 @@ Executable "krobot-hil-simulator"
   CompiledObject: best
   MainIs: krobot_hil_simulator.ml
   BuildDepends: krobot, lwt.syntax
+
+# +-------------------------------------------------------------------+
+# | Services                                                          |
+# +-------------------------------------------------------------------+
+
+Executable "krobot-service-planner"
+  Path: src/services
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_service_planner.ml
+  BuildDepends: krobot, lwt.syntax
+  DataFiles: fr.krobot.Service.Planner.service ($datadir/$pkg_name/services)
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |

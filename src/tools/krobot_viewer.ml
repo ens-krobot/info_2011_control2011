@@ -194,13 +194,22 @@ module Board = struct
 
   type t = {
     bus : Krobot_bus.t;
+    (* The D-Bus message bus used by this board. *)
+
     ui : Krobot_viewer_ui.window;
+    (* The UI of the board. *)
+
     mutable state : state;
+    (* The state of the robot. *)
+
     mutable beacon : beacon;
-    mutable points : vertice list;
-    mutable bezier : vertice array list;
-    mutable event : unit event;
-    mutable moving : bool;
+    (* The state of the beacon. *)
+
+    vertices : vertice list signal;
+    (* The current trajectory. *)
+
+    mutable events : unit event list;
+    (* List of events kept in the board. *)
   }
 
   type color =
@@ -406,11 +415,13 @@ module Board = struct
     (* Draw points. *)
     Cairo.set_source_rgb ctx 255. 255. 0.;
     Cairo.move_to ctx board.state.pos.x board.state.pos.y;
-    List.iter (fun { x; y } -> Cairo.line_to ctx x y) board.points;
+    List.iter (fun { x; y } -> Cairo.line_to ctx x y) (S.value board.vertices);
     Cairo.stroke ctx;
+(*
     Cairo.set_source_rgb ctx 255. 0. 255.;
     List.iter (Array.iter (fun { x; y } -> Cairo.line_to ctx x y)) board.bezier;
     Cairo.stroke ctx;
+*)
 
     let ctx = Cairo_lablgtk.create board.ui#scene#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
@@ -428,15 +439,11 @@ module Board = struct
     let scale = dw /. (world_width +. 0.204) in
     let x0 = (width -. dw) /. 2. and y0 = (height -. dh) /. 2. in
     let x = (x -. x0) /. scale -. 0.102 and y = world_height -. ((y -. y0) /. scale -. 0.102) in
-    if x >= 0. && x < world_width && y >= 0. && y < world_height then begin
-      board.points <- board.points @ [{ x; y }];
-      queue_draw board
-    end
+    if x >= 0. && x < world_width && y >= 0. && y < world_height then
+      ignore_result (Krobot_planner.add_vertice board.bus { x; y })
 
   let clear board =
-    board.points <- [];
-    board.bezier <- [];
-    queue_draw board
+    ignore_result (OBus_property.set (Krobot_planner.vertices board.bus) [])
 
   let rec last = function
     | [] -> failwith "Krobot_viewer.Board.last"
@@ -444,42 +451,10 @@ module Board = struct
     | _ :: l -> last l
 
   let smooth board =
-    let points = Array.of_list ({ x = board.state.pos.x; y = board.state.pos.y } :: board.points) in
     let tolerance = board.ui#tolerance#adjustment#value in
-    let rec loop = function
-      | i1 :: i2 :: rest ->
-          let { x = x1; y = y1 } = points.(i1) and { x = x2; y = y2 } = points.(i2) in
-          let a = y2 -. y1 and b = x1 -. x2 and c = x2 *. y1 -. x1 *. y2 in
-          let r = sqrt (a *. a +. b *. b) in
-          if r <> 0. then begin
-            (* Search the furthest point from the line passing by (x1,
-               y1) and (x2, y2) *)
-            let max_dist = ref 0. and at_max = ref i1 in
-            for i = i1 + 1 to i2 - 1 do
-              let { x; y } = points.(i) in
-              let d = abs_float (a *. x +. b *. y +. c) /. r in
-              if d > !max_dist then begin
-                max_dist := d;
-                at_max := i
-              end
-            done;
-            if !max_dist > tolerance then
-              (* The furthest point is out of tolerance, we split the
-                 current region with it. *)
-              loop (i1 :: !at_max :: i2 :: rest)
-            else
-              (* The point is acceptable, we pass the next region. *)
-              i1:: loop (i2 :: rest)
-          end else
-            (* The two point are the same so we drop one. *)
-            loop (i2 :: rest)
-      | rest ->
-          rest
-    in
-    let result = List.tl (loop [0; Array.length points - 1]); in
-    board.points <- List.map (fun i -> points.(i)) result;
+    ignore_result (Krobot_planner.simplify board.bus tolerance)
 
-    let bezier_vertices q r v1 v2 =
+(*    let bezier_vertices q r v1 v2 =
       (* Create the bezier curve. *)
       let curve = Bezier.of_vertices q (translate q v1) (translate r v2) r in
 
@@ -530,62 +505,10 @@ module Board = struct
     end;
 
     queue_draw board
-
-  let wait_done board =
-    lwt () = Lwt_log.info "waiting for the robot to stop moving" in
-    lwt () = Lwt_unix.sleep 0.3 in
-    lwt () =
-      while_lwt board.moving do
-        Lwt_unix.sleep 0.2
-      done
-    in
-    Lwt_log.info "trajectory done"
-
-  let go board =
-    let rec loop () =
-      match board.points with
-        | { x; y } :: rest ->
-            let sqr x = x *. x in
-            let radius = sqrt (sqr (max wheels_position (robot_size -. wheels_position)) +. sqr (robot_size /. 2.)) in
-            if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
-              (* Turn the robot. *)
-              let alpha = math_mod_float (atan2 (y -. board.state.pos.y) (x -. board.state.pos.x) -. board.state.theta) (2. *. pi) in
-              lwt () = Lwt_log.info_f "turning by %f radiants" alpha in
-              lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
-                                                      Motor_turn(alpha,
-                                                                 board.ui#rotation_speed#adjustment#value,
-                                                                 board.ui#rotation_acceleration#adjustment#value)) in
-              lwt () = wait_done board in
-
-              (* Move the robot. *)
-              let dist = sqrt (sqr (x -. board.state.pos.x) +. sqr (y -. board.state.pos.y)) in
-              lwt () = Lwt_log.info_f "moving by %f meters" dist in
-              lwt () = Krobot_message.send board.bus (Unix.gettimeofday (),
-                                                      Motor_move(dist,
-                                                                 board.ui#moving_speed#adjustment#value,
-                                                                 board.ui#moving_acceleration#adjustment#value)) in
-              lwt () = wait_done board in
-
-              (* Remove the point. *)
-              (match board.points with
-                 | _ :: l -> board.points <- l
-                 | [] -> ());
-              (match board.bezier with
-                 | _ :: l -> board.bezier <- l
-                 | [] -> ());
-
-              (* Redraw everything without the last point. *)
-              queue_draw board;
-
-              loop ()
-            end else
-              Lwt_log.warning_f "can not move to (%f, %f)" x y
-        | [] ->
-            return ()
-    in
-    loop ()
+*)
 
   let create bus ui =
+    lwt vertices = OBus_property.monitor (Krobot_planner.vertices bus) in
     let board ={
       bus;
       ui;
@@ -595,10 +518,8 @@ module Board = struct
         theta = -0.5 *. pi
       };
       beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
-      points = [];
-      bezier = [];
-      event = E.never;
-      moving = false;
+      vertices;
+      events = [];
     } in
     board.ui#beacon_status#set_text "-";
     board.ui#beacon_distance#set_text "-";
@@ -607,7 +528,8 @@ module Board = struct
     queue_draw board;
     (* Move the robot on the board when we receive odometry
        informations. *)
-    board.event <- (
+    board.events <- [
+      (* Handle CAN frames. *)
       E.map
         (fun (ts, frame) ->
            match frame with
@@ -622,7 +544,6 @@ module Board = struct
                    queue_draw board
                  end
              | Motor_status(m1, m2, m3, m4) ->
-                 board.moving <- m1 || m2;
                  board.ui#entry_moving1#set_text (if m1 then "yes" else "no");
                  board.ui#entry_moving2#set_text (if m2 then "yes" else "no");
                  board.ui#entry_moving3#set_text (if m3 then "yes" else "no");
@@ -648,9 +569,12 @@ module Board = struct
                  board.ui#menu_mode_normal#set_active true
              | _ ->
                  ())
-        (Krobot_message.recv bus)
-    );
-    board
+        (Krobot_message.recv bus);
+
+      (* Redraw everything when the list of vertices changes. *)
+      E.map (fun _ -> queue_draw board) (S.changes vertices);
+    ];
+    return board
 end
 
 (* +-----------------------------------------------------------------+
@@ -696,7 +620,7 @@ lwt () =
   let lcd = LCD.create ui in
   ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw lcd; true));
 
-  let board = Board.create bus ui in
+  lwt board = Board.create bus ui in
   ignore (ui#scene#event#connect#expose (fun ev -> Board.draw board; true));
   ignore
     (ui#scene#event#connect#button_press
@@ -723,24 +647,21 @@ lwt () =
             Board.smooth board;
           false));
 
-  let thread_go = ref (return ()) in
   ignore
     (ui#button_go#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
             ignore_result (
-              ui#button_go#misc#set_sensitive false;
-              try_lwt
-                thread_go := Board.go board;
-                !thread_go
-              with
-                | Canceled ->
-                    return ()
-              finally
-                ui#button_go#misc#set_sensitive true;
-                return ()
+              Krobot_planner.go bus
+                ui#rotation_speed#adjustment#value
+                ui#rotation_acceleration#adjustment#value
+                ui#moving_speed#adjustment#value
+                ui#moving_acceleration#adjustment#value
             );
           false));
+
+  lwt moving = OBus_property.monitor (Krobot_planner.moving bus) in
+  S.keep (S.map (fun state -> ui#button_go#misc#set_sensitive (not state)) moving);
 
   ignore
     (ui#button_start_red#event#connect#button_release
@@ -767,13 +688,8 @@ lwt () =
   ignore
     (ui#button_stop#event#connect#button_release
        (fun ev ->
-          if GdkEvent.Button.button ev = 1 then begin
-            Board.clear board;
-            cancel !thread_go;
-            ignore_result (
-              Krobot_message.send bus (Unix.gettimeofday (), Motor_stop)
-            )
-          end;
+          if GdkEvent.Button.button ev = 1 then
+            ignore_result (Krobot_planner.stop bus);
           false));
 
   ignore
