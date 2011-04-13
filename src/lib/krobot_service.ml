@@ -117,19 +117,16 @@ let init bus ?(fork=true) ?(kill=false) name =
   let dbus_logger =
     Lwt_log.make
       (fun section level lines ->
-         if level > Lwt_log.Info then
-           let buf = Buffer.create 42 in
-           let lines =
-             List.map
-               (fun line ->
-                  Buffer.clear buf;
-                  Lwt_log.render ~buffer:buf ~template:"$(level)@$(name)[$(section)]: $(message)" ~section ~level ~message:line;
-                  Buffer.contents buf)
-               lines
-           in
-           OBus_signal.emit s_log obj (String.concat "\n" lines)
-         else
-           return ())
+         let buf = Buffer.create 42 in
+         let lines =
+           List.map
+             (fun line ->
+                Buffer.clear buf;
+                Lwt_log.render ~buffer:buf ~template:"$(name)[$(section)]: $(message)" ~section ~level ~message:line;
+                Buffer.contents buf)
+             lines
+         in
+         OBus_signal.emit s_log obj (String.concat "\n" lines))
       return
   in
 

@@ -271,6 +271,9 @@ options are:"
 lwt () =
   Arg.parse options ignore usage;
 
+  (* Display all informative messages. *)
+  Lwt_log.Section.set_level Lwt_log.Section.main Lwt_log.Info;
+
   lwt bus = Krobot_bus.get () in
 
   (* Create a new planner. *)

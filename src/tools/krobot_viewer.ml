@@ -602,6 +602,7 @@ lwt () =
   ignore (ui#window#connect#destroy ~callback:(wakeup wakener));
   ui#window#show ();
 
+  (* Write logs to the log buffer. *)
   Lwt_log.default :=
     Lwt_log.broadcast [
       !Lwt_log.default;
@@ -610,12 +611,21 @@ lwt () =
                    List.iter
                      (fun line ->
                         ui#logs#buffer#insert
-                          (Printf.sprintf "%s: %s\n" (Lwt_log.Section.name section) line))
+                          (Printf.sprintf "krobot-viewer[%s]: %s\n" (Lwt_log.Section.name section) line))
                      lines;
                    ui#scrolled_logs#vadjustment#set_value ui#scrolled_logs#vadjustment#upper;
                    return ())
         ~close:return
     ];
+
+  (* Send logs received from other daemons to the log buffer. *)
+  lwt ev_logs = OBus_signal.connect (Krobot_service.log (Krobot_service.all bus)) in
+  E.keep
+    (E.map
+       (fun line ->
+          ui#logs#buffer#insert (line ^ "\n");
+          ui#scrolled_logs#vadjustment#set_value ui#scrolled_logs#vadjustment#upper)
+       ev_logs);
 
   let lcd = LCD.create ui in
   ignore (ui#lcd#event#connect#expose (fun ev -> LCD.draw lcd; true));
