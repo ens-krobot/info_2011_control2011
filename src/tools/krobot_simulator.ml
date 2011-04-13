@@ -225,8 +225,15 @@ lwt () =
                 sim.command <- Idle;
                 return ()
             | Req_motor_status ->
-                let moving = sim.command <> Idle in
-                Krobot_message.send bus (Unix.gettimeofday (), Motor_status(moving, moving, false, false))
+              begin
+                match sim.command with
+                  | Turn(a, b) ->
+                      Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, true, false, false))
+                  | Move(a, b) ->
+                      Krobot_message.send bus (Unix.gettimeofday (), Motor_status(true, false, false, false))
+                  | _ ->
+                      Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, false, false, false))
+              end
             | Set_odometry(x, y, theta) ->
                 sim.state <- { x; y; theta };
                 return ()
