@@ -135,7 +135,7 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
             if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
               (* Turn the robot. *)
               let alpha = math_mod_float (atan2 (y -. planner.position.y) (x -. planner.position.x) -. planner.orientation) (2. *. pi) in
-              lwt () = Lwt_log.info_f "turning by %f radiants" alpha in
+              lwt () = Lwt_log.info_f "turning by %f radians" alpha in
               lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
                                                         Motor_turn(alpha,
                                                                    rotation_speed,
