@@ -272,13 +272,15 @@ lwt () =
   Arg.parse options ignore usage;
 
   lwt bus = Krobot_bus.get () in
-  lwt () = Krobot_service.init bus ~kill:!kill ~fork:!fork "Planner" in
 
   (* Create a new planner. *)
   let planner = create bus in
 
   (* Export it on the krobot bus. *)
   OBus_object.export (Krobot_bus.to_bus bus) planner.obus;
+
+  (* Start the service. *)
+  lwt () = Krobot_service.init bus ~kill:!kill ~fork:!fork "Planner" in
 
   (* Wait forever. *)
   fst (wait ())
