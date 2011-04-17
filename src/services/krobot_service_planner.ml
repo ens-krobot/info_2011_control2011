@@ -16,6 +16,8 @@ open Krobot_config
 open Krobot_message
 open Krobot_interface_planner.Fr_krobot_Planner
 
+let section = Lwt_log.Section.make "krobot(planner)"
+
 let pi = 4. *. atan 1.
 
 let math_mod_float a b =
@@ -135,7 +137,7 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
   if S.value planner.moving then
     return ()
   else begin
-    let rec loop () =
+(*    let rec loop () =
       match S.value planner.vertices with
         | { x; y } :: rest ->
             let sqr x = x *. x in
@@ -172,11 +174,42 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
               Lwt_log.warning_f "can not move to (%f, %f)" x y
         | [] ->
             return ()
-    in
+    in*)
     planner.set_moving true;
     planner.mover <- (
       try_lwt
-        loop ()
+        let o, v = S.value planner.origin in
+        let params = List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v (o :: S.value planner.vertices) []) in
+        Lwt_list.iter_s
+          (fun (p, q, r, s) ->
+
+             let v = vector r s in
+             lwt () =
+               Krobot_message.send
+                 planner.bus
+                 (Unix.gettimeofday (),
+                  Motor_bezier(s.x,
+                               s.y,
+                               distance p q,
+                               distance r s,
+                               atan2 v.vy v.vx,
+                               0.))
+             in
+
+             lwt () = Lwt_unix.sleep 2.0 in
+
+             (match S.value planner.vertices with
+                | _ :: l -> planner.set_vertices l
+                | [] -> ());
+             planner.set_origin (planner.position,
+                                 { vx = cos planner.orientation;
+                                   vy = sin planner.orientation });
+
+             return ()
+          )
+          params
+      with exn ->
+        Lwt_log.error_f ~section ~exn "failed to move"
       finally
         planner.set_moving false;
         return ()

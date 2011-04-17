@@ -211,16 +211,16 @@ let encode = function
       and y = int_of_float (y *. 1000.)
       and d1 = int_of_float (d1 *. 100.)
       and d2 = int_of_float (d2 *. 100.)
-      and theta = int_of_float (theta *. 1000.)
+      and theta = int_of_float (theta *. 1000.) land 0b1111111111111;
       and v = int_of_float (v *. 1000.) in
       let data = Bitstring.string_of_bitstring
         (BITSTRING{
-           x : 12;
-           y : 12;
-           d1 : 8;
-           d2 : 8;
-           theta : 13;
-           v : 11
+           x : 12 : littleendian, unsigned;
+           y : 12 : littleendian, unsigned;
+           d1 : 8 : littleendian, unsigned;
+           d2 : 8 : littleendian, unsigned;
+           theta : 13 : littleendian, unsigned;
+           v : 11 : littleendian, unsigned
          })
       in
       frame
@@ -381,17 +381,20 @@ let decode frame =
             (get_uint8 frame.data 0 <> 0)
       | 206 ->
           (bitmatch Bitstring.bitstring_of_string frame.data with
-             | { x : 12;
-                 y : 12;
-                 d1 : 8;
-                 d2 : 8;
-                 theta : 13;
-                 v : 11 } ->
+             | { x : 12 : littleendian;
+                 y : 12 : littleendian;
+                 d1 : 8 : littleendian;
+                 d2 : 8 : littleendian;
+                 theta : 13 : littleendian;
+                 v : 11  : littleendian } ->
                  Motor_bezier(float x /. 1000.,
                               float y /. 1000.,
                               float d1 /. 100.,
                               float d2 /. 100.,
-                              float theta /. 1000.,
+                              (if theta >= 4096 then
+                                 float (theta - 8192) /. 1000.
+                               else
+                                 float theta /. 1000.),
                               float v /. 1000.))
       | 301 ->
            Beacon_position

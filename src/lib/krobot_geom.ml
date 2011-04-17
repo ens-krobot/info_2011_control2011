@@ -133,13 +133,8 @@ module Bezier = struct
     let t3 = t2 *. t in
     translate origin ((b.a *| t3) +| (b.b *| t2) +| (b.c *| t1) +| b.p)
 
-  let fold_curves f initial vertices acc =
-    let add_curve q r v1 v2 acc =
-      (* Create the bezier curve. *)
-      let curve = of_vertices q (translate q v1) (translate r v2) r in
-
-      f curve acc
-    in
+  let fold_vertices f initial vertices acc =
+    let add_vertices q r v1 v2 acc = f q (translate q v1) (translate r v2) r acc in
 
     (* Compute cubic bezier curves. *)
     let rec loop acc = function
@@ -149,12 +144,12 @@ module Bezier = struct
            let _, v1 = tangents p q r and v2, _ = tangents q r s in
            let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
            and v2 = v2 *| (min (distance q r) (distance r s) /. 2.) in
-           loop (add_curve q r v1 v2 acc) rest
+           loop (add_vertices q r v1 v2 acc) rest
       | [p; q; r] ->
           let _, v1 = tangents p q r and v2 = vector r q /| distance q r in
           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          add_curve q r v1 v2 acc
+          add_vertices q r v1 v2 acc
       | _ ->
           acc
     in
@@ -164,13 +159,16 @@ module Bezier = struct
           and v2, _ = tangents q r s in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          loop (add_curve q r v1 v2 acc) vertices
+          loop (add_vertices q r v1 v2 acc) vertices
       | [q; r] ->
           let v1 = initial
           and v2 = vector r q /| distance q r  in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          add_curve q r v1 v2 acc
+          add_vertices q r v1 v2 acc
       | [_] | [] ->
           acc
+
+  let fold_curves f initial vertices acc =
+    fold_vertices (fun p q r s acc -> f (of_vertices p q r s) acc) initial vertices acc
 end

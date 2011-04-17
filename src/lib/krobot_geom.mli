@@ -68,4 +68,8 @@ module Bezier : sig
     (** [fold_curves f vector vertices acc] folds [f] over the curve
         passing through the given list of vertices. [vector] is the
         initial direction vector. *)
+
+  val fold_vertices : (vertice -> vertice -> vertice -> vertice -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
+    (** [fold_vertices f vector vertices acc] same as {!fold_curves}
+        but pass parameters instead of curves to [f]. *)
 end
