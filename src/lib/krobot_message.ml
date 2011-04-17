@@ -29,6 +29,7 @@ type t =
   | Motor_status of bool * bool * bool * bool
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
+  | Motor_bezier of float * float * float * float * float * float
   | Motor_stop
   | Odometry of float * float * float
   | Set_odometry of float * float * float
@@ -96,6 +97,10 @@ let to_string = function
       sprintf
         "Motor_turn(%f, %f, %f)"
         angle speed acc
+  | Motor_bezier(x, y, d1, d2, theta, v) ->
+      sprintf
+        "Motor_bezier(%f, %f, %f, %f, %f, %f)"
+        x y d1 d2 theta v
   | Motor_stop ->
       "Motor_stop"
   | Odometry(x, y, theta) ->
@@ -197,6 +202,29 @@ let encode = function
       put_uint16 data 6 (truncate (acc *. 1000.));
       frame
         ~identifier:202
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Motor_bezier(x, y, d1, d2, theta, v) ->
+      let x = int_of_float (x *. 1000.)
+      and y = int_of_float (y *. 1000.)
+      and d1 = int_of_float (d1 *. 100.)
+      and d2 = int_of_float (d2 *. 100.)
+      and theta = int_of_float (theta *. 1000.)
+      and v = int_of_float (v *. 1000.) in
+      let data = Bitstring.string_of_bitstring
+        (BITSTRING{
+           x : 12;
+           y : 12;
+           d1 : 8;
+           d2 : 8;
+           theta : 13;
+           v : 11
+         })
+      in
+      frame
+        ~identifier:206
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -351,6 +379,20 @@ let decode frame =
       | 205 ->
           Set_controller_mode
             (get_uint8 frame.data 0 <> 0)
+      | 206 ->
+          (bitmatch Bitstring.bitstring_of_string frame.data with
+             | { x : 12;
+                 y : 12;
+                 d1 : 8;
+                 d2 : 8;
+                 theta : 13;
+                 v : 11 } ->
+                 Motor_bezier(float x /. 1000.,
+                              float y /. 1000.,
+                              float d1 /. 100.,
+                              float d2 /. 100.,
+                              float theta /. 1000.,
+                              float v /. 1000.))
       | 301 ->
            Beacon_position
              (float (get_uint16 frame.data 0) /. 10000.,

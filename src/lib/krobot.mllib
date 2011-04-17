@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: d28f502a765cf0ae56f93e800363c356)
+# DO NOT EDIT (digest: a2debf72e72f6ae38ea62c8b35c3784d)
 Krobot_can
 Krobot_bus
 Krobot_message
 Krobot_service
 Krobot_geom
+Krobot_planner
 # OASIS_STOP

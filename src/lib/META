@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 6d4fe02a501933ad8464e70af7fcf3b1)
+# DO NOT EDIT (digest: 060bacace64817181263e75a71185b59)
 version = "1.0"
 description = "The [Kro]bot library"
-requires = "lwt.unix obus krobot.interfaces"
+requires = "lwt.unix obus krobot.interfaces bitstring"
 archive(byte) = "krobot.cma"
 archive(native) = "krobot.cmxa"
 exists_if = "krobot.cma"

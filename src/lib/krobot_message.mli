@@ -44,6 +44,8 @@ type t =
           - [speed] is in rad/s
           - [acceleration] is in rad/s^2
       *)
+  | Motor_bezier of float * float * float * float * float * float
+      (** [Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end)] *)
   | Motor_stop
       (** Stops the motors. *)
   | Odometry of float * float * float
