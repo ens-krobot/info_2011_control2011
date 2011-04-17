@@ -208,6 +208,9 @@ module Board = struct
     mutable beacon : beacon;
     (* The state of the beacon. *)
 
+    origin : (vertice * vector) signal;
+    (* The origin of the trajectory. *)
+
     vertices : vertice list signal;
     (* The current trajectory. *)
 
@@ -415,9 +418,11 @@ module Board = struct
       Cairo.stroke ctx
     end;
 
+    let o, v = S.value board.origin in
+
     (* Draw points. *)
     Cairo.set_source_rgb ctx 255. 255. 0.;
-    Cairo.move_to ctx board.state.pos.x board.state.pos.y;
+    Cairo.move_to ctx o.x o.y;
     List.iter (fun { x; y } -> Cairo.line_to ctx x y) (S.value board.vertices);
     Cairo.stroke ctx;
 
@@ -432,9 +437,7 @@ module Board = struct
            Cairo.line_to ctx x y
          done;
          Cairo.stroke ctx)
-      { vx = cos board.state.theta; vy = sin board.state.theta }
-      (board.state.pos :: S.value board.vertices)
-      ();
+      v (o :: S.value board.vertices) ();
 
     let ctx = Cairo_lablgtk.create board.ui#scene#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
@@ -467,61 +470,9 @@ module Board = struct
     let tolerance = board.ui#tolerance#adjustment#value in
     ignore_result (Krobot_planner.simplify board.bus tolerance)
 
-(*    let bezier_vertices q r v1 v2 =
-      (* Create the bezier curve. *)
-      let curve = Bezier.of_vertices q (translate q v1) (translate r v2) r in
-
-      (* Create vertices. *)
-      let vertices = Array.create 101 origin in
-      for i = 0 to 100 do
-        vertices.(i) <- Bezier.vertice curve (float i /. 100.)
-      done;
-
-      vertices
-    in
-
-    (* Compute cubic bezier curves. *)
-    let rec loop = function
-      |  p :: (q :: r :: s :: _ as rest) ->
-           (* Computes tangents with a length that is half of the
-              minimum length of the adjacent segments. *)
-           let _, v1 = tangents p q r and v2, _ = tangents q r s in
-           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
-           and v2 = v2 *| (min (distance q r) (distance r s) /. 2.) in
-           bezier_vertices q r v1 v2 :: loop rest
-      | [p; q; r] ->
-           let _, v1 = tangents p q r and v2 = vector r q /| distance q r in
-           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
-           and v2 = v2 *| (distance q r /. 2.) in
-           [bezier_vertices q r v1 v2]
-      | _ ->
-          []
-    in
-    begin
-      match board.points with
-        | r :: s :: _ ->
-            let q = board.state.pos in
-            let v1 = { vx = cos board.state.theta; vy = sin board.state.theta }
-            and v2, _ = tangents q r s in
-            let v1 = v1 *| (distance q r /. 2.)
-            and v2 = v2 *| (distance q r /. 2.) in
-            board.bezier <- bezier_vertices q r v1 v2 :: loop (q :: board.points);
-        | [r] ->
-            let q = board.state.pos in
-            let v1 = { vx = cos board.state.theta; vy = sin board.state.theta }
-            and v2 = vector r q /| distance q r  in
-            let v1 = v1 *| (distance q r /. 2.)
-            and v2 = v2 *| (distance q r /. 2.) in
-            board.bezier <- bezier_vertices q r v1 v2 :: loop (q :: board.points);
-        | [] ->
-            board.bezier <- []
-    end;
-
-    queue_draw board
-*)
-
   let create bus ui =
-    lwt vertices = OBus_property.monitor (Krobot_planner.vertices bus) in
+    lwt origin = OBus_property.monitor (Krobot_planner.origin bus)
+    and vertices = OBus_property.monitor (Krobot_planner.vertices bus) in
     let board ={
       bus;
       ui;
@@ -531,6 +482,7 @@ module Board = struct
         theta = -0.5 *. pi
       };
       beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
+      origin;
       vertices;
       events = [];
       statusbar_context = ui#statusbar#new_context "";

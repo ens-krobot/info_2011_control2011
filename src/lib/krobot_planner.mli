@@ -10,6 +10,9 @@
 type t = Krobot_bus.t
     (** Type of the planner. *)
 
+val origin : t -> (Krobot_geom.vertice * Krobot_geom.vector, [ `readable ]) OBus_property.t
+  (** The origin of the trajectory. *)
+
 val vertices : t -> (Krobot_geom.vertice list, [ `readable | `writable ]) OBus_property.t
   (** The property holding the current trajectory. *)
 

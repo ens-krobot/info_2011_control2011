@@ -10,6 +10,9 @@
 (** Interface for the planner. *)
 
 interface fr.krobot.Planner {
+  property_r origin : ((double * double) * (double * double))
+    (** The origin of the trajectory, with the initial vector. *)
+
   property_rw vertices : (double * double) array
     (** Property holding the current list of vertices for the planned
         trajectory. *)

@@ -39,6 +39,14 @@ type planner = {
   obus : planner OBus_object.t;
   (* The D-Bus object attached to this planner. *)
 
+  origin : (vertice * vector) signal;
+  (* If the robot is moving, this is the origin of the current
+     trajectory with the initial direction vector, otherwise it is the
+     current position with the current direction vector. *)
+
+  set_origin : (vertice * vector) -> unit;
+  (* Set the origin of the trajectory. *)
+
   vertices : vertice list signal;
   (* The list of vertices for the trajectory. *)
 
@@ -155,6 +163,9 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
               (match S.value planner.vertices with
                  | _ :: l -> planner.set_vertices l
                  | [] -> ());
+              planner.set_origin (planner.position,
+                                  { vx = cos planner.orientation;
+                                    vy = sin planner.orientation });
 
               loop ()
             end else
@@ -188,6 +199,9 @@ let create bus =
     OBus_object.make
       ~interfaces:[
         Krobot_interface_planner.Fr_krobot_Planner.make {
+          p_origin =
+            (fun obj ->
+               S.map (fun ({ x; y }, { vx; vy }) -> ((x, y), (vx, vy))) (OBus_object.get obj).origin);
           p_vertices =
             ((fun obj ->
                 S.map (List.map (fun { x; y } -> (x, y))) (OBus_object.get obj).vertices),
@@ -215,11 +229,14 @@ let create bus =
       ]
       ["fr"; "krobot"; "Planner"]
   in
+  let origin, set_origin = S.create ({ x = 0.; y = 0. }, { vx = 1.; vy = 0. }) in
   let vertices, set_vertices = S.create [] in
   let moving, set_moving = S.create false in
   let planner = {
     bus;
     obus = obus_object;
+    origin;
+    set_origin;
     vertices;
     set_vertices;
     moving;
@@ -238,7 +255,11 @@ let create bus =
            match frame with
              | Odometry(x, y, theta) ->
                  planner.position <- { x; y };
-                 planner.orientation <- math_mod_float theta (2. *. pi)
+                 planner.orientation <- math_mod_float theta (2. *. pi);
+                 if not (S.value planner.moving) then
+                   planner.set_origin (planner.position,
+                                       { vx = cos planner.orientation;
+                                         vy = sin planner.orientation })
              | Motor_status(m1, m2, m3, m4) ->
                  planner.motors_moving <- m1 || m2
              | _ ->

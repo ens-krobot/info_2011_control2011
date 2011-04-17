@@ -17,6 +17,11 @@ type t = Krobot_bus.t
 let proxy bus =
   OBus_proxy.make (OBus_peer.make (Krobot_bus.to_bus bus) "fr.krobot.Service.Planner") ["fr"; "krobot"; "Planner"]
 
+let origin bus =
+  OBus_property.map_r
+    (fun ((x, y), (vx, vy)) -> ({ x; y }, ({ vx; vy })))
+    (OBus_property.make p_origin (proxy bus))
+
 let vertices bus =
   OBus_property.map_rw
     (List.map (fun (x, y) -> { x; y }))
