@@ -420,11 +420,21 @@ module Board = struct
     Cairo.move_to ctx board.state.pos.x board.state.pos.y;
     List.iter (fun { x; y } -> Cairo.line_to ctx x y) (S.value board.vertices);
     Cairo.stroke ctx;
-(*
+
+    (* Draw bezier curves. *)
     Cairo.set_source_rgb ctx 255. 0. 255.;
-    List.iter (Array.iter (fun { x; y } -> Cairo.line_to ctx x y)) board.bezier;
-    Cairo.stroke ctx;
-*)
+    Bezier.fold_curves
+      (fun curve () ->
+         let { x; y } = Bezier.vertice curve 0. in
+         Cairo.move_to ctx x y;
+         for i = 1 to 100 do
+           let { x; y } = Bezier.vertice curve (float i /. 100.) in
+           Cairo.line_to ctx x y
+         done;
+         Cairo.stroke ctx)
+      { vx = cos board.state.theta; vy = sin board.state.theta }
+      (board.state.pos :: S.value board.vertices)
+      ();
 
     let ctx = Cairo_lablgtk.create board.ui#scene#misc#window in
     Cairo.set_source_surface ctx surface 0. 0.;
