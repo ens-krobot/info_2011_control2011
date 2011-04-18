@@ -11,7 +11,7 @@
 #include <caml/memory.h>
 #include <caml/alloc.h>
 
-static struct bezier_message {
+struct bezier_message {
   unsigned int x : 12;
   unsigned int y : 12;
   unsigned int d1 : 8;
