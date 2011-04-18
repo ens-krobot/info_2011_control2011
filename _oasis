@@ -31,9 +31,9 @@ Flag gtk
 
 Library krobot
   FindlibName: krobot
-  BuildDepends: lwt.unix, lwt.syntax, obus, krobot.interfaces, bitstring, bitstring.syntax
+  BuildDepends: lwt.unix, lwt.syntax, obus, krobot.interfaces
   XMETADescription: The [Kro]bot library
-  XMETARequires: lwt.unix, obus, krobot.interfaces, bitstring
+  XMETARequires: lwt.unix, obus, krobot.interfaces
   Path: src/lib
   Install: true
   Modules:
@@ -43,6 +43,8 @@ Library krobot
     Krobot_service,
     Krobot_geom,
     Krobot_planner
+  CSources:
+    krobot_message_stubs.c
 
 Library "krobot-can"
   FindlibName: can

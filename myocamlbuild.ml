@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 570b31c8f48685aca9662d28e560f425) *)
+(* DO NOT EDIT (digest: 1ca7268f789f49955feedef89f6b4ca9) *)
 module OASISGettext = struct
 # 21 "/home/dim/sources/oasis/src/oasis/OASISGettext.ml"
   
@@ -457,7 +457,7 @@ let package_default =
           ("src/lib/krobot", ["src/lib"]);
           ("src/can/krobot-can", ["src/can"])
        ];
-     lib_c = [("krobot-can", "src/can", [])];
+     lib_c = [("krobot", "src/lib", []); ("krobot-can", "src/can", [])];
      flags = [];
      }
   ;;

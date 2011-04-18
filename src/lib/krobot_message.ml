@@ -126,6 +126,8 @@ let to_string = function
 
 let pi = 4. *. atan 1.
 
+external encode_bezier : int * int * int * int * int * int -> string = "krobot_message_encode_bezier"
+
 let encode = function
   | Encoder_position_direction_3_4(pos3, dir3, pos4, dir4) ->
       let data = String.create 6 in
@@ -213,22 +215,12 @@ let encode = function
       and d2 = int_of_float (d2 *. 100.)
       and theta = int_of_float (theta *. 1000.) land 0b1111111111111;
       and v = int_of_float (v *. 1000.) in
-      let data = Bitstring.string_of_bitstring
-        (BITSTRING{
-           x : 12 : littleendian, unsigned;
-           y : 12 : littleendian, unsigned;
-           d1 : 8 : littleendian, unsigned;
-           d2 : 8 : littleendian, unsigned;
-           theta : 13 : littleendian, unsigned;
-           v : 11 : littleendian, unsigned
-         })
-      in
       frame
         ~identifier:206
         ~kind:Data
         ~remote:false
         ~format:F29bits
-        ~data
+        ~data:(encode_bezier (x, y, d1, d2, theta, v))
   | Set_odometry(x, y, theta) ->
       let data = String.create 6 in
       put_sint16 data 0 (truncate (x *. 1000.));
@@ -324,102 +316,98 @@ let () =
        | _ ->
            None)
 
+external decode_bezier : string -> int * int * int * int * int * int = "krobot_message_decode_bezier"
+
 let decode frame =
   try
-  if frame.remote then
-    match frame.identifier with
-      | 103 ->
-          Req_motor_status
-      | _ ->
-          Unknown frame
-  else
-    match frame.identifier with
-      | 100 ->
-          Encoder_position_direction_3_4
-            (get_uint16 frame.data 0,
-             (if get_uint8 frame.data 4 = 0 then Forward else Backward),
-             get_uint16 frame.data 2,
-             (if get_uint8 frame.data 5 = 0 then Forward else Backward))
-      | 101 ->
-          Encoder_position_speed_3
-            (get_float32 frame.data 0,
-             get_float32 frame.data 4)
-      | 102 ->
-          Encoder_position_speed_4
-            (get_float32 frame.data 0,
-             get_float32 frame.data 4)
-      | 103 ->
-          let x = get_uint8 frame.data 0 in
-          Motor_status(x land 1 <> 0,
-                       x land 2 <> 0,
-                       x land 4 <> 0,
-                       x land 8 <> 0)
-      | 104 ->
-          Odometry
-            (float (get_sint16 frame.data 0) /. 1000.,
-             float (get_sint16 frame.data 2) /. 1000.,
-             float (get_sint16 frame.data 4) /. 10000.)
-      | 201 ->
-          Motor_move
-            (float (get_sint32 frame.data 0) /. 1000.,
-             float (get_uint16 frame.data 4) /. 1000.,
-             float (get_uint16 frame.data 6) /. 1000.)
-      | 202 ->
-          Motor_turn
-            (float (get_sint32 frame.data 0) /. 10000.,
-             float (get_uint16 frame.data 4) /. 1000.,
-             float (get_uint16 frame.data 6) /. 1000.)
-      | 203 ->
-          Set_odometry
-            (float (get_sint16 frame.data 0) /. 1000.,
-             float (get_sint16 frame.data 2) /. 1000.,
-             float (get_sint16 frame.data 4) /. 10000.)
-      | 204 ->
-          Motor_stop
-      | 205 ->
-          Set_controller_mode
-            (get_uint8 frame.data 0 <> 0)
-      | 206 ->
-          (bitmatch Bitstring.bitstring_of_string frame.data with
-             | { x : 12 : littleendian;
-                 y : 12 : littleendian;
-                 d1 : 8 : littleendian;
-                 d2 : 8 : littleendian;
-                 theta : 13 : littleendian;
-                 v : 11  : littleendian } ->
-                 Motor_bezier(float x /. 1000.,
-                              float y /. 1000.,
-                              float d1 /. 100.,
-                              float d2 /. 100.,
-                              (if theta >= 4096 then
-                                 float (theta - 8192) /. 1000.
-                               else
-                                 float theta /. 1000.),
-                              float v /. 1000.))
-      | 301 ->
-           Beacon_position
-             (float (get_uint16 frame.data 0) /. 10000.,
-              float (get_uint16 frame.data 2) /. 1000.,
-              float (get_uint16 frame.data 4) /. 10000.)
-      | 302 ->
-           Beacon_lowlevel_position
-             (float (get_uint16 frame.data 0) /. 10000.,
-              float (get_uint16 frame.data 2) /. 100000.,
-              get_uint32 frame.data 4)
-      | 401 ->
-           Battery1_voltages
-             (float (get_uint16 frame.data 0) /. 10000.,
-              float (get_uint16 frame.data 2) /. 10000.,
-              float (get_uint16 frame.data 4) /. 10000.,
-              float (get_uint16 frame.data 6) /. 10000.)
-      | 402 ->
-           Battery2_voltages
-             (float (get_uint16 frame.data 0) /. 10000.,
-              float (get_uint16 frame.data 2) /. 10000.,
-              float (get_uint16 frame.data 4) /. 10000.,
-              float (get_uint16 frame.data 6) /. 10000.)
-      | _ ->
-          Unknown frame
+    if frame.remote then
+      match frame.identifier with
+        | 103 ->
+            Req_motor_status
+        | _ ->
+            Unknown frame
+    else
+      match frame.identifier with
+        | 100 ->
+            Encoder_position_direction_3_4
+              (get_uint16 frame.data 0,
+               (if get_uint8 frame.data 4 = 0 then Forward else Backward),
+               get_uint16 frame.data 2,
+               (if get_uint8 frame.data 5 = 0 then Forward else Backward))
+        | 101 ->
+            Encoder_position_speed_3
+              (get_float32 frame.data 0,
+               get_float32 frame.data 4)
+        | 102 ->
+            Encoder_position_speed_4
+              (get_float32 frame.data 0,
+               get_float32 frame.data 4)
+        | 103 ->
+            let x = get_uint8 frame.data 0 in
+            Motor_status(x land 1 <> 0,
+                         x land 2 <> 0,
+                         x land 4 <> 0,
+                         x land 8 <> 0)
+        | 104 ->
+            Odometry
+              (float (get_sint16 frame.data 0) /. 1000.,
+               float (get_sint16 frame.data 2) /. 1000.,
+               float (get_sint16 frame.data 4) /. 10000.)
+        | 201 ->
+            Motor_move
+              (float (get_sint32 frame.data 0) /. 1000.,
+               float (get_uint16 frame.data 4) /. 1000.,
+               float (get_uint16 frame.data 6) /. 1000.)
+        | 202 ->
+            Motor_turn
+              (float (get_sint32 frame.data 0) /. 10000.,
+               float (get_uint16 frame.data 4) /. 1000.,
+               float (get_uint16 frame.data 6) /. 1000.)
+        | 203 ->
+            Set_odometry
+              (float (get_sint16 frame.data 0) /. 1000.,
+               float (get_sint16 frame.data 2) /. 1000.,
+               float (get_sint16 frame.data 4) /. 10000.)
+        | 204 ->
+            Motor_stop
+        | 205 ->
+            Set_controller_mode
+              (get_uint8 frame.data 0 <> 0)
+        | 206 ->
+            let x, y, d1, d2, theta, v = decode_bezier frame.data in
+            Motor_bezier(float x /. 1000.,
+                         float y /. 1000.,
+                         float d1 /. 100.,
+                         float d2 /. 100.,
+                         (if theta >= 4096 then
+                            float (theta - 8192) /. 1000.
+                          else
+                            float theta /. 1000.),
+                         float v /. 1000.)
+        | 301 ->
+            Beacon_position
+              (float (get_uint16 frame.data 0) /. 10000.,
+               float (get_uint16 frame.data 2) /. 1000.,
+               float (get_uint16 frame.data 4) /. 10000.)
+        | 302 ->
+            Beacon_lowlevel_position
+              (float (get_uint16 frame.data 0) /. 10000.,
+               float (get_uint16 frame.data 2) /. 100000.,
+               get_uint32 frame.data 4)
+        | 401 ->
+            Battery1_voltages
+              (float (get_uint16 frame.data 0) /. 10000.,
+               float (get_uint16 frame.data 2) /. 10000.,
+               float (get_uint16 frame.data 4) /. 10000.,
+               float (get_uint16 frame.data 6) /. 10000.)
+        | 402 ->
+            Battery2_voltages
+              (float (get_uint16 frame.data 0) /. 10000.,
+               float (get_uint16 frame.data 2) /. 10000.,
+               float (get_uint16 frame.data 4) /. 10000.,
+               float (get_uint16 frame.data 6) /. 10000.)
+        | _ ->
+            Unknown frame
   with Invalid_argument _ ->
     raise (Invalid_frame frame)
 

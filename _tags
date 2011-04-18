@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: bc62a620a945818c8391362124b031c3)
+# DO NOT EDIT (digest: 28c051595fc8936deb8eca602b892268)
 # Library krobot-interfaces
 "src/interfaces": include
 "src/interfaces/krobot-interfaces.cmxs": use_krobot-interfaces
@@ -10,12 +10,15 @@
 # Library krobot
 "src/lib": include
 "src/lib/krobot.cmxs": use_krobot
+<src/lib/krobot.{cma,cmxa}>: use_libkrobot
 <src/lib/*.ml{,i}>: use_krobot-interfaces
 <src/lib/*.ml{,i}>: pkg_obus
 <src/lib/*.ml{,i}>: pkg_lwt.unix
 <src/lib/*.ml{,i}>: pkg_lwt.syntax
-<src/lib/*.ml{,i}>: pkg_bitstring.syntax
-<src/lib/*.ml{,i}>: pkg_bitstring
+"src/lib/krobot_message_stubs.c": use_krobot-interfaces
+"src/lib/krobot_message_stubs.c": pkg_obus
+"src/lib/krobot_message_stubs.c": pkg_lwt.unix
+"src/lib/krobot_message_stubs.c": pkg_lwt.syntax
 # Library krobot-can
 "src/can": include
 "src/can/krobot-can.cmxs": use_krobot-can
@@ -25,31 +28,23 @@
 <src/can/*.ml{,i}>: pkg_obus
 <src/can/*.ml{,i}>: pkg_lwt.unix
 <src/can/*.ml{,i}>: pkg_lwt.syntax
-<src/can/*.ml{,i}>: pkg_bitstring.syntax
-<src/can/*.ml{,i}>: pkg_bitstring
 "src/can/can_stubs.c": use_krobot
 "src/can/can_stubs.c": use_krobot-interfaces
 "src/can/can_stubs.c": pkg_obus
 "src/can/can_stubs.c": pkg_lwt.unix
 "src/can/can_stubs.c": pkg_lwt.syntax
-"src/can/can_stubs.c": pkg_bitstring.syntax
-"src/can/can_stubs.c": pkg_bitstring
 # Executable krobot-dump
 <src/tools/krobot_dump.{native,byte}>: use_krobot
 <src/tools/krobot_dump.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_dump.{native,byte}>: pkg_obus
 <src/tools/krobot_dump.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_dump.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_dump.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_dump.{native,byte}>: pkg_bitstring
 # Executable krobot-dump-encoders
 <src/tools/krobot_dump_encoders.{native,byte}>: use_krobot
 <src/tools/krobot_dump_encoders.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_dump_encoders.{native,byte}>: pkg_obus
 <src/tools/krobot_dump_encoders.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_dump_encoders.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_dump_encoders.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_dump_encoders.{native,byte}>: pkg_bitstring
 # Executable krobot-driver
 <src/driver/krobot_driver.{native,byte}>: use_krobot-can
 <src/driver/krobot_driver.{native,byte}>: use_krobot
@@ -57,16 +52,12 @@
 <src/driver/krobot_driver.{native,byte}>: pkg_obus
 <src/driver/krobot_driver.{native,byte}>: pkg_lwt.unix
 <src/driver/krobot_driver.{native,byte}>: pkg_lwt.syntax
-<src/driver/krobot_driver.{native,byte}>: pkg_bitstring.syntax
-<src/driver/krobot_driver.{native,byte}>: pkg_bitstring
 <src/driver/*.ml{,i}>: use_krobot-can
 <src/driver/*.ml{,i}>: use_krobot
 <src/driver/*.ml{,i}>: use_krobot-interfaces
 <src/driver/*.ml{,i}>: pkg_obus
 <src/driver/*.ml{,i}>: pkg_lwt.unix
 <src/driver/*.ml{,i}>: pkg_lwt.syntax
-<src/driver/*.ml{,i}>: pkg_bitstring.syntax
-<src/driver/*.ml{,i}>: pkg_bitstring
 # Executable krobot-viewer
 <src/tools/krobot_viewer.{native,byte}>: use_krobot
 <src/tools/krobot_viewer.{native,byte}>: use_krobot-interfaces
@@ -76,8 +67,6 @@
 <src/tools/krobot_viewer.{native,byte}>: pkg_lwt.glib
 <src/tools/krobot_viewer.{native,byte}>: pkg_lablgtk2.glade
 <src/tools/krobot_viewer.{native,byte}>: pkg_cairo.lablgtk2
-<src/tools/krobot_viewer.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_viewer.{native,byte}>: pkg_bitstring
 <src/tools/*.ml{,i}>: pkg_lablgtk2.glade
 # Executable krobot-hil-simulator
 <src/tools/krobot_hil_simulator.{native,byte}>: use_krobot
@@ -85,8 +74,6 @@
 <src/tools/krobot_hil_simulator.{native,byte}>: pkg_obus
 <src/tools/krobot_hil_simulator.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_hil_simulator.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_hil_simulator.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_hil_simulator.{native,byte}>: pkg_bitstring
 # Executable send-can
 <examples/send_can.{native,byte}>: use_krobot-can
 <examples/send_can.{native,byte}>: use_krobot
@@ -94,8 +81,6 @@
 <examples/send_can.{native,byte}>: pkg_obus
 <examples/send_can.{native,byte}>: pkg_lwt.unix
 <examples/send_can.{native,byte}>: pkg_lwt.syntax
-<examples/send_can.{native,byte}>: pkg_bitstring.syntax
-<examples/send_can.{native,byte}>: pkg_bitstring
 # Executable krobot-plot-battery
 <src/tools/krobot_plot_battery.{native,byte}>: use_krobot
 <src/tools/krobot_plot_battery.{native,byte}>: use_krobot-interfaces
@@ -104,39 +89,29 @@
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.glib
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_cairo.lablgtk2
-<src/tools/krobot_plot_battery.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_plot_battery.{native,byte}>: pkg_bitstring
 # Executable krobot-service-planner
 <src/services/krobot_service_planner.{native,byte}>: use_krobot
 <src/services/krobot_service_planner.{native,byte}>: use_krobot-interfaces
 <src/services/krobot_service_planner.{native,byte}>: pkg_obus
 <src/services/krobot_service_planner.{native,byte}>: pkg_lwt.unix
 <src/services/krobot_service_planner.{native,byte}>: pkg_lwt.syntax
-<src/services/krobot_service_planner.{native,byte}>: pkg_bitstring.syntax
-<src/services/krobot_service_planner.{native,byte}>: pkg_bitstring
 <src/services/*.ml{,i}>: use_krobot
 <src/services/*.ml{,i}>: use_krobot-interfaces
 <src/services/*.ml{,i}>: pkg_obus
 <src/services/*.ml{,i}>: pkg_lwt.unix
 <src/services/*.ml{,i}>: pkg_lwt.syntax
-<src/services/*.ml{,i}>: pkg_bitstring.syntax
-<src/services/*.ml{,i}>: pkg_bitstring
 # Executable krobot-remote
 <src/tools/krobot_remote.{native,byte}>: use_krobot
 <src/tools/krobot_remote.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_remote.{native,byte}>: pkg_obus
 <src/tools/krobot_remote.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_remote.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_remote.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_remote.{native,byte}>: pkg_bitstring
 # Executable krobot-replay
 <src/tools/krobot_replay.{native,byte}>: use_krobot
 <src/tools/krobot_replay.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_replay.{native,byte}>: pkg_obus
 <src/tools/krobot_replay.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_replay.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_replay.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_replay.{native,byte}>: pkg_bitstring
 # Executable dump-can
 <examples/dump_can.{native,byte}>: use_krobot-can
 <examples/dump_can.{native,byte}>: use_krobot
@@ -144,32 +119,24 @@
 <examples/dump_can.{native,byte}>: pkg_obus
 <examples/dump_can.{native,byte}>: pkg_lwt.unix
 <examples/dump_can.{native,byte}>: pkg_lwt.syntax
-<examples/dump_can.{native,byte}>: pkg_bitstring.syntax
-<examples/dump_can.{native,byte}>: pkg_bitstring
 <examples/*.ml{,i}>: use_krobot-can
 <examples/*.ml{,i}>: use_krobot
 <examples/*.ml{,i}>: use_krobot-interfaces
 <examples/*.ml{,i}>: pkg_obus
 <examples/*.ml{,i}>: pkg_lwt.unix
 <examples/*.ml{,i}>: pkg_lwt.syntax
-<examples/*.ml{,i}>: pkg_bitstring.syntax
-<examples/*.ml{,i}>: pkg_bitstring
 # Executable krobot-local
 <src/tools/krobot_local.{native,byte}>: use_krobot
 <src/tools/krobot_local.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_local.{native,byte}>: pkg_obus
 <src/tools/krobot_local.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_local.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_local.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_local.{native,byte}>: pkg_bitstring
 # Executable krobot-record
 <src/tools/krobot_record.{native,byte}>: use_krobot
 <src/tools/krobot_record.{native,byte}>: use_krobot-interfaces
 <src/tools/krobot_record.{native,byte}>: pkg_obus
 <src/tools/krobot_record.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_record.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_record.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_record.{native,byte}>: pkg_bitstring
 # Executable krobot-plot
 <src/tools/krobot_plot.{native,byte}>: use_krobot
 <src/tools/krobot_plot.{native,byte}>: use_krobot-interfaces
@@ -178,8 +145,6 @@
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_plot.{native,byte}>: pkg_lwt.glib
 <src/tools/krobot_plot.{native,byte}>: pkg_cairo.lablgtk2
-<src/tools/krobot_plot.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_plot.{native,byte}>: pkg_bitstring
 <src/tools/*.ml{,i}>: pkg_lwt.glib
 <src/tools/*.ml{,i}>: pkg_cairo.lablgtk2
 # Executable krobot-simulator
@@ -188,13 +153,9 @@
 <src/tools/krobot_simulator.{native,byte}>: pkg_obus
 <src/tools/krobot_simulator.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_simulator.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_simulator.{native,byte}>: pkg_bitstring.syntax
-<src/tools/krobot_simulator.{native,byte}>: pkg_bitstring
 <src/tools/*.ml{,i}>: use_krobot
 <src/tools/*.ml{,i}>: use_krobot-interfaces
 <src/tools/*.ml{,i}>: pkg_obus
 <src/tools/*.ml{,i}>: pkg_lwt.unix
 <src/tools/*.ml{,i}>: pkg_lwt.syntax
-<src/tools/*.ml{,i}>: pkg_bitstring.syntax
-<src/tools/*.ml{,i}>: pkg_bitstring
 # OASIS_STOP
