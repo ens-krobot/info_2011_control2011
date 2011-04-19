@@ -193,7 +193,7 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
                                0.))
              in
 
-             lwt () = Lwt_unix.sleep 2.0 in
+             lwt () = wait_done planner in
 
              (match planner.vertices with
                 | _ :: l ->
@@ -231,8 +231,10 @@ let handle_message planner (timestamp, message) =
                 set_origin planner (planner.position,
                                     { vx = cos planner.orientation;
                                       vy = sin planner.orientation })
-          | Motor_status(m1, m2, m3, m4) ->
-              planner.motors_moving <- m1 || m2
+
+          | Odometry_ghost(x, y, theta, following) ->
+              planner.motors_moving <- following
+
           | _ ->
               ()
       end
