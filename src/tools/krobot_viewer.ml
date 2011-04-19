@@ -450,6 +450,9 @@ lwt () =
   (* Handle messages. *)
   E.keep (E.map (fun msg -> handle_message viewer msg) (Krobot_bus.recv bus));
 
+  (* Ask for initial parameters. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Send) in
+
   (* Adjusts The position of paned. *)
   viewer.ui#scene_paned#set_position ((viewer.ui#window#default_width * 5) / 8);
 
