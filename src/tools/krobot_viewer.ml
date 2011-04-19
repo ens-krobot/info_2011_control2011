@@ -55,6 +55,9 @@ type viewer = {
 
   mutable vertices : vertice list;
   (* The current trajectory. *)
+
+  mutable motor_status : bool * bool * bool *bool;
+  (* Status of the four motor controller. *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -345,24 +348,26 @@ let handle_message viewer (timestamp, message) =
               end
 
           | Motor_status(m1, m2, m3, m4) ->
-              let moving = m1 || m2 in
-              if moving then begin
-                viewer.statusbar_context#pop ();
-                let _ = viewer.statusbar_context#push
-                  (if m1 then
-                     "Moving..."
-                   else
-                     (if m2 then
-                        "Turning..."
-                      else
-                        "")
-                  ) in ();
-              end else
-                viewer.statusbar_context#pop ();
-              viewer.ui#entry_moving1#set_text (if m1 then "yes" else "no");
-              viewer.ui#entry_moving2#set_text (if m2 then "yes" else "no");
-              viewer.ui#entry_moving3#set_text (if m3 then "yes" else "no");
-              viewer.ui#entry_moving4#set_text (if m4 then "yes" else "no")
+              if (m1, m2, m3, m4) <> viewer.motor_status then begin
+                viewer.motor_status <- (m1, m2, m3, m4);
+                if m1 || m2 then begin
+                  viewer.statusbar_context#pop ();
+                  let _ = viewer.statusbar_context#push
+                    (if m1 then
+                       "Moving..."
+                     else
+                       (if m2 then
+                          "Turning..."
+                        else
+                          "")
+                    ) in ();
+                end else
+                  viewer.statusbar_context#pop ();
+                viewer.ui#entry_moving1#set_text (if m1 then "yes" else "no");
+                viewer.ui#entry_moving2#set_text (if m2 then "yes" else "no");
+                viewer.ui#entry_moving3#set_text (if m3 then "yes" else "no");
+                viewer.ui#entry_moving4#set_text (if m4 then "yes" else "no")
+              end
 
           | Beacon_position(angle, distance, period) ->
               let newangle = math_mod_float (viewer.state.theta +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
@@ -466,6 +471,7 @@ lwt () =
     origin = ({ x = 0.; y = 0. }, { vx = 0.; vy = 0. });
     vertices = [];
     statusbar_context = ui#statusbar#new_context "";
+    motor_status = (false, false, false, false);
   } in
 
   (* Handle messages. *)
