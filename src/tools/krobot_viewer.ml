@@ -230,10 +230,10 @@ let draw viewer =
   Cairo.arc ctx 1.675 0.175 0.05 0. (2. *. pi);
   Cairo.fill ctx;
 
-  Cairo.save ctx;
-
   List.iter
     (fun (state, alpha) ->
+       Cairo.save ctx;
+
        (* Draw the robot *)
        Cairo.translate ctx state.pos.x state.pos.y;
        Cairo.rotate ctx state.theta;
@@ -249,11 +249,11 @@ let draw viewer =
        Cairo.line_to ctx d (robot_size /. 4.);
        Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
        Cairo.set_source_rgba ctx 0. 0. 0. 0.5;
-       Cairo.stroke ctx)
+       Cairo.stroke ctx;
+
+       Cairo.restore ctx)
     [(viewer.ghost, 0.5);
      (viewer.state, 1.0)];
-
-  Cairo.restore ctx;
 
   (* Draw the beacon *)
   if viewer.beacon.valid then begin
