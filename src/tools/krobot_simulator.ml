@@ -241,6 +241,17 @@ lwt () =
     (* Sends the state of the robot. *)
     lwt () = Krobot_message.send bus (sim.time, Odometry(sim.state.x, sim.state.y, sim.state.theta)) in
 
+    (* Sends the state of the motors. *)
+    lwt () =
+      match sim.command with
+        | Turn(a, b) ->
+            Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, true, false, false))
+        | Move(a, b) ->
+            Krobot_message.send bus (Unix.gettimeofday (), Motor_status(true, false, false, false))
+        | _ ->
+            Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, false, false, false))
+    in
+
     lwt () = print sim in
 
     let (u1, u2) = velocities sim in

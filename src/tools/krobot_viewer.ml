@@ -568,11 +568,4 @@ lwt () =
             );
           false));
 
-  pick [
-    waiter;
-    (* Sends motor status request continously. *)
-    while_lwt true do
-      lwt () = Krobot_message.send bus (Unix.gettimeofday (), Req_motor_status) in
-      Lwt_unix.sleep 0.2
-    done;
-  ]
+  waiter
