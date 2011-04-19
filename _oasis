@@ -13,9 +13,6 @@ BuildTools: ocamlbuild
 Plugins: DevFiles (0.2), META (0.2)
 Synopsis: [Kro]bot
 Description: Control program for the Eurobot robotic cup.
-FilesAB:
-  src/driver/bus.conf.ab,
-  src/services/fr.krobot.Service.Planner.service.ab
 
 # +-------------------------------------------------------------------+
 # | Flags                                                             |
