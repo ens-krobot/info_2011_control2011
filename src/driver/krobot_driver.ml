@@ -18,12 +18,10 @@ open Krobot_bus
    +-----------------------------------------------------------------+ *)
 
 let fork = ref true
-let kill = ref false
 let once = ref false
 
 let options = Arg.align [
   "-no-fork", Arg.Clear fork, " Run in foreground";
-  "-kill", Arg.Set kill, " Kill any running driver and exit";
   "-once", Arg.Set once, " Do not reopen the device on errors";
 ]
 

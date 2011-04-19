@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 1679d4e007e0054354522251924e527a)
+# DO NOT EDIT (digest: c856ca92c511128600c4a9a2ddb551e7)
 # Library krobot
 "src/lib": include
 "src/lib/krobot.cmxs": use_krobot
@@ -69,6 +69,11 @@
 <examples/send_can.{native,byte}>: pkg_lwt.unix
 <examples/send_can.{native,byte}>: pkg_lwt.syntax
 <examples/send_can.{native,byte}>: pkg_lwt.react
+# Executable krobot-kill
+<src/tools/krobot_kill.{native,byte}>: use_krobot
+<src/tools/krobot_kill.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_kill.{native,byte}>: pkg_lwt.syntax
+<src/tools/krobot_kill.{native,byte}>: pkg_lwt.react
 # Executable krobot-plot-battery
 <src/tools/krobot_plot_battery.{native,byte}>: use_krobot
 <src/tools/krobot_plot_battery.{native,byte}>: pkg_lwt.unix
