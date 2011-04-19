@@ -82,6 +82,13 @@ Executable "krobot-dump"
   MainIs: krobot_dump.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-monitor"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_monitor.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-dump-encoders"
   Path: src/tools
   Install: true
