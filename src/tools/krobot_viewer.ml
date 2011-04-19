@@ -44,6 +44,9 @@ type viewer = {
   mutable state : state;
   (* The state of the robot. *)
 
+  mutable ghost : state;
+  (* The state of the ghost. *)
+
   mutable beacon : beacon;
   (* The state of the beacon. *)
 
@@ -229,22 +232,26 @@ let draw viewer =
 
   Cairo.save ctx;
 
-  (* Draw the robot *)
-  Cairo.translate ctx viewer.state.pos.x viewer.state.pos.y;
-  Cairo.rotate ctx viewer.state.theta;
-  Cairo.rectangle ctx (-. wheels_position) (-. robot_size /. 2.) robot_size robot_size;
-  set_color ctx White;
-  Cairo.fill ctx;
+  List.iter
+    (fun (state, alpha) ->
+       (* Draw the robot *)
+       Cairo.translate ctx state.pos.x state.pos.y;
+       Cairo.rotate ctx state.theta;
+       Cairo.rectangle ctx (-. wheels_position) (-. robot_size /. 2.) robot_size robot_size;
+       Cairo.set_source_rgba ctx 1. 1. 1. alpha;
+       Cairo.fill ctx;
 
-  (* Draw an arrow on the robot *)
-  let d = robot_size /. 2. -. wheels_position in
-  Cairo.move_to ctx 0. 0.;
-  Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
-  Cairo.line_to ctx d (-. robot_size /. 4.);
-  Cairo.line_to ctx d (robot_size /. 4.);
-  Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
-  set_color ctx Black;
-  Cairo.stroke ctx;
+       (* Draw an arrow on the robot *)
+       let d = robot_size /. 2. -. wheels_position in
+       Cairo.move_to ctx 0. 0.;
+       Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
+       Cairo.line_to ctx d (-. robot_size /. 4.);
+       Cairo.line_to ctx d (robot_size /. 4.);
+       Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
+       Cairo.set_source_rgba ctx 0. 0. 0. 0.5;
+       Cairo.stroke ctx)
+    [(viewer.ghost, 0.5);
+     (viewer.state, 1.0)];
 
   Cairo.restore ctx;
 
@@ -328,6 +335,15 @@ let handle_message viewer (timestamp, message) =
                 viewer.ui#entry_theta#set_text (string_of_float theta);
                 queue_draw viewer
               end
+
+          | Odometry_ghost(x, y, theta, following) ->
+              let angle = math_mod_float (theta) (2. *. pi) in
+              let ghost = { pos = { x; y }; theta = angle } in
+              if ghost <> viewer.ghost then begin
+                viewer.ghost <- ghost;
+                queue_draw viewer
+              end
+
           | Motor_status(m1, m2, m3, m4) ->
               let moving = m1 || m2 in
               if moving then begin
@@ -347,6 +363,7 @@ let handle_message viewer (timestamp, message) =
               viewer.ui#entry_moving2#set_text (if m2 then "yes" else "no");
               viewer.ui#entry_moving3#set_text (if m3 then "yes" else "no");
               viewer.ui#entry_moving4#set_text (if m4 then "yes" else "no")
+
           | Beacon_position(angle, distance, period) ->
               let newangle = math_mod_float (viewer.state.theta +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
               let x = viewer.state.pos.x +. distance *. cos (newangle) in
@@ -361,11 +378,13 @@ let handle_message viewer (timestamp, message) =
                 viewer.ui#beacon_period#set_text (string_of_float period);
                 queue_draw viewer
               end
+
           | Set_controller_mode hil ->
               if hil then
                 viewer.ui#menu_mode_hil#set_active true
               else
                 viewer.ui#menu_mode_normal#set_active true
+
           | _ ->
               ()
       end
@@ -433,14 +452,16 @@ lwt () =
     ];
 
   (* Create the viewer. *)
+  let init = {
+    pos = { x = 0.2;
+            y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position };
+    theta = -0.5 *. pi
+  } in
   let viewer ={
     bus;
     ui;
-    state = {
-      pos = { x = 0.2;
-              y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position };
-      theta = -0.5 *. pi
-    };
+    state = init;
+    ghost = init;
     beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
     origin = ({ x = 0.; y = 0. }, { vx = 0.; vy = 0. });
     vertices = [];
