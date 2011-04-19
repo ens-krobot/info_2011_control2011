@@ -72,10 +72,15 @@ let dispatch hub node =
    | Connection to another HUB                                       |
    +-----------------------------------------------------------------+ *)
 
-let link hub inet_addr =
-  let addr = Unix.ADDR_INET(inet_addr, port) in
+let link hub host =
   while_lwt true do
     try_lwt
+      (* Resolve the host. *)
+      lwt entry = Lwt_unix.gethostbyname host in
+
+      (* Create the address of the host. *)
+      let addr = Unix.ADDR_INET(entry.Unix.h_addr_list.(0), port) in
+
       (* Try to connect to the remote HUB. *)
       lwt channels = Lwt_io.open_connection addr in
 
@@ -85,7 +90,7 @@ let link hub inet_addr =
       (* Dispatch until error. *)
       dispatch hub node
     with exn ->
-      ignore (Lwt_log.error_f ~section ~exn "cannot connect to '%s'" (Unix.string_of_inet_addr inet_addr));
+      ignore (Lwt_log.error_f ~section ~exn "cannot connect to '%s'" host);
 
       (* Wait a bit before retrying. *)
       Lwt_unix.sleep 1.0
@@ -116,20 +121,14 @@ let usage = "\
 Usage: krobot-hub [options] [addresses]
 options are:"
 
-let addresses = ref []
-
-let parse_address addr =
-  try
-    addresses := Unix.inet_addr_of_string addr :: !addresses
-  with Failure _ ->
-    raise (Arg.Bad(Printf.sprintf "invalid inet address '%s'" addr))
+let hosts = ref []
 
 (* +-----------------------------------------------------------------+
    | Entry point                                                     |
    +-----------------------------------------------------------------+ *)
 
 lwt () =
-  Arg.parse options parse_address usage;
+  Arg.parse options (fun host -> hosts := host :: !hosts) usage;
 
   (* Create the local HUB. *)
   let hub = { connections = Lwt_sequence.create () } in
@@ -138,7 +137,7 @@ lwt () =
   ignore (Lwt_io.establish_server (Unix.ADDR_INET(Unix.inet_addr_any, port)) (fun channels -> handle_connection hub channels));
 
   (* Launch link to other HUBs. *)
-  List.iter (fun addr -> ignore (link hub addr)) !addresses;
+  List.iter (fun host -> ignore (link hub host)) !hosts;
 
   (* Fork if not prevented. *)
   if !fork then Lwt_daemon.daemonize ();
