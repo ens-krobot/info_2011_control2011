@@ -7,7 +7,7 @@
  * This file is a part of [kro]bot.
  *)
 
-(** Krobot messages. *)
+(** Krobot CAN messages. *)
 
 type direction = Forward | Backward
     (** Type of directions. *)

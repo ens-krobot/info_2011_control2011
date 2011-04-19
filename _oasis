@@ -31,18 +31,17 @@ Flag gtk
 
 Library krobot
   FindlibName: krobot
-  BuildDepends: lwt.unix, lwt.syntax, obus, krobot.interfaces
+  BuildDepends: lwt.unix, lwt.syntax, lwt.react
   XMETADescription: The [Kro]bot library
-  XMETARequires: lwt.unix, obus, krobot.interfaces
+  XMETARequires: lwt.unix, lwt.react
   Path: src/lib
   Install: true
   Modules:
     Krobot_can,
     Krobot_bus,
     Krobot_message,
-    Krobot_service,
     Krobot_geom,
-    Krobot_planner
+    Krobot_config
   CSources:
     krobot_message_stubs.c
 
@@ -57,19 +56,6 @@ Library "krobot-can"
   Modules: Krobot_can_bus
   CSources: can_stubs.c
 
-Library "krobot-interfaces"
-  FindlibName: interfaces
-  FindlibParent: krobot
-  BuildDepends: obus
-  XMETADescription: [Kro]bot D-Bus interfaces
-  XMETARequires: obus
-  Path: src/interfaces
-  Install: true
-  Modules:
-    Krobot_interface_can,
-    Krobot_interface_service,
-    Krobot_interface_planner
-
 # +-------------------------------------------------------------------+
 # | The driver                                                        |
 # +-------------------------------------------------------------------+
@@ -80,11 +66,17 @@ Executable "krobot-driver"
   CompiledObject: best
   MainIs: krobot_driver.ml
   BuildDepends: krobot.can, lwt.syntax
-  DataFiles: bus.conf
 
 # +-------------------------------------------------------------------+
 # | Tools                                                             |
 # +-------------------------------------------------------------------+
+
+Executable "krobot-hub"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_hub.ml
+  BuildDepends: lwt.unix, lwt.syntax
 
 Executable "krobot-dump"
   Path: src/tools
@@ -102,7 +94,8 @@ Executable "krobot-dump-encoders"
 
 Executable "krobot-record"
   Path: src/tools
-  Install: true
+  Install: false
+  Build: false
   CompiledObject: best
   MainIs: krobot_record.ml
   BuildDepends: krobot, lwt.syntax
@@ -112,20 +105,6 @@ Executable "krobot-replay"
   Install: true
   CompiledObject: best
   MainIs: krobot_replay.ml
-  BuildDepends: krobot, lwt.syntax
-
-Executable "krobot-remote"
-  Path: src/tools
-  Install: true
-  CompiledObject: best
-  MainIs: krobot_remote.ml
-  BuildDepends: krobot, lwt.syntax
-
-Executable "krobot-local"
-  Path: src/tools
-  Install: true
-  CompiledObject: best
-  MainIs: krobot_local.ml
   BuildDepends: krobot, lwt.syntax
 
 Executable "krobot-plot"
@@ -166,17 +145,12 @@ Executable "krobot-hil-simulator"
   MainIs: krobot_hil_simulator.ml
   BuildDepends: krobot, lwt.syntax
 
-# +-------------------------------------------------------------------+
-# | Services                                                          |
-# +-------------------------------------------------------------------+
-
-Executable "krobot-service-planner"
-  Path: src/services
+Executable "krobot-planner"
+  Path: src/tools
   Install: true
   CompiledObject: best
-  MainIs: krobot_service_planner.ml
+  MainIs: krobot_planner.ml
   BuildDepends: krobot, lwt.syntax
-  DataFiles: fr.krobot.Service.Planner.service ($datadir/$pkg_name/services)
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |

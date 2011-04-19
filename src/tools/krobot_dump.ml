@@ -58,22 +58,26 @@ lwt () =
 
   E.keep
     (E.map_s
-       (fun (timestamp, frame) ->
-          let msg = Krobot_message.decode frame in
-          lwt () = Lwt_io.print (date_string timestamp)in
-          lwt () =
-            if !decoded then
-              Lwt_io.printf ": %s" (Krobot_message.to_string msg)
-            else
-              return ()
-          in
-          lwt () =
-            if !raw then
-              Lwt_io.printf ": %s" (Krobot_can.string_of_frame frame)
-            else
-              return ()
-          in
-          Lwt_io.printl "")
-       (Krobot_can.recv bus));
+       (fun (timestamp, message) ->
+          match message with
+            | Krobot_bus.CAN frame ->
+                let msg = Krobot_message.decode frame in
+                lwt () = Lwt_io.print (date_string timestamp)in
+                lwt () =
+                  if !decoded then
+                    Lwt_io.printf ": %s" (Krobot_message.to_string msg)
+                  else
+                    return ()
+                in
+                lwt () =
+                  if !raw then
+                    Lwt_io.printf ": %s" (Krobot_can.string_of_frame frame)
+                  else
+                    return ()
+                in
+                Lwt_io.printl ""
+            | _ ->
+                return ())
+       (Krobot_bus.recv bus));
 
   fst (wait ())

@@ -11,11 +11,12 @@
 
 open Lwt
 open Lwt_react
+open Krobot_bus
 
 let rec loop bus ic prev_timestamp =
   lwt timestamp, frame = Lwt_io.read_value ic in
   lwt () = Lwt_unix.sleep (timestamp -. prev_timestamp) in
-  lwt () = Krobot_can.send bus (Unix.gettimeofday (), frame) in
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN frame) in
   loop bus ic timestamp
 
 lwt () =
@@ -29,7 +30,7 @@ lwt () =
 
   try_lwt
     lwt timestamp, frame = Lwt_io.read_value ic in
-    lwt () = Krobot_can.send bus (Unix.gettimeofday (), frame) in
+    lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN frame) in
     loop bus ic timestamp
   with End_of_file ->
     Lwt_io.close ic

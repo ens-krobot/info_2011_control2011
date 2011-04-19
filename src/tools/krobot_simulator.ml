@@ -13,18 +13,7 @@ open Lwt
 open Lwt_react
 open Krobot_config
 open Krobot_message
-
-let pi = 4. *. atan 1.
-
-let math_mod_float a b =
-  let b2 = b /. 2. in
-  let modf = mod_float a b in
-  if modf > b2 then
-    modf -. b
-  else if modf < -. b2 then
-    modf +. b
-  else
-    modf;;
+open Krobot_geom
 
 (* +-----------------------------------------------------------------+
    | Types                                                           |

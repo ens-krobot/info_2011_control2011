@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 6d4fe02a501933ad8464e70af7fcf3b1)
+# DO NOT EDIT (digest: 3dcfd084b393896010b17f3aac3a6423)
 version = "1.0"
 description = "The [Kro]bot library"
-requires = "lwt.unix obus krobot.interfaces"
+requires = "lwt.unix lwt.react"
 archive(byte) = "krobot.cma"
 archive(native) = "krobot.cmxa"
 exists_if = "krobot.cma"
@@ -13,15 +13,6 @@ package "can" (
  archive(byte) = "krobot-can.cma"
  archive(native) = "krobot-can.cmxa"
  exists_if = "krobot-can.cma"
-)
-
-package "interfaces" (
- version = "1.0"
- description = "[Kro]bot D-Bus interfaces"
- requires = "obus"
- archive(byte) = "krobot-interfaces.cma"
- archive(native) = "krobot-interfaces.cmxa"
- exists_if = "krobot-interfaces.cma"
 )
 # OASIS_STOP
 

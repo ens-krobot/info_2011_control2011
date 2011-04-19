@@ -1,6 +1,6 @@
 (*
- * krobot_service_planner.ml
- * -------------------------
+ * krobot_planner.ml
+ * -----------------
  * Copyright : (c) 2011, Jeremie Dimino <jeremie@dimino.org>
  * Licence   : BSD3
  *
@@ -11,10 +11,10 @@
 
 open Lwt
 open Lwt_react
+open Krobot_bus
 open Krobot_geom
 open Krobot_config
 open Krobot_message
-open Krobot_interface_planner.Fr_krobot_Planner
 
 let section = Lwt_log.Section.make "krobot(planner)"
 
@@ -38,28 +38,16 @@ type planner = {
   bus : Krobot_bus.t;
   (* The message bus used to communicate with the robot. *)
 
-  obus : planner OBus_object.t;
-  (* The D-Bus object attached to this planner. *)
-
-  origin : (vertice * vector) signal;
+  mutable origin : (vertice * vector);
   (* If the robot is moving, this is the origin of the current
      trajectory with the initial direction vector, otherwise it is the
      current position with the current direction vector. *)
 
-  set_origin : (vertice * vector) -> unit;
-  (* Set the origin of the trajectory. *)
-
-  vertices : vertice list signal;
+  mutable vertices : vertice list;
   (* The list of vertices for the trajectory. *)
 
-  set_vertices : vertice list -> unit;
-  (* Set the list of vertices. *)
-
-  moving : bool signal;
+  mutable moving : bool;
   (* Is the robot moving ? *)
-
-  set_moving : bool -> unit;
-  (* Set the moving status. *)
 
   mutable motors_moving : bool;
   (* Are the motor currently active ? *)
@@ -81,11 +69,20 @@ type planner = {
    | Primitives                                                      |
    +-----------------------------------------------------------------+ *)
 
-let add_vertice planner vertice =
-  planner.set_vertices (S.value planner.vertices @ [vertice])
+let set_vertices planner vertices =
+  planner.vertices <- vertices;
+  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_vertices vertices))
+
+let set_origin planner (o, v) =
+  planner.origin <- (o, v);
+  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_origin(o, v)))
+
+let set_moving planner moving =
+  planner.moving <- moving;
+  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_moving moving))
 
 let simplify planner tolerance =
-  match S.value planner.vertices with
+  match planner.vertices with
     | [] ->
         ()
     | points ->
@@ -121,7 +118,7 @@ let simplify planner tolerance =
               rest
         in
         let result = loop [0; Array.length points - 1] in
-        planner.set_vertices (List.map (fun i -> points.(i)) result)
+        set_vertices planner (List.map (fun i -> points.(i)) result)
 
 let wait_done planner =
   lwt () = Lwt_log.info "waiting for the robot to stop moving" in
@@ -134,7 +131,7 @@ let wait_done planner =
   Lwt_log.info "trajectory done"
 
 let go planner rotation_speed rotation_acceleration moving_speed moving_acceleration =
-  if S.value planner.moving then
+  if planner.moving then
     return ()
   else begin
 (*    let rec loop () =
@@ -175,11 +172,11 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
         | [] ->
             return ()
     in*)
-    planner.set_moving true;
+    set_moving planner true;
     planner.mover <- (
       try_lwt
-        let o, v = S.value planner.origin in
-        let params = List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v (o :: S.value planner.vertices) []) in
+        let o, v = planner.origin in
+        let params = List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v (o :: planner.vertices) []) in
         Lwt_list.iter_s
           (fun (p, q, r, s) ->
 
@@ -198,10 +195,12 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
 
              lwt () = Lwt_unix.sleep 2.0 in
 
-             (match S.value planner.vertices with
-                | _ :: l -> planner.set_vertices l
-                | [] -> ());
-             planner.set_origin (planner.position,
+             (match planner.vertices with
+                | _ :: l ->
+                    set_vertices planner l
+                | [] ->
+                    ());
+             set_origin planner (planner.position,
                                  { vx = cos planner.orientation;
                                    vy = sin planner.orientation });
 
@@ -211,107 +210,75 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
       with exn ->
         Lwt_log.error_f ~section ~exn "failed to move"
       finally
-        planner.set_moving false;
+        set_moving planner false;
         return ()
     );
     return ()
   end
 
-let stop planner =
-  cancel planner.mover;
-  planner.set_moving false;
-  planner.set_vertices [];
-  Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop)
-
 (* +-----------------------------------------------------------------+
-   | Object creation                                                 |
+   | Message handling                                                |
    +-----------------------------------------------------------------+ *)
 
-let create bus =
-  let obus_object =
-    OBus_object.make
-      ~interfaces:[
-        Krobot_interface_planner.Fr_krobot_Planner.make {
-          p_origin =
-            (fun obj ->
-               S.map (fun ({ x; y }, { vx; vy }) -> ((x, y), (vx, vy))) (OBus_object.get obj).origin);
-          p_vertices =
-            ((fun obj ->
-                S.map (List.map (fun { x; y } -> (x, y))) (OBus_object.get obj).vertices),
-             (fun obj vertices ->
-                (OBus_object.get obj).set_vertices (List.map (fun (x, y) -> { x; y }) vertices);
-                return ()));
-          p_moving =
-            (fun obj ->
-               (OBus_object.get obj).moving);
-          m_simplify =
-            (fun obj tolerance ->
-               simplify (OBus_object.get obj) tolerance;
-               return ());
-          m_add_vertice =
-            (fun obj (x, y) ->
-               add_vertice (OBus_object.get obj) { x; y };
-               return ());
-          m_go =
-            (fun obj (a, b, c, d) ->
-               go (OBus_object.get obj) a b c d);
-          m_stop =
-            (fun obj () ->
-               stop (OBus_object.get obj));
-        };
-      ]
-      ["fr"; "krobot"; "Planner"]
-  in
-  let origin, set_origin = S.create ({ x = 0.; y = 0. }, { vx = 1.; vy = 0. }) in
-  let vertices, set_vertices = S.create [] in
-  let moving, set_moving = S.create false in
-  let planner = {
-    bus;
-    obus = obus_object;
-    origin;
-    set_origin;
-    vertices;
-    set_vertices;
-    moving;
-    set_moving;
-    motors_moving = false;
-    mover = return ();
-    position = { x = 0.; y = 0. };
-    orientation = 0.;
-    event = E.never;
-  } in
-  OBus_object.attach obus_object planner;
+let handle_message planner (timestamp, message) =
+  match message with
+    | CAN frame -> begin
+        match decode frame with
+          | Odometry(x, y, theta) ->
+              planner.position <- { x; y };
+              planner.orientation <- math_mod_float theta (2. *. pi);
+              if not planner.moving then
+                set_origin planner (planner.position,
+                                    { vx = cos planner.orientation;
+                                      vy = sin planner.orientation })
+          | Motor_status(m1, m2, m3, m4) ->
+              planner.motors_moving <- m1 || m2
+          | _ ->
+              ()
+      end
 
-  planner.event <- (
-      E.map
-        (fun (ts, frame) ->
-           match frame with
-             | Odometry(x, y, theta) ->
-                 planner.position <- { x; y };
-                 planner.orientation <- math_mod_float theta (2. *. pi);
-                 if not (S.value planner.moving) then
-                   planner.set_origin (planner.position,
-                                       { vx = cos planner.orientation;
-                                         vy = sin planner.orientation })
-             | Motor_status(m1, m2, m3, m4) ->
-                 planner.motors_moving <- m1 || m2
-             | _ ->
-                 ())
-        (Krobot_message.recv bus)
-  );
+    | Kill "planner" ->
+        exit 0
 
-  planner
+    | Send ->
+        ignore (
+          let ts = Unix.gettimeofday () in
+          join [
+            Krobot_bus.send planner.bus (ts, Trajectory_origin(fst planner.origin, snd planner.origin));
+            Krobot_bus.send planner.bus (ts, Trajectory_vertices planner.vertices);
+            Krobot_bus.send planner.bus (ts, Trajectory_moving planner.moving);
+          ]
+        )
+
+    | Trajectory_set_vertices l ->
+        set_vertices planner l
+
+    | Trajectory_add_vertice vertice ->
+        set_vertices planner (planner.vertices @ [vertice])
+
+    | Trajectory_simplify tolerance ->
+        simplify planner tolerance
+
+    | Trajectory_go(rotation_speed, rotation_acceleration, moving_speed, moving_acceleration) ->
+        ignore (go planner rotation_speed rotation_acceleration moving_speed moving_acceleration)
+
+    | Trajectory_stop ->
+        cancel planner.mover;
+        set_moving planner false;
+        set_vertices planner [];
+        ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop))
+
+    | _ ->
+        ()
 
 (* +-----------------------------------------------------------------+
    | Command-line arguments                                          |
    +-----------------------------------------------------------------+ *)
 
 let fork = ref true
-let kill = ref false
 
 let options = Arg.align [
   "-no-fork", Arg.Clear fork, " Run in foreground";
-  "-kill", Arg.Set kill, " Kill any running planner and exit";
 ]
 
 let usage = "\
@@ -326,18 +293,32 @@ lwt () =
   Arg.parse options ignore usage;
 
   (* Display all informative messages. *)
-  Lwt_log.Section.set_level Lwt_log.Section.main Lwt_log.Info;
+  Lwt_log.append_rule "*" Lwt_log.Info;
 
+  (* Open the krobot bus. *)
   lwt bus = Krobot_bus.get () in
 
+  (* Fork if not prevented. *)
+  if !fork then Lwt_daemon.daemonize ();
+
+  (* Kill any running planner. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "planner") in
+
   (* Create a new planner. *)
-  let planner = create bus in
+  let planner = {
+    bus;
+    origin = { x = 0.; y = 0. }, { vx = 1.; vy = 0. };
+    vertices = [];
+    moving = false;
+    motors_moving = false;
+    mover = return ();
+    position = { x = 0.; y = 0. };
+    orientation = 0.;
+    event = E.never;
+  } in
 
-  (* Export it on the krobot bus. *)
-  OBus_object.export (Krobot_bus.to_bus bus) planner.obus;
-
-  (* Start the service. *)
-  lwt () = Krobot_service.init bus ~kill:!kill ~fork:!fork "Planner" in
+  (* Handle krobot message. *)
+  E.keep (E.map (handle_message planner) (Krobot_bus.recv bus));
 
   (* Wait forever. *)
   fst (wait ())

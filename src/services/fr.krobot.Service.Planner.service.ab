@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=fr.krobot.Service.Planner
-Exec=$(bindir)/krobot-service-planner

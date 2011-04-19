@@ -11,6 +11,7 @@
 
 open Lwt
 open Lwt_react
+open Krobot_bus
 
 (* +-----------------------------------------------------------------+
    | Command-line arguments                                          |
@@ -46,33 +47,56 @@ lwt () =
       | _ -> Arg.usage options usage; exit 2
   in
 
+  (* Open the krobot bus. *)
   lwt bus = Krobot_bus.get () in
-  lwt () = Krobot_service.init bus ~kill:!kill ~fork:!fork "Driver" in
+
+  (* Fork if not prevented. *)
+  if !fork then Lwt_daemon.daemonize ();
+
+  (* Kill any running planner. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "driver") in
+
+  (* The CAN bus, when it is available. *)
+  let can_opt = ref None in
+
+  (* Handle messages. *)
+  E.keep
+    (E.map_s
+       (fun (ts, msg) ->
+          match msg with
+            | Kill "driver" ->
+                exit 0
+
+            | CAN frame -> begin
+                match !can_opt with
+                  | Some can ->
+                      Krobot_can_bus.send can (ts, frame)
+                  | None ->
+                      return ()
+              end
+
+            | _ ->
+                return ())
+       (Krobot_bus.recv bus));
 
   while_lwt true do
     try_lwt
       (* Open the CAN bus. *)
       lwt can = Krobot_can_bus.open_can device in
-
-      let active, set_active = S.create true in
-
-      (* D-Bus --> CAN *)
-      let ev = E.map_s (Krobot_can_bus.send can) (E.when_ active (Krobot_can.recv bus)) in
+      can_opt := Some can;
 
       try_lwt
-        (* CAN --> D-Bus *)
         while_lwt true do
-          Krobot_can_bus.recv can >>= Krobot_can.send bus
+          lwt (ts, frame) = Krobot_can_bus.recv can in
+          Krobot_bus.send bus (ts, CAN frame)
         done
       with exn ->
-        lwt () = Krobot_can_bus.close can in
         (* Make sure no more messages are sent on the CAN bus. *)
-        set_active false;
-        (* This is just here to keep a reference to [ev]. *)
-        E.stop ev;
+        can_opt := None;
+        lwt () = Krobot_can_bus.close can in
         raise_lwt exn
     with exn ->
-      lwt () = Lwt_log.error ~exn "failure" in
+      ignore (Lwt_log.error ~exn "failure");
       if !once then
         exit 0
       else

@@ -7,45 +7,165 @@
  * This file is a part of [kro]bot.
  *)
 
-let section = Lwt_log.Section.make "bus"
+open Lwt
+open Lwt_react
+open Krobot_geom
 
-type t = OBus_bus.t
+let section = Lwt_log.Section.make "krobot(bus)"
+let port = 50000
 
-external of_bus : OBus_bus.t -> t = "%identity"
-external to_bus : t -> OBus_bus.t = "%identity"
+(* +-----------------------------------------------------------------+
+   | Types                                                           |
+   +-----------------------------------------------------------------+ *)
 
-let default_address = [OBus_address.make "unix" [("abstract", "krobot")]]
+type message =
+  | CAN of Krobot_can.frame
+  | Log of string
+  | Send
+  | Kill of string
+  | Trajectory_origin of vertice * vector
+  | Trajectory_vertices of vertice list
+  | Trajectory_set_vertices of vertice list
+  | Trajectory_add_vertice of vertice
+  | Trajectory_simplify of float
+  | Trajectory_go of float * float * float * float
+  | Trajectory_stop
+  | Trajectory_moving of bool
 
-let address =
-  match try Some(Sys.getenv "DBUS_KROBOT_BUS_ADDRESS") with Not_found -> None with
-    | Some str -> begin
+type t = {
+  oc : Lwt_io.output_channel;
+  recv : (float * message) event;
+}
+
+(* +-----------------------------------------------------------------+
+   | Message printer                                                 |
+   +-----------------------------------------------------------------+ *)
+
+open Printf
+
+let string_of_vertice v =
+  sprintf "{ x = %f; y = %f }" v.x v.y
+
+let string_of_vector v =
+  sprintf "{ vx = %f; vy = %f }" v.vx v.vy
+
+let string_of_message = function
+  | CAN frame ->
+      sprintf
+        "CAN %s"
+        (Krobot_can.string_of_frame frame)
+  | Log str ->
+      sprintf
+        "Log %S"
+        str
+  | Send ->
+      "Send"
+  | Kill name ->
+      sprintf
+        "Kill %S"
+        name
+  | Trajectory_origin(o, v) ->
+      sprintf
+        "Trajectory_origin(%s, %s)"
+        (string_of_vertice o)
+        (string_of_vector v)
+  | Trajectory_vertices l ->
+      sprintf
+        "Trajectory_vertices [%s]"
+        (String.concat "; " (List.map string_of_vertice l))
+  | Trajectory_set_vertices l ->
+      sprintf
+        "Trajectory_set_vertices [%s]"
+        (String.concat "; " (List.map string_of_vertice l))
+  | Trajectory_add_vertice v ->
+      sprintf
+        "Trajectory_add_vertice %s"
+        (string_of_vertice v)
+  | Trajectory_simplify tolerance ->
+      sprintf
+        "Trajectory_simplify %f"
+        tolerance
+  | Trajectory_go(a, b, c, d) ->
+      sprintf
+        "Trajectory_go(%f, %f, %f, %f)"
+        a b c d
+  | Trajectory_stop ->
+      "Trajectory_stop"
+  | Trajectory_moving b ->
+      sprintf
+        "Trajectory_moving %B"
+        b
+
+(* +-----------------------------------------------------------------+
+   | Sending/receiving messages                                      |
+   +-----------------------------------------------------------------+ *)
+
+let send bus v = Lwt_io.write_value bus.oc v
+let recv bus = bus.recv
+
+(* +-----------------------------------------------------------------+
+   | Dispatching incomming messages                                  |
+   +-----------------------------------------------------------------+ *)
+
+let dispatch ic emit =
+  try_lwt
+    while_lwt true do
+      (* Read one message. *)
+      lwt v = Lwt_io.read_value ic in
+
+      (* Emit it. *)
+      begin
         try
-          OBus_address.of_string str
-        with OBus_address.Parse_failure(str, pos, err) ->
-          ignore (Lwt_log.error_f "The environment variable DBUS_KROBOT_BUS_ADDRESS contains an invalid D-Bus address: \"%s\", at position %d: %s" str pos err);
-          default_address
-      end
-    | None ->
-        default_address
+          emit v
+        with exn ->
+          ignore (Lwt_log.error ~section ~exn "message handler failed with")
+      end;
+
+      return ()
+    done
+  with exn ->
+    ignore (Lwt_log.error ~section ~exn "lost connection");
+    exit 1
+
+(* +-----------------------------------------------------------------+
+   | Creation                                                        |
+   +-----------------------------------------------------------------+ *)
 
 let bus = lazy(
   try_lwt
-    lwt () = Lwt_log.info "openning the D-Bus krobot bus" in
-    OBus_bus.of_addresses address
+    (* Open a connection to the local HUB. *)
+    lwt ic, oc = Lwt_io.open_connection (Unix.ADDR_INET(Unix.inet_addr_loopback, port)) in
+
+    (* The event for incomming message. *)
+    let recv, emit = E.create () in
+
+    (* Dispatch message forever. *)
+    ignore (dispatch ic emit);
+
+    (* Create the bus. *)
+    let bus = { oc; recv } in
+
+    (* Send logs over the bus. *)
+    let logger =
+      Lwt_log.make
+        (fun section level lines ->
+           let buf = Buffer.create 42 in
+           List.iter
+             (fun line ->
+                Buffer.clear buf;
+                Lwt_log.render ~buffer:buf ~template:"$(name)[$(section)]: $(message)" ~section ~level ~message:line;
+                ignore (send bus (Unix.gettimeofday (), Log(Buffer.contents buf))))
+             lines;
+           return ())
+        return
+    in
+
+    Lwt_log.default := Lwt_log.broadcast [!Lwt_log.default; logger];
+
+    return bus
   with exn ->
-    lwt () = Lwt_log.error_f ~section ~exn "failed to connect to the D-Bus krobot bus at address \"%s\"" (OBus_address.to_string address) in
+    ignore (Lwt_log.error ~section ~exn "failed to connect to the local hub");
     exit 1
 )
 
 let get () = Lazy.force bus
-
-(* We put that here because all programs use this module. *)
-let () =
-  Printexc.register_printer
-    (function
-       | Unix.Unix_error(error, func, "") ->
-           Some(Printf.sprintf "%s: %s" func (Unix.error_message error))
-       | Unix.Unix_error(error, func, arg) ->
-           Some(Printf.sprintf "%s(%S): %s" func arg (Unix.error_message error))
-       | _ ->
-           None)

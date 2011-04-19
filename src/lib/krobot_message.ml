@@ -415,5 +415,15 @@ let decode frame =
    | Sending/receiving messages                                      |
    +-----------------------------------------------------------------+ *)
 
-let send bus (timestamp, msg) = Krobot_can.send bus (timestamp, encode msg)
-let recv bus = E.map (fun (timestamp, frame) -> (timestamp, decode frame)) (Krobot_can.recv bus)
+let send bus (timestamp, msg) =
+  Krobot_bus.send bus (timestamp, Krobot_bus.CAN(encode msg))
+
+let recv bus =
+  E.fmap
+    (fun (timestamp, message) ->
+       match message with
+         | Krobot_bus.CAN frame ->
+             Some(timestamp, decode frame)
+         | _ ->
+             None)
+    (Krobot_bus.recv bus)

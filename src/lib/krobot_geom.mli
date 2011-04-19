@@ -11,6 +11,12 @@
 
 (** {6 Basic geometry} *)
 
+val pi : float
+  (** 3.14... *)
+
+val math_mod_float : float -> float -> float
+  (** Same as [mod_float] but always returns a positive number. *)
+
 type vector = { vx : float; vy : float }
 type vertice = { x : float; y : float }
 
