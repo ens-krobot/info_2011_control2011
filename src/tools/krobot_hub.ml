@@ -136,11 +136,11 @@ lwt () =
   (* Establish the local server. *)
   ignore (Lwt_io.establish_server (Unix.ADDR_INET(Unix.inet_addr_any, port)) (fun channels -> handle_connection hub channels));
 
-  (* Launch link to other HUBs. *)
-  List.iter (fun host -> ignore (link hub host)) !hosts;
-
   (* Fork if not prevented. *)
   if !fork then Lwt_daemon.daemonize ();
+
+  (* Launch link to other HUBs. *)
+  List.iter (fun host -> ignore (link hub host)) !hosts;
 
   (* Wait forever. *)
   fst (wait ())
