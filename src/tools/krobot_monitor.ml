@@ -11,6 +11,7 @@
 
 open Lwt
 open Lwt_react
+open Krobot_bus
 
 let date_string time =
   let tm = Unix.localtime time in
@@ -45,7 +46,16 @@ lwt () =
   E.keep
     (E.map_s
        (fun (timestamp, message) ->
-          Lwt_io.printlf "%s: %s" (date_string timestamp) (Krobot_bus.string_of_message message))
+          match message with
+            | CAN frame ->
+                Lwt_io.printlf "%s: %s -> %s"
+                  (date_string timestamp)
+                  (Krobot_bus.string_of_message message)
+                  (Krobot_message.to_string (Krobot_message.decode frame))
+            | _ ->
+                Lwt_io.printlf "%s: %s"
+                  (date_string timestamp)
+                  (Krobot_bus.string_of_message message))
        (Krobot_bus.recv bus));
 
   fst (wait ())
