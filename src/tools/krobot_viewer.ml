@@ -326,7 +326,7 @@ let simplify viewer =
 
 let handle_message viewer (timestamp, message) =
   match message with
-    | CAN frame -> begin
+    | CAN(_, frame) -> begin
         match decode frame with
           | Odometry(x, y, theta) ->
               let angle = math_mod_float (theta) (2. *. pi) in

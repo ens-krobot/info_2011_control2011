@@ -47,7 +47,7 @@ lwt () =
     (E.map_s
        (fun (timestamp, message) ->
           match message with
-            | CAN frame ->
+            | CAN(_, frame) ->
                 Lwt_io.printlf "%s: %s -> %s"
                   (date_string timestamp)
                   (Krobot_bus.string_of_message message)

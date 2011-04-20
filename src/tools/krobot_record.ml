@@ -11,6 +11,7 @@
 
 open Lwt
 open Lwt_react
+open Krobot_bus
 
 lwt () =
   if Array.length Sys.argv <> 2 then begin
@@ -21,13 +22,16 @@ lwt () =
   lwt bus = Krobot_bus.get () in
   lwt oc = Lwt_io.open_file ~mode:Lwt_io.output Sys.argv.(1) in
 
-  (* The proxy for the driver. *)
-  let driver = OBus_proxy.make (OBus_peer.make (Krobot_bus.to_bus bus) "fr.krobot.Service.Driver") ["fr"; "krobot"; "CAN"] in
-
-  (* Receive frames comming from the driver. *)
-  lwt ev = OBus_signal.connect (OBus_signal.make Krobot_interface_can.Fr_krobot_CAN.s_message driver) in
-
-  (* Write all frames to the output file. *)
-  E.keep (E.map_s (fun v -> Lwt_io.write_value oc (Krobot_can.frame_of_tuple v)) ev);
+  (* Write all frames comming from the electronic to the output
+     file. *)
+  E.keep
+    (E.map_s
+       (fun (timestamp, message) ->
+          match message with
+            | CAN(Elec, frame) ->
+                Lwt_io.write_value oc (timestamp, frame)
+            | _ ->
+                return ())
+       (Krobot_bus.recv bus));
 
   fst (wait ())

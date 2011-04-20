@@ -18,10 +18,13 @@ val get : unit -> t Lwt.t
   (** [get ()] returns the krobot bus. It exits the program on
       error. *)
 
+type frame_source = Elec | Info
+    (** The source of CAN frames. *)
+
 (** Type of message exchanged over the bus. *)
 type message =
-  | CAN of Krobot_can.frame
-      (** A CAN frame. *)
+  | CAN of frame_source * Krobot_can.frame
+      (** [CAN(source, frmae)] a CAN frame. *)
   | Log of string
       (** A log message. *)
   | Send

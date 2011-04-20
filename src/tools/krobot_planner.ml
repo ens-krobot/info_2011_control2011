@@ -283,7 +283,7 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
 
 let handle_message planner (timestamp, message) =
   match message with
-    | CAN frame -> begin
+    | CAN(_, frame) -> begin
         match decode frame with
           | Odometry(x, y, theta) ->
               planner.position <- { x; y };

@@ -98,8 +98,7 @@ Executable "krobot-dump-encoders"
 
 Executable "krobot-record"
   Path: src/tools
-  Install: false
-  Build: false
+  Install: true
   CompiledObject: best
   MainIs: krobot_record.ml
   BuildDepends: krobot, lwt.syntax

@@ -18,8 +18,10 @@ let port = 50000
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
 
+type frame_source = Elec | Info
+
 type message =
-  | CAN of Krobot_can.frame
+  | CAN of frame_source * Krobot_can.frame
   | Log of string
   | Send
   | Kill of string
@@ -50,9 +52,10 @@ let string_of_vector v =
   sprintf "{ vx = %f; vy = %f }" v.vx v.vy
 
 let string_of_message = function
-  | CAN frame ->
+  | CAN(source, frame) ->
       sprintf
-        "CAN %s"
+        "CAN(%s, %s)"
+        (match source with Elec -> "Elec" | Info -> "Info")
         (Krobot_can.string_of_frame frame)
   | Log str ->
       sprintf

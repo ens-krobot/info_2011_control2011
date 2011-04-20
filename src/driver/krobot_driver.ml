@@ -65,7 +65,7 @@ lwt () =
             | Kill "driver" ->
                 exit 0
 
-            | CAN frame -> begin
+            | CAN(Info, frame) -> begin
                 match !can_opt with
                   | Some can ->
                       Krobot_can_bus.send can (ts, frame)
@@ -86,7 +86,7 @@ lwt () =
       try_lwt
         while_lwt true do
           lwt (ts, frame) = Krobot_can_bus.recv can in
-          Krobot_bus.send bus (ts, CAN frame)
+          Krobot_bus.send bus (ts, CAN(Elec, frame))
         done
       with exn ->
         (* Make sure no more messages are sent on the CAN bus. *)

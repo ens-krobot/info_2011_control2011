@@ -11,6 +11,7 @@
 
 open Lwt
 open Lwt_react
+open Krobot_bus
 
 let raw = ref false
 let decoded = ref true
@@ -60,9 +61,9 @@ lwt () =
     (E.map_s
        (fun (timestamp, message) ->
           match message with
-            | Krobot_bus.CAN frame ->
+            | CAN(source, frame) ->
                 let msg = Krobot_message.decode frame in
-                lwt () = Lwt_io.print (date_string timestamp)in
+                lwt () = Lwt_io.printf "%s| %s" (match source with Elec -> "elec" | Info -> "info") (date_string timestamp)in
                 lwt () =
                   if !decoded then
                     Lwt_io.printf ": %s" (Krobot_message.to_string msg)

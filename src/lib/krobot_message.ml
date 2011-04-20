@@ -441,13 +441,12 @@ let decode frame =
    +-----------------------------------------------------------------+ *)
 
 let send bus (timestamp, msg) =
-  Krobot_bus.send bus (timestamp, Krobot_bus.CAN(encode msg))
-
+  Krobot_bus.send bus (timestamp, Krobot_bus.CAN(Krobot_bus.Info, encode msg))
 let recv bus =
   E.fmap
     (fun (timestamp, message) ->
        match message with
-         | Krobot_bus.CAN frame ->
+         | Krobot_bus.CAN(_, frame) ->
              Some(timestamp, decode frame)
          | _ ->
              None)
