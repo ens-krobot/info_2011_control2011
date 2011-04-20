@@ -256,6 +256,8 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
               loop y rest
         in
 
+        (* Add the origin of the trajectory to keep displaying it. *)
+        planner.vertices <- planner.position :: planner.vertices;
         match planner.curves with
           | [] ->
               return ()
