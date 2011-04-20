@@ -236,16 +236,16 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
         let rec loop x = function
           | [] ->
               lwt () = wait_done planner in
-              drop_vertice x;
+              set_vertices planner [];
               return ()
 
           | [points] ->
               lwt () = wait_middle planner in
-              lwt y = send_curve points 0.01 in
+              lwt _ = send_curve points 0.01 in
               lwt () = wait_start planner in
               drop_vertice x;
               lwt () = wait_done planner in
-              drop_vertice y;
+              set_vertices planner [];
               return ()
 
           | points :: rest ->
@@ -260,12 +260,13 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
         planner.vertices <- planner.position :: planner.vertices;
         match planner.curves with
           | [] ->
+              set_vertices planner [];
               return ()
 
           | [points] ->
-              lwt x = send_curve points 0.01 in
+              lwt _ = send_curve points 0.01 in
               lwt () = wait_done planner in
-              drop_vertice x;
+              set_vertices planner [];
               return ()
 
           | points :: rest ->
