@@ -309,8 +309,9 @@ let handle_message planner (timestamp, message) =
     | Send ->
         ignore (
           let ts = Unix.gettimeofday () in
+          let vertices = if planner.moving then planner.vertices else planner.position :: planner.vertices in
           join [
-            Krobot_bus.send planner.bus (ts, Trajectory_vertices(planner.vertices, planner.curves));
+            Krobot_bus.send planner.bus (ts, Trajectory_vertices(vertices, planner.curves));
             Krobot_bus.send planner.bus (ts, Trajectory_moving planner.moving);
           ]
         )
