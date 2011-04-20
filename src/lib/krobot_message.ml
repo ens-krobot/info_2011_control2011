@@ -32,7 +32,7 @@ type t =
   | Motor_bezier of float * float * float * float * float * float
   | Motor_stop
   | Odometry of float * float * float
-  | Odometry_ghost of float * float * float * bool
+  | Odometry_ghost of float * float * float * int * bool
   | Set_odometry of float * float * float
   | Set_controller_mode of bool
   | Req_motor_status
@@ -108,10 +108,10 @@ let to_string = function
       sprintf
         "Odometry(%f, %f, %f)"
         x y theta
-  | Odometry_ghost(x, y, theta, following) ->
+  | Odometry_ghost(x, y, theta, u, following) ->
       sprintf
-        "Odometry_ghost(%f, %f, %f, %B)"
-        x y theta following
+        "Odometry_ghost(%f, %f, %f, %d, %B)"
+        x y theta u following
   | Set_odometry(x, y, theta) ->
       sprintf
         "Set_odometry(%f, %f, %f)"
@@ -191,12 +191,13 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Odometry_ghost(x, y, theta, following) ->
-      let data = String.create 7 in
+  | Odometry_ghost(x, y, theta, u, following) ->
+      let data = String.create 8 in
       put_sint16 data 0 (truncate (x *. 1000.));
       put_sint16 data 2 (truncate (y *. 1000.));
       put_sint16 data 4 (truncate (theta *. 10000.));
-      put_uint8 data 6 (if following then 1 else 0);
+      put_uint8 data 6 u;
+      put_uint8 data 7 (if following then 1 else 0);
       frame
         ~identifier:105
         ~kind:Data
@@ -375,7 +376,8 @@ let decode frame =
               (float (get_sint16 frame.data 0) /. 1000.,
                float (get_sint16 frame.data 2) /. 1000.,
                float (get_sint16 frame.data 4) /. 10000.,
-               get_uint8 frame.data 6 <> 0)
+               get_uint8 frame.data 6,
+               get_uint8 frame.data 7 <> 0)
         | 201 ->
             Motor_move
               (float (get_sint32 frame.data 0) /. 1000.,

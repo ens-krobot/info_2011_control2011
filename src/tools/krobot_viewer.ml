@@ -339,7 +339,7 @@ let handle_message viewer (timestamp, message) =
                 queue_draw viewer
               end
 
-          | Odometry_ghost(x, y, theta, following) ->
+          | Odometry_ghost(x, y, theta, u, following) ->
               let angle = math_mod_float (theta) (2. *. pi) in
               let ghost = { pos = { x; y }; theta = angle } in
               if ghost <> viewer.ghost then begin

@@ -51,7 +51,7 @@ type t =
   | Odometry of float * float * float
       (** [Odometry(x, y, theta)] the position of the robot on the
           table. *)
-  | Odometry_ghost of float * float * float * bool
+  | Odometry_ghost of float * float * float * int * bool
       (** [Odometry_ghost(x, y, theta, following)]. [following] is
           [true] iff the robot is following the ghost. *)
   | Set_odometry of float * float * float

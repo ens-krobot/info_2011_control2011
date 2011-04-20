@@ -52,6 +52,10 @@ type planner = {
   mutable motors_moving : bool;
   (* Are the motor currently active ? *)
 
+  mutable curve_status : int;
+  (* The status of the trajectory controller on the curve (between 0
+     and 255). *)
+
   mutable mover : unit Lwt.t;
   (* The thread moving the robot. *)
 
@@ -125,90 +129,147 @@ let wait_done planner =
   lwt () = Lwt_unix.sleep 0.3 in
   lwt () =
     while_lwt planner.motors_moving do
-      Lwt_unix.sleep 0.2
+      Lwt_unix.sleep 0.1
     done
   in
   Lwt_log.info "trajectory done"
+
+let wait_middle planner =
+  lwt () = Lwt_log.info "waiting for the robot to be in the middle of the trajectory" in
+  lwt () = Lwt_unix.sleep 0.3 in
+  lwt () =
+    while_lwt planner.curve_status < 128 do
+      Lwt_unix.sleep 0.001
+    done
+  in
+  Lwt_log.info "robot in the middle of the trajectory"
+
+let wait_start planner =
+  lwt () = Lwt_log.info "waiting for the robot to start the new trajectory" in
+  lwt () =
+    while_lwt planner.curve_status >= 128 do
+      Lwt_unix.sleep 0.001
+    done
+  in
+  Lwt_log.info "robot started the new trajectory"
 
 let go planner rotation_speed rotation_acceleration moving_speed moving_acceleration =
   if planner.moving then
     return ()
   else begin
-(*    let rec loop () =
-      match S.value planner.vertices with
-        | { x; y } :: rest ->
-            let sqr x = x *. x in
-            let radius = sqrt (sqr (max wheels_position (robot_size -. wheels_position)) +. sqr (robot_size /. 2.)) in
-            if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
-              (* Turn the robot. *)
-              let alpha = math_mod_float (atan2 (y -. planner.position.y) (x -. planner.position.x) -. planner.orientation) (2. *. pi) in
-              lwt () = Lwt_log.info_f "turning by %f radians" alpha in
-              lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
-                                                        Motor_turn(alpha,
-                                                                   rotation_speed,
-                                                                   rotation_acceleration)) in
-              lwt () = wait_done planner in
+    (*    let rec loop () =
+          match S.value planner.vertices with
+          | { x; y } :: rest ->
+          let sqr x = x *. x in
+          let radius = sqrt (sqr (max wheels_position (robot_size -. wheels_position)) +. sqr (robot_size /. 2.)) in
+          if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
+    (* Turn the robot. *)
+          let alpha = math_mod_float (atan2 (y -. planner.position.y) (x -. planner.position.x) -. planner.orientation) (2. *. pi) in
+          lwt () = Lwt_log.info_f "turning by %f radians" alpha in
+          lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
+          Motor_turn(alpha,
+          rotation_speed,
+          rotation_acceleration)) in
+          lwt () = wait_done planner in
 
-              (* Move the robot. *)
-              let dist = sqrt (sqr (x -. planner.position.x) +. sqr (y -. planner.position.y)) in
-              lwt () = Lwt_log.info_f "moving by %f meters" dist in
-              lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
-                                                        Motor_move(dist,
-                                                                   moving_speed,
-                                                                   moving_acceleration)) in
-              lwt () = wait_done planner in
+    (* Move the robot. *)
+          let dist = sqrt (sqr (x -. planner.position.x) +. sqr (y -. planner.position.y)) in
+          lwt () = Lwt_log.info_f "moving by %f meters" dist in
+          lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
+          Motor_move(dist,
+          moving_speed,
+          moving_acceleration)) in
+          lwt () = wait_done planner in
 
-              (* Remove the point. *)
-              (match S.value planner.vertices with
-                 | _ :: l -> planner.set_vertices l
-                 | [] -> ());
-              planner.set_origin (planner.position,
-                                  { vx = cos planner.orientation;
-                                    vy = sin planner.orientation });
+    (* Remove the point. *)
+          (match S.value planner.vertices with
+          | _ :: l -> planner.set_vertices l
+          | [] -> ());
+          planner.set_origin (planner.position,
+          { vx = cos planner.orientation;
+          vy = sin planner.orientation });
 
-              loop ()
-            end else
-              Lwt_log.warning_f "can not move to (%f, %f)" x y
-        | [] ->
-            return ()
-    in*)
+          loop ()
+          end else
+          Lwt_log.warning_f "can not move to (%f, %f)" x y
+          | [] ->
+          return ()
+          in*)
     set_moving planner true;
     planner.mover <- (
       try_lwt
         let o, v = planner.origin in
+
+        (* Compute all cubic bezier curves. *)
         let params = List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v (o :: planner.vertices) []) in
-        Lwt_list.iter_s
-          (fun (p, q, r, s) ->
 
-             let v = vector r s in
-             lwt () =
-               Krobot_message.send
-                 planner.bus
-                 (Unix.gettimeofday (),
-                  Motor_bezier(s.x,
-                               s.y,
-                               distance p q,
-                               distance r s,
-                               atan2 v.vy v.vx,
-                               0.))
-             in
+        (* Send a bezier curve to the robot. *)
+        let send_curve (p, q, r, s) v_end =
+          (* Compute parameters. *)
+          let d1 = distance p q and d2 = distance r s in
+          let v = vector r s in
+          let theta_end = atan2 v.vy v.vx in
 
-             lwt () = wait_done planner in
+          ignore (
+            Lwt_log.info_f
+              "sending bezier curve, x = %f, y = %f, d1 = %f, d2 = %f, theta_end = %f, v_end = %f"
+              s.x s.y d1 d2 theta_end v_end
+          );
 
-             (match planner.vertices with
-                | _ :: l ->
-                    set_vertices planner l
-                | [] ->
-                    ());
-             set_origin planner (planner.position,
-                                 { vx = cos planner.orientation;
-                                   vy = sin planner.orientation });
+          (* Send the curve. *)
+          Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end))
+        in
 
-             return ()
-          )
-          params
+        (* Remove the first vertice of the trajecotry. *)
+        let drop_vertice () =
+          (match planner.vertices with
+             | _ :: l ->
+                 set_vertices planner l
+             | [] ->
+                 ());
+          set_origin planner (planner.position,
+                              { vx = cos planner.orientation;
+                                vy = sin planner.orientation })
+        in
+
+        let rec loop = function
+          | [] ->
+              lwt () = wait_done planner in
+              drop_vertice ();
+              return ()
+
+          | [points] ->
+              lwt () = wait_middle planner in
+              lwt () = send_curve points 0.01 in
+              lwt () = wait_done planner in
+              drop_vertice ();
+              return ()
+
+          | points :: rest ->
+              lwt () = wait_middle planner in
+              lwt () = send_curve points 0.5 in
+              lwt () = wait_start planner in
+              drop_vertice ();
+              loop rest
+        in
+
+        match params with
+          | [] ->
+              return ()
+
+          | [points] ->
+              lwt () = send_curve points 0.01 in
+              lwt () = wait_done planner in
+              drop_vertice ();
+              return ()
+
+          | points :: rest ->
+              lwt () = send_curve points 0.5 in
+              loop rest
+
       with exn ->
         Lwt_log.error_f ~section ~exn "failed to move"
+
       finally
         set_moving planner false;
         return ()
@@ -232,7 +293,8 @@ let handle_message planner (timestamp, message) =
                                     { vx = cos planner.orientation;
                                       vy = sin planner.orientation })
 
-          | Odometry_ghost(x, y, theta, following) ->
+          | Odometry_ghost(x, y, theta, u, following) ->
+              planner.curve_status <- u;
               planner.motors_moving <- following
 
           | _ ->
@@ -313,6 +375,7 @@ lwt () =
     vertices = [];
     moving = false;
     motors_moving = false;
+    curve_status = 0;
     mover = return ();
     position = { x = 0.; y = 0. };
     orientation = 0.;
