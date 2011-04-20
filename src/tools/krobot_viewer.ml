@@ -50,11 +50,11 @@ type viewer = {
   mutable beacon : beacon;
   (* The state of the beacon. *)
 
-  mutable origin : vertice * vector;
-  (* The origin of the trajectory. *)
-
   mutable vertices : vertice list;
   (* The current trajectory. *)
+
+  mutable curves : (vertice * vertice * vertice * vertice) list;
+  (* The current bezier curves of the trajectory. *)
 
   mutable motor_status : bool * bool * bool *bool;
   (* Status of the four motor controller. *)
@@ -268,18 +268,21 @@ let draw viewer =
     Cairo.stroke ctx
   end;
 
-  let o, v = viewer.origin in
-
   (* Draw points. *)
   Cairo.set_source_rgb ctx 255. 255. 0.;
-  Cairo.move_to ctx o.x o.y;
-  List.iter (fun { x; y } -> Cairo.line_to ctx x y) viewer.vertices;
-  Cairo.stroke ctx;
+  (match viewer.vertices with
+     | [] ->
+         ()
+     | o :: l ->
+         Cairo.move_to ctx o.x o.y;
+         List.iter (fun { x; y } -> Cairo.line_to ctx x y) l;
+         Cairo.stroke ctx);
 
   (* Draw bezier curves. *)
   Cairo.set_source_rgb ctx 255. 0. 255.;
-  Bezier.fold_curves
-    (fun curve () ->
+  List.iter
+    (fun (p, q, r, s) ->
+       let curve = Bezier.of_vertices p q r s in
        let { x; y } = Bezier.vertice curve 0. in
        Cairo.move_to ctx x y;
        for i = 1 to 100 do
@@ -287,7 +290,7 @@ let draw viewer =
          Cairo.line_to ctx x y
        done;
        Cairo.stroke ctx)
-    v (o :: viewer.vertices) ();
+    viewer.curves;
 
   let ctx = Cairo_lablgtk.create viewer.ui#scene#misc#window in
   Cairo.set_source_surface ctx surface 0. 0.;
@@ -397,12 +400,9 @@ let handle_message viewer (timestamp, message) =
     | Kill "viewer" ->
         exit 0
 
-    | Trajectory_origin(o, v) ->
-        viewer.origin <- (o, v);
-        queue_draw viewer
-
-    | Trajectory_vertices l ->
-        viewer.vertices <- l;
+    | Trajectory_vertices(vertices, curves) ->
+        viewer.vertices <- vertices;
+        viewer.curves <- curves;
         queue_draw viewer
 
     | Trajectory_moving moving ->
@@ -468,8 +468,8 @@ lwt () =
     state = init;
     ghost = init;
     beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
-    origin = ({ x = 0.; y = 0. }, { vx = 0.; vy = 0. });
     vertices = [];
+    curves = [];
     statusbar_context = ui#statusbar#new_context "";
     motor_status = (false, false, false, false);
   } in

@@ -38,13 +38,11 @@ type planner = {
   bus : Krobot_bus.t;
   (* The message bus used to communicate with the robot. *)
 
-  mutable origin : (vertice * vector);
-  (* If the robot is moving, this is the origin of the current
-     trajectory with the initial direction vector, otherwise it is the
-     current position with the current direction vector. *)
-
   mutable vertices : vertice list;
   (* The list of vertices for the trajectory. *)
+
+  mutable curves : (vertice * vertice * vertice * vertice) list;
+  (* The parameters of bezier curves. *)
 
   mutable moving : bool;
   (* Is the robot moving ? *)
@@ -73,13 +71,26 @@ type planner = {
    | Primitives                                                      |
    +-----------------------------------------------------------------+ *)
 
-let set_vertices planner vertices =
+let set_vertices planner ?curves vertices =
   planner.vertices <- vertices;
-  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_vertices vertices))
-
-let set_origin planner (o, v) =
-  planner.origin <- (o, v);
-  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_origin(o, v)))
+  (* If the robot is not moving, add its current position to the
+     trajectory. *)
+  let vertices =
+    match planner.moving with
+      | true -> vertices
+      | false -> planner.position :: vertices
+  in
+  (* Compute bezier curves if not provided. *)
+  let curves =
+    match curves with
+      | Some l ->
+          l
+      | None ->
+          let v = { vx = cos planner.orientation; vy = sin planner.orientation } in
+          List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v vertices [])
+  in
+  planner.curves <- curves;
+  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_vertices(vertices, curves)))
 
 let set_moving planner moving =
   planner.moving <- moving;
@@ -198,11 +209,6 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
     set_moving planner true;
     planner.mover <- (
       try_lwt
-        let o, v = planner.origin in
-
-        (* Compute all cubic bezier curves. *)
-        let params = List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v (o :: planner.vertices) []) in
-
         (* Send a bezier curve to the robot. *)
         let send_curve (p, q, r, s) v_end =
           (* Compute parameters. *)
@@ -217,55 +223,52 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
           );
 
           (* Send the curve. *)
-          Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end))
+          lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)) in
+
+          return (s, theta_end)
         in
 
         (* Remove the first vertice of the trajecotry. *)
-        let drop_vertice () =
-          (match planner.vertices with
-             | _ :: l ->
-                 set_vertices planner l
-             | [] ->
-                 ());
-          set_origin planner (planner.position,
-                              { vx = cos planner.orientation;
-                                vy = sin planner.orientation })
+        let drop_vertice (s, theta) =
+          set_vertices planner ~curves:(List.tl planner.curves) (List.tl planner.vertices)
         in
 
-        let rec loop = function
+        let rec loop x = function
           | [] ->
               lwt () = wait_done planner in
-              drop_vertice ();
+              drop_vertice x;
               return ()
 
           | [points] ->
               lwt () = wait_middle planner in
-              lwt () = send_curve points 0.01 in
-              lwt () = wait_done planner in
-              drop_vertice ();
-              return ()
-
-          | points :: rest ->
-              lwt () = wait_middle planner in
-              lwt () = send_curve points 0.5 in
+              lwt y = send_curve points 0.01 in
               lwt () = wait_start planner in
-              drop_vertice ();
-              loop rest
+              drop_vertice x;
+              lwt () = wait_done planner in
+              drop_vertice y;
+              return ()
+
+          | points :: rest ->
+              lwt () = wait_middle planner in
+              lwt y = send_curve points 0.5 in
+              lwt () = wait_start planner in
+              drop_vertice x;
+              loop y rest
         in
 
-        match params with
+        match planner.curves with
           | [] ->
               return ()
 
           | [points] ->
-              lwt () = send_curve points 0.01 in
+              lwt x = send_curve points 0.01 in
               lwt () = wait_done planner in
-              drop_vertice ();
+              drop_vertice x;
               return ()
 
           | points :: rest ->
-              lwt () = send_curve points 0.5 in
-              loop rest
+              lwt x = send_curve points 0.5 in
+              loop x rest
 
       with exn ->
         Lwt_log.error_f ~section ~exn "failed to move"
@@ -287,11 +290,7 @@ let handle_message planner (timestamp, message) =
         match decode frame with
           | Odometry(x, y, theta) ->
               planner.position <- { x; y };
-              planner.orientation <- math_mod_float theta (2. *. pi);
-              if not planner.moving then
-                set_origin planner (planner.position,
-                                    { vx = cos planner.orientation;
-                                      vy = sin planner.orientation })
+              planner.orientation <- math_mod_float theta (2. *. pi)
 
           | Odometry_ghost(x, y, theta, u, following) ->
               planner.curve_status <- u;
@@ -308,23 +307,26 @@ let handle_message planner (timestamp, message) =
         ignore (
           let ts = Unix.gettimeofday () in
           join [
-            Krobot_bus.send planner.bus (ts, Trajectory_origin(fst planner.origin, snd planner.origin));
-            Krobot_bus.send planner.bus (ts, Trajectory_vertices planner.vertices);
+            Krobot_bus.send planner.bus (ts, Trajectory_vertices(planner.vertices, planner.curves));
             Krobot_bus.send planner.bus (ts, Trajectory_moving planner.moving);
           ]
         )
 
     | Trajectory_set_vertices l ->
-        set_vertices planner l
+        if not planner.moving then
+          set_vertices planner l
 
     | Trajectory_add_vertice vertice ->
-        set_vertices planner (planner.vertices @ [vertice])
+        if not planner.moving then
+          set_vertices planner (planner.vertices @ [vertice])
 
     | Trajectory_simplify tolerance ->
-        simplify planner tolerance
+        if not planner.moving then
+          simplify planner tolerance
 
     | Trajectory_go(rotation_speed, rotation_acceleration, moving_speed, moving_acceleration) ->
-        ignore (go planner rotation_speed rotation_acceleration moving_speed moving_acceleration)
+        if not planner.moving then
+          ignore (go planner rotation_speed rotation_acceleration moving_speed moving_acceleration)
 
     | Trajectory_stop ->
         cancel planner.mover;
@@ -371,8 +373,8 @@ lwt () =
   (* Create a new planner. *)
   let planner = {
     bus;
-    origin = { x = 0.; y = 0. }, { vx = 1.; vy = 0. };
     vertices = [];
+    curves = [];
     moving = false;
     motors_moving = false;
     curve_status = 0;

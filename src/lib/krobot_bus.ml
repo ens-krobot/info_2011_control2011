@@ -25,8 +25,7 @@ type message =
   | Log of string
   | Send
   | Kill of string
-  | Trajectory_origin of vertice * vector
-  | Trajectory_vertices of vertice list
+  | Trajectory_vertices of vertice list * (vertice * vertice * vertice * vertice) list
   | Trajectory_set_vertices of vertice list
   | Trajectory_add_vertice of vertice
   | Trajectory_simplify of float
@@ -67,15 +66,19 @@ let string_of_message = function
       sprintf
         "Kill %S"
         name
-  | Trajectory_origin(o, v) ->
+  | Trajectory_vertices(vertices, curves) ->
       sprintf
-        "Trajectory_origin(%s, %s)"
-        (string_of_vertice o)
-        (string_of_vector v)
-  | Trajectory_vertices l ->
-      sprintf
-        "Trajectory_vertices [%s]"
-        (String.concat "; " (List.map string_of_vertice l))
+        "Trajectory_vertices([%s], [%s])"
+        (String.concat "; " (List.map string_of_vertice vertices))
+        (String.concat "; " (List.map
+                               (fun (p, q, r, s) ->
+                                  Printf.sprintf
+                                    "(%s, %s, %s, %s)"
+                                    (string_of_vertice p)
+                                    (string_of_vertice q)
+                                    (string_of_vertice r)
+                                    (string_of_vertice s))
+                               curves))
   | Trajectory_set_vertices l ->
       sprintf
         "Trajectory_set_vertices [%s]"

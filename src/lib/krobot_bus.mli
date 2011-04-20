@@ -34,11 +34,9 @@ type message =
 
   (** Trajectory messages. *)
 
-  | Trajectory_origin of vertice * vector
-      (** The origin of the trajectory with the initial direction
-          vector. *)
-  | Trajectory_vertices of vertice list
-      (** The list of vertices for the planned trajectory. *)
+  | Trajectory_vertices of vertice list * (vertice * vertice * vertice * vertice) list
+      (** The list of vertices for the planned trajectory, along with
+          the bezier curves. *)
   | Trajectory_set_vertices of vertice list
       (** Sets the trajectory. *)
   | Trajectory_add_vertice of vertice
