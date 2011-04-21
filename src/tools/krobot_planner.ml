@@ -336,7 +336,7 @@ let handle_message planner (timestamp, message) =
         cancel planner.mover;
         set_moving planner false;
         set_vertices planner [];
-        ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop))
+        ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0,0.0)))
 
     | _ ->
         ()

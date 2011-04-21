@@ -210,7 +210,7 @@ lwt () =
                 lwt () = Lwt_log.info_f "received: turn(%f, %f, %f)" angle speed acc in
                 turn sim angle speed acc;
                 return ()
-            | Motor_stop ->
+            | Motor_stop(lin_acc, rot_acc) ->
                 sim.command <- Idle;
                 return ()
             | Req_motor_status ->

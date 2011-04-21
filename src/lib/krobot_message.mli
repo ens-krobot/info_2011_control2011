@@ -46,8 +46,12 @@ type t =
       *)
   | Motor_bezier of float * float * float * float * float * float
       (** [Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end)] *)
-  | Motor_stop
-      (** Stops the motors. *)
+  | Motor_stop of float * float
+      (** [Motor_stop(lin_acc, rot_acc)] command to stop following the
+          current Bezier Spline and the queued ones.
+          - [lin_acc] in m/s^2
+          - [rot_acc] in rad/s^2
+      *)
   | Odometry of float * float * float
       (** [Odometry(x, y, theta)] the position of the robot on the
           table. *)

@@ -30,7 +30,7 @@ type t =
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
   | Motor_bezier of float * float * float * float * float * float
-  | Motor_stop
+  | Motor_stop of float * float
   | Odometry of float * float * float
   | Odometry_ghost of float * float * float * int * bool
   | Set_odometry of float * float * float
@@ -102,8 +102,10 @@ let to_string = function
       sprintf
         "Motor_bezier(%f, %f, %f, %f, %f, %f)"
         x y d1 d2 theta v
-  | Motor_stop ->
-      "Motor_stop"
+  | Motor_stop(lin_acc, rot_acc) ->
+      sprintf
+        "Motor_stop(%f, %f)"
+        lin_acc rot_acc
   | Odometry(x, y, theta) ->
       sprintf
         "Odometry(%f, %f, %f)"
@@ -296,13 +298,16 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Motor_stop ->
+  | Motor_stop(lin_acc, rot_acc) ->
+      let data = String.create 8 in
+      put_float32 data 0 lin_acc;
+      put_float32 data 4 rot_acc;
       frame
         ~identifier:204
         ~kind:Data
         ~remote:false
         ~format:F29bits
-        ~data:"\x01"
+        ~data
   | Set_controller_mode b ->
       frame
         ~identifier:205
@@ -395,6 +400,8 @@ let decode frame =
                float (get_sint16 frame.data 4) /. 10000.)
         | 204 ->
             Motor_stop
+              (get_float32 frame.data 0,
+               get_float32 frame.data 4)
         | 205 ->
             Set_controller_mode
               (get_uint8 frame.data 0 <> 0)
