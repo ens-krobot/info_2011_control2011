@@ -233,7 +233,7 @@ let encode = function
       and y = int_of_float (y *. 1000.)
       and d1 = int_of_float (d1 *. 100.)
       and d2 = int_of_float (d2 *. 100.)
-      and theta = int_of_float (theta *. 100.) land 0b111111111111;
+      and theta = int_of_float (theta *. 100.)
       and v = int_of_float (v *. 1000.) in
       frame
         ~identifier:206
@@ -411,10 +411,7 @@ let decode frame =
                          float y /. 1000.,
                          float d1 /. 100.,
                          float d2 /. 100.,
-                         (if theta >= 2048 then
-                            float (theta - 4096) /. 100.
-                          else
-                            float theta /. 100.),
+                         float theta /. 100.,
                          float v /. 1000.)
         | 301 ->
             Beacon_position
