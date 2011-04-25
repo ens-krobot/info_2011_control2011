@@ -12,12 +12,12 @@
 #include <caml/alloc.h>
 
 struct bezier_message {
-  unsigned int x : 12;
-  unsigned int y : 12;
-  int d1 : 9;
-  unsigned int d2 : 8;
-  int theta : 12;
-  unsigned int v : 11;
+  unsigned int x : 12 __attribute__((__packed__));
+  unsigned int y : 12 __attribute__((__packed__));
+  int d1 : 9 __attribute__((__packed__));
+  unsigned int d2 : 8 __attribute__((__packed__));
+  int theta : 12 __attribute__((__packed__));
+  unsigned int v : 11 __attribute__((__packed__));
 };
 
 CAMLprim value krobot_message_encode_bezier(value params)
