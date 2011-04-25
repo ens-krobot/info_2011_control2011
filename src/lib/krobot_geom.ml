@@ -54,6 +54,9 @@ let div v s = {
   vy = v.vy /. s;
 }
 
+let prod a b =
+  a.vx *. b.vx +. a.vy *. b.vy
+
 let ( +| ) = add
 let ( -| ) = sub
 let ( ~| ) = minus
@@ -167,12 +170,14 @@ module Bezier = struct
     in
     match vertices with
       | q :: r :: s :: _ ->
+          let initial = if prod initial (vector q r) < 0. then minus initial else initial in
           let v1 = initial
           and v2, _ = tangents q r s in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
           loop (add_vertices q r v1 v2 acc) vertices
       | [q; r] ->
+          let initial = if prod initial (vector q r) < 0. then minus initial else initial in
           let v1 = initial
           and v2 = vector r q /| distance q r  in
           let v1 = v1 *| (distance q r /. 2.)

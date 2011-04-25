@@ -14,9 +14,9 @@
 struct bezier_message {
   unsigned int x : 12;
   unsigned int y : 12;
-  unsigned int d1 : 8;
+  int d1 : 9;
   unsigned int d2 : 8;
-  int theta : 13;
+  int theta : 12;
   unsigned int v : 11;
 };
 

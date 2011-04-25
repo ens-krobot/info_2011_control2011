@@ -28,6 +28,7 @@ val sub : vector -> vector -> vector
 val minus : vector -> vector
 val mul : vector -> float -> vector
 val div : vector -> float -> vector
+val prod : vector -> vector -> float
 
 val ( +| ) : vector -> vector -> vector
 val ( -| ) : vector -> vector -> vector
