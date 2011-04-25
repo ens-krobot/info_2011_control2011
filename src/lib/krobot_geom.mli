@@ -76,7 +76,8 @@ module Bezier : sig
         passing through the given list of vertices. [vector] is the
         initial direction vector. *)
 
-  val fold_vertices : (vertice -> vertice -> vertice -> vertice -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
+  val fold_vertices : (float -> vertice -> vertice -> vertice -> vertice -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
     (** [fold_vertices f vector vertices acc] same as {!fold_curves}
-        but pass parameters instead of curves to [f]. *)
+        but pass parameters instead of curves to [f]. The first
+        parameter passed to [f] is the sign of [d1]. *)
 end

@@ -149,43 +149,43 @@ module Bezier = struct
     translate origin ((b.a *| t3) +| (b.b *| t2) +| (b.c *| t1) +| b.p)
 
   let fold_vertices f initial vertices acc =
-    let add_vertices q r v1 v2 acc = f q (translate q v1) (translate r v2) r acc in
+    let add_vertices sign q r v1 v2 acc = f sign q (translate q v1) (translate r v2) r acc in
 
     (* Compute cubic bezier curves. *)
-    let rec loop acc = function
+    let rec loop sign acc = function
       |  p :: (q :: r :: s :: _ as rest) ->
            (* Computes tangents with a length that is half of the
               minimum length of the adjacent segments. *)
            let _, v1 = tangents p q r and v2, _ = tangents q r s in
            let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
            and v2 = v2 *| (min (distance q r) (distance r s) /. 2.) in
-           loop (add_vertices q r v1 v2 acc) rest
+           loop sign (add_vertices sign q r v1 v2 acc) rest
       | [p; q; r] ->
           let _, v1 = tangents p q r and v2 = vector r q /| distance q r in
           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          add_vertices q r v1 v2 acc
+          add_vertices sign q r v1 v2 acc
       | _ ->
           acc
     in
     match vertices with
       | q :: r :: s :: _ ->
-          let initial = if prod initial (vector q r) < 0. then minus initial else initial in
+          let initial, sign = if prod initial (vector q r) < 0. then (minus initial, -1.) else (initial, 1.) in
           let v1 = initial
           and v2, _ = tangents q r s in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          loop (add_vertices q r v1 v2 acc) vertices
+          loop sign (add_vertices sign q r v1 v2 acc) vertices
       | [q; r] ->
-          let initial = if prod initial (vector q r) < 0. then minus initial else initial in
+          let initial, sign = if prod initial (vector q r) < 0. then (minus initial, -1.) else (initial, 1.) in
           let v1 = initial
           and v2 = vector r q /| distance q r  in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          add_vertices q r v1 v2 acc
+          add_vertices sign q r v1 v2 acc
       | [_] | [] ->
           acc
 
   let fold_curves f initial vertices acc =
-    fold_vertices (fun p q r s acc -> f (of_vertices p q r s) acc) initial vertices acc
+    fold_vertices (fun sign p q r s acc -> f (of_vertices p q r s) acc) initial vertices acc
 end

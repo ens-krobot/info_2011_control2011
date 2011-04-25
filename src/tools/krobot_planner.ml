@@ -41,7 +41,7 @@ type planner = {
   mutable vertices : vertice list;
   (* The list of vertices for the trajectory. *)
 
-  mutable curves : (vertice * vertice * vertice * vertice) list;
+  mutable curves : (float * vertice * vertice * vertice * vertice) list;
   (* The parameters of bezier curves. *)
 
   mutable moving : bool;
@@ -87,10 +87,11 @@ let set_vertices planner ?curves vertices =
           l
       | None ->
           let v = { vx = cos planner.orientation; vy = sin planner.orientation } in
-          List.rev (Bezier.fold_vertices (fun p q r s acc -> (p, q, r, s) :: acc) v vertices [])
+          List.rev (Bezier.fold_vertices (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) v vertices [])
   in
   planner.curves <- curves;
-  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_vertices(vertices, curves)))
+  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_vertices(vertices,
+                                                                                 List.map (fun (sign, p, q, r, s) -> (p, q, r, s)) curves)))
 
 let set_moving planner moving =
   planner.moving <- moving;
@@ -210,9 +211,9 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
     planner.mover <- (
       try_lwt
         (* Send a bezier curve to the robot. *)
-        let send_curve (p, q, r, s) v_end =
+        let send_curve (sign, p, q, r, s) v_end =
           (* Compute parameters. *)
-          let d1 = distance p q and d2 = distance r s in
+          let d1 = sign *. distance p q and d2 = distance r s in
           let v = vector r s in
           let theta_end = atan2 v.vy v.vx in
 
@@ -311,7 +312,7 @@ let handle_message planner (timestamp, message) =
           let ts = Unix.gettimeofday () in
           let vertices = if planner.moving then planner.vertices else planner.position :: planner.vertices in
           join [
-            Krobot_bus.send planner.bus (ts, Trajectory_vertices(vertices, planner.curves));
+            Krobot_bus.send planner.bus (ts, Trajectory_vertices(vertices, List.map (fun (sign, p, q, r, s) -> (p, q, r, s)) planner.curves));
             Krobot_bus.send planner.bus (ts, Trajectory_moving planner.moving);
           ]
         )
