@@ -23,6 +23,7 @@ type t =
   | Battery2_voltages of float * float * float * float
   | Beacon_position of float * float * float
   | Beacon_lowlevel_position of float * float * int
+  | Encoder_position_direction_1_2 of int * direction * int * direction
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
   | Encoder_position_speed_4 of float * float
@@ -73,6 +74,11 @@ let to_string = function
         angle
         width
         period
+  | Encoder_position_direction_1_2(pos1, dir1, pos2, dir2) ->
+      sprintf
+        "Encoder_position_direction_1_2(%d, %s, %d, %s)"
+        pos1 (string_of_direction dir1)
+        pos2 (string_of_direction dir2)
   | Encoder_position_direction_3_4(pos3, dir3, pos4, dir4) ->
       sprintf
         "Encoder_position_direction_3_4(%d, %s, %d, %s)"
@@ -136,6 +142,18 @@ let pi = 4. *. atan 1.
 external encode_bezier : int * int * int * int * int * int -> string = "krobot_message_encode_bezier"
 
 let encode = function
+  | Encoder_position_direction_1_2(pos1, dir1, pos2, dir2) ->
+      let data = String.create 6 in
+      put_uint16 data 0 pos1;
+      put_uint16 data 2 pos2;
+      put_uint8 data 4 (match dir1 with Forward -> 0 | Backward -> 1);
+      put_uint8 data 5 (match dir2 with Forward -> 0 | Backward -> 1);
+      frame
+        ~identifier:99
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Encoder_position_direction_3_4(pos3, dir3, pos4, dir4) ->
       let data = String.create 6 in
       put_uint16 data 0 pos3;
@@ -351,6 +369,12 @@ let decode frame =
             Unknown frame
     else
       match frame.identifier with
+        | 99 ->
+            Encoder_position_direction_1_2
+              (get_uint16 frame.data 0,
+               (if get_uint8 frame.data 4 = 0 then Forward else Backward),
+               get_uint16 frame.data 2,
+               (if get_uint8 frame.data 5 = 0 then Forward else Backward))
         | 100 ->
             Encoder_position_direction_3_4
               (get_uint16 frame.data 0,

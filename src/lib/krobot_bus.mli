@@ -51,6 +51,11 @@ type message =
   | Trajectory_moving of bool
       (** Is the robot following a trajectory ? *)
 
+  (** Objects *)
+
+  | Objects of vertice list
+      (** The list of objects on the board. *)
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

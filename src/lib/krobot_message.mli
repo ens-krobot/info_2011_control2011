@@ -22,6 +22,8 @@ type t =
       (** The position of the beacon relative to the robot *)
   | Beacon_lowlevel_position of float * float * int
       (** The position of the beacon as internally stored (for calibration) *)
+  | Encoder_position_direction_1_2 of int * direction * int * direction
+      (** The position and direction of encoders 1 and 2. *)
   | Encoder_position_direction_3_4 of int * direction * int * direction
       (** The position and direction of encoders 3 and 4. *)
   | Encoder_position_speed_3 of float * float

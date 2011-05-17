@@ -18,18 +18,6 @@ open Krobot_message
 
 let section = Lwt_log.Section.make "krobot(planner)"
 
-let pi = 4. *. atan 1.
-
-let math_mod_float a b =
-  let b2 = b /. 2. in
-  let modf = mod_float a b in
-  if modf > b2 then
-    modf -. b
-  else if modf < -. b2 then
-    modf +. b
-  else
-    modf;;
-
 (* +-----------------------------------------------------------------+
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
@@ -62,6 +50,9 @@ type planner = {
 
   mutable orientation : float;
   (* The orientation of the robot. *)
+
+  mutable objects : vertice list;
+  (* The list of objects on the board. *)
 
   mutable event : unit event;
   (* Event kept in the planner. *)
@@ -169,44 +160,6 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
   if planner.moving then
     return ()
   else begin
-    (*    let rec loop () =
-          match S.value planner.vertices with
-          | { x; y } :: rest ->
-          let sqr x = x *. x in
-          let radius = sqrt (sqr (max wheels_position (robot_size -. wheels_position)) +. sqr (robot_size /. 2.)) in
-          if x >= radius && x <= world_width -. radius && y >= radius && y <= world_height -. radius then begin
-    (* Turn the robot. *)
-          let alpha = math_mod_float (atan2 (y -. planner.position.y) (x -. planner.position.x) -. planner.orientation) (2. *. pi) in
-          lwt () = Lwt_log.info_f "turning by %f radians" alpha in
-          lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
-          Motor_turn(alpha,
-          rotation_speed,
-          rotation_acceleration)) in
-          lwt () = wait_done planner in
-
-    (* Move the robot. *)
-          let dist = sqrt (sqr (x -. planner.position.x) +. sqr (y -. planner.position.y)) in
-          lwt () = Lwt_log.info_f "moving by %f meters" dist in
-          lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (),
-          Motor_move(dist,
-          moving_speed,
-          moving_acceleration)) in
-          lwt () = wait_done planner in
-
-    (* Remove the point. *)
-          (match S.value planner.vertices with
-          | _ :: l -> planner.set_vertices l
-          | [] -> ());
-          planner.set_origin (planner.position,
-          { vx = cos planner.orientation;
-          vy = sin planner.orientation });
-
-          loop ()
-          end else
-          Lwt_log.warning_f "can not move to (%f, %f)" x y
-          | [] ->
-          return ()
-          in*)
     set_moving planner true;
     planner.mover <- (
       try_lwt
@@ -339,6 +292,9 @@ let handle_message planner (timestamp, message) =
         set_vertices planner [];
         ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0,0.0)))
 
+    | Objects l ->
+        planner.objects <- l
+
     | _ ->
         ()
 
@@ -386,11 +342,15 @@ lwt () =
     mover = return ();
     position = { x = 0.; y = 0. };
     orientation = 0.;
+    objects = [];
     event = E.never;
   } in
 
   (* Handle krobot message. *)
   E.keep (E.map (handle_message planner) (Krobot_bus.recv bus));
+
+  (* Ask for objects. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Send) in
 
   (* Wait forever. *)
   fst (wait ())

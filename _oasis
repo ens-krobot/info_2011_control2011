@@ -155,6 +155,13 @@ Executable "krobot-planner"
   MainIs: krobot_planner.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-objects"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_objects.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-kill"
   Path: src/tools
   Install: true

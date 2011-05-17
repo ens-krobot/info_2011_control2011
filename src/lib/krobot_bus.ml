@@ -32,6 +32,7 @@ type message =
   | Trajectory_go of float * float * float * float
   | Trajectory_stop
   | Trajectory_moving of bool
+  | Objects of vertice list
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -101,6 +102,10 @@ let string_of_message = function
       sprintf
         "Trajectory_moving %B"
         b
+  | Objects objects ->
+      sprintf
+        "Objects [%s]"
+        (String.concat "; " (List.map string_of_vertice objects))
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |
