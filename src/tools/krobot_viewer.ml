@@ -58,6 +58,9 @@ type viewer = {
 
   mutable motor_status : bool * bool * bool *bool;
   (* Status of the four motor controller. *)
+
+  mutable objects : vertice list;
+  (* The objects on the table. *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -233,6 +236,19 @@ let draw viewer =
   Cairo.arc ctx 1.675 0.175 0.05 0. (2. *. pi);
   Cairo.fill ctx;
 
+  (* Draw objects *)
+  List.iter
+    (fun { x; y } ->
+       set_color ctx Yellow;
+       Cairo.arc ctx x y 0.1 0. (2. *. pi);
+       Cairo.fill ctx;
+
+       set_color ctx Black;
+       Cairo.arc ctx x y 0.1 0. (2. *. pi);
+       Cairo.stroke ctx)
+    viewer.objects;
+
+  (* Draw the robot and the ghost *)
   List.iter
     (fun (state, alpha) ->
        Cairo.save ctx;
@@ -412,6 +428,10 @@ let handle_message viewer (timestamp, message) =
         viewer.ui#logs#buffer#insert (line ^ "\n");
         viewer.ui#scrolled_logs#vadjustment#set_value viewer.ui#scrolled_logs#vadjustment#upper
 
+    | Objects l ->
+        viewer.objects <- l;
+        queue_draw viewer
+
     | _ ->
         ()
 
@@ -472,6 +492,7 @@ lwt () =
     curves = [];
     statusbar_context = ui#statusbar#new_context "";
     motor_status = (false, false, false, false);
+    objects = [];
   } in
 
   (* Handle messages. *)

@@ -82,11 +82,34 @@ lwt () =
   (* Create a new planner. *)
   let objects = {
     bus;
-    objects = [];
+    objects = [
+      { x = 0.800; y = 0.350 };
+      { x = 1.150; y = 0.350 };
+      { x = 1.850; y = 0.350 };
+      { x = 2.200; y = 0.350 };
+      { x = 1.500; y = 1.050 };
+      { x = 0.800; y = 1.400 };
+      { x = 2.200; y = 1.400 };
+      { x = 1.150; y = 1.750 };
+      { x = 1.850; y = 1.750 };
+      { x = 0.200; y = 0.290 };
+      { x = 0.200; y = 0.570 };
+      { x = 0.200; y = 0.850 };
+      { x = 0.200; y = 1.130 };
+      { x = 0.200; y = 1.410 };
+      { x = 2.800; y = 0.290 };
+      { x = 2.800; y = 0.570 };
+      { x = 2.800; y = 0.850 };
+      { x = 2.800; y = 1.130 };
+      { x = 2.800; y = 1.410 };
+    ];
   } in
 
   (* Handle krobot message. *)
   E.keep (E.map (handle_message objects) (Krobot_bus.recv bus));
+
+  (* Sends initial objects. *)
+  lwt () = Krobot_bus.send objects.bus (Unix.gettimeofday (), Objects objects.objects) in
 
   (* Wait forever. *)
   fst (wait ())
