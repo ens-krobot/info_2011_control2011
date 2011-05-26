@@ -14,3 +14,4 @@ let wheels_diameter = 0.098
 let wheels_distance = 0.150
 let wheels_position = robot_size /. 2.
 let rotary_beacon_index_pos = (4. *. atan 1.) /. 2. (* left side *)
+let object_radius = 0.1

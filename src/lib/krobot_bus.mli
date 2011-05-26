@@ -50,6 +50,8 @@ type message =
       (** Stop the current trajectory. *)
   | Trajectory_moving of bool
       (** Is the robot following a trajectory ? *)
+  | Trajectory_find_path
+      (** Find a path avoiding objects. *)
 
   (** Objects *)
 

@@ -153,7 +153,7 @@ Executable "krobot-planner"
   Install: true
   CompiledObject: best
   MainIs: krobot_planner.ml
-  BuildDepends: krobot, lwt.syntax
+  BuildDepends: krobot, lwt.syntax, ocamlgraph
 
 Executable "krobot-objects"
   Path: src/tools

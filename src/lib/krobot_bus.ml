@@ -32,6 +32,7 @@ type message =
   | Trajectory_go of float * float * float * float
   | Trajectory_stop
   | Trajectory_moving of bool
+  | Trajectory_find_path
   | Objects of vertice list
 
 type t = {
@@ -102,6 +103,8 @@ let string_of_message = function
       sprintf
         "Trajectory_moving %B"
         b
+  | Trajectory_find_path ->
+      "Trajectory_find_path"
   | Objects objects ->
       sprintf
         "Objects [%s]"

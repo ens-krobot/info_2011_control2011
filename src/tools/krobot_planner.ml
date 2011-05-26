@@ -59,6 +59,111 @@ type planner = {
 }
 
 (* +-----------------------------------------------------------------+
+   | Motion planning                                                 |
+   +-----------------------------------------------------------------+ *)
+
+module Vertice_set = Set.Make(struct type t = vertice let compare = compare end)
+module Vertice_map = Map.Make(struct type t = vertice let compare = compare end)
+
+module Dijkstra =
+  Graph.Path.Dijkstra
+    (struct
+       type t = Vertice_set.t Vertice_map.t
+
+       module V = struct
+         type t = vertice
+         let compare = Pervasives.compare
+         let hash = Hashtbl.hash
+         let equal = (=)
+       end
+
+       module E = struct
+         type t = vertice * vertice
+         type label = float
+         let label (a, b) = distance a b
+         let dst (a, b) = b
+       end
+
+       let iter_succ_e f graph v =
+         Vertice_set.iter (fun v' -> f (v, v')) (Vertice_map.find v graph)
+     end)
+    (struct
+       type label = float
+       type t = float
+       let weight d = d
+       let compare a b = compare a b
+       let add a b = a +. b
+       let zero = 0.
+     end)
+
+let sqr x = x *. x
+
+let dist = object_radius +. robot_size /. 2.
+
+(* Test whether there is an intersection between the line (va, vb) and
+   one of the objects. *)
+let rec intersection va vb objects =
+  match objects with
+    | [] ->
+        false
+    | vc :: rest ->
+        (* Compute coefficients of the polynomial. *)
+        let a = sqr (distance va vb)
+        and b = -2. *. prod (vector va vc) (vector va vb)
+        and c = sqr (distance va vc) -. sqr dist in
+        let delta = sqr b -. 4. *. a *. c in
+        if delta < 0. then
+          intersection va vb rest
+        else
+          let k1 = (-. b -. sqrt delta) /. (2. *. a)
+          and k2 = (-. b +. sqrt delta) /. (2. *. a) in
+          if (k1 >= 0. && k1 <= 1.) || (k2 >= 0. && k2 <= 1.) then
+            true
+          else
+            intersection va vb rest
+
+let find_path planner src dst =
+  (* Build bounding boxes. *)
+  let r = object_radius +. robot_size in
+  let vertices =
+    List.fold_left
+      (fun set obj ->
+         Vertice_set.add { x = obj.x; y = obj.y -. r }
+           (Vertice_set.add { x = obj.x +. r; y = obj.y }
+              (Vertice_set.add { x = obj.x; y = obj.y +. r }
+                 (Vertice_set.add { x = obj.x -. r; y = obj.y }
+                    set))))
+      Vertice_set.empty planner.objects
+  in
+  (* Add the source and the destination. *)
+  let vertices = Vertice_set.add src (Vertice_set.add dst vertices) in
+  (* Build the graph. *)
+  let graph =
+    Vertice_set.fold
+      (fun va map ->
+         let successors =
+           Vertice_set.fold
+             (fun vb set ->
+                if va <> vb then
+                  if intersection va vb planner.objects then
+                    set
+                  else
+                    Vertice_set.add vb set
+                else
+                  set)
+             vertices Vertice_set.empty
+         in
+         Vertice_map.add va successors map)
+      vertices Vertice_map.empty
+  in
+  try
+    (* Compute the shortest path. *)
+    let path, weight = Dijkstra.shortest_path graph src dst in
+    List.map (fun (a, b) -> b) path
+  with Not_found ->
+    [dst]
+
+(* +-----------------------------------------------------------------+
    | Primitives                                                      |
    +-----------------------------------------------------------------+ *)
 
@@ -291,6 +396,15 @@ let handle_message planner (timestamp, message) =
         set_moving planner false;
         set_vertices planner [];
         ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0,0.0)))
+
+    | Trajectory_find_path ->
+        if not planner.moving then begin
+          match planner.vertices with
+            | v :: _ ->
+                set_vertices planner (find_path planner planner.position v)
+            | _ ->
+                ()
+        end
 
     | Objects l ->
         planner.objects <- l

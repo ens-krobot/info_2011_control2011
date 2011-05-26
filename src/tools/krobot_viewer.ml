@@ -531,6 +531,13 @@ lwt () =
           false));
 
   ignore
+    (ui#button_find#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then
+            ignore (Krobot_bus.send viewer.bus (Unix.gettimeofday (), Trajectory_find_path));
+          false));
+
+  ignore
     (ui#button_go#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then

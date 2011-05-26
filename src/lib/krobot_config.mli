@@ -31,3 +31,6 @@ val wheels_position : float
 val rotary_beacon_index_pos : float
   (** The angle of the rotary beacon index angle with respect to the
       robot's front *)
+
+val object_radius : float
+  (** Radius of objects. *)

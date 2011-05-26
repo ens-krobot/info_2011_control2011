@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 727ec33b4060953b9ebbde97c6c14363)
+# DO NOT EDIT (digest: 1d3ff08546f26990d32be2616f7495bc)
 # Library krobot
 "src/lib": include
 "src/lib/krobot.cmxs": use_krobot
@@ -109,9 +109,11 @@
 <examples/*.ml{,i}>: pkg_lwt.react
 # Executable krobot-planner
 <src/tools/krobot_planner.{native,byte}>: use_krobot
+<src/tools/krobot_planner.{native,byte}>: pkg_ocamlgraph
 <src/tools/krobot_planner.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_planner.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_planner.{native,byte}>: pkg_lwt.react
+<src/tools/*.ml{,i}>: pkg_ocamlgraph
 # Executable krobot-record
 <src/tools/krobot_record.{native,byte}>: use_krobot
 <src/tools/krobot_record.{native,byte}>: pkg_lwt.unix
