@@ -98,7 +98,11 @@ module Dijkstra =
 
 let sqr x = x *. x
 
-let dist = object_radius +. robot_size /. 2.
+(* Distance from borders to the robot. *)
+let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
+
+(* Minimum distance from the center of objects to the center robot. *)
+let object_safety_distance = object_radius +. robot_size /. 2.
 
 (* Test whether there is an intersection between the line (va, vb) and
    one of the objects. *)
@@ -110,7 +114,7 @@ let rec intersection va vb objects =
         (* Compute coefficients of the polynomial. *)
         let a = sqr (distance va vb)
         and b = -2. *. prod (vector va vc) (vector va vb)
-        and c = sqr (distance va vc) -. sqr dist in
+        and c = sqr (distance va vc) -. sqr object_safety_distance in
         let delta = sqr b -. 4. *. a *. c in
         if delta < 0. then
           intersection va vb rest
@@ -124,15 +128,29 @@ let rec intersection va vb objects =
 
 let find_path planner src dst =
   (* Build bounding boxes. *)
-  let r = object_radius +. robot_size in
+  let r1 = object_radius +. robot_size in
+  let r2 = object_radius +. robot_size *. 3. /. 4. in
   let vertices =
     List.fold_left
       (fun set obj ->
-         Vertice_set.add { x = obj.x; y = obj.y -. r }
-           (Vertice_set.add { x = obj.x +. r; y = obj.y }
-              (Vertice_set.add { x = obj.x; y = obj.y +. r }
-                 (Vertice_set.add { x = obj.x -. r; y = obj.y }
-                    set))))
+         let add x y set =
+           if (x >= border_safety_distance
+               && x <= world_width -. border_safety_distance
+               && y >= border_safety_distance
+               && y <= world_height -. border_safety_distance) then
+             Vertice_set.add { x; y } set
+           else
+             set
+         in
+         let set = add obj.x (obj.y -. r1) set in
+         let set = add (obj.x +. r1) obj.y set in
+         let set = add obj.x (obj.y +. r1) set in
+         let set = add (obj.x -. r1) obj.y set in
+         let set = add obj.x (obj.y -. r2) set in
+         let set = add (obj.x +. r2) obj.y set in
+         let set = add obj.x (obj.y +. r2) set in
+         let set = add (obj.x -. r2) obj.y set in
+         set)
       Vertice_set.empty planner.objects
   in
   (* Add the source and the destination. *)
