@@ -127,6 +127,8 @@ let rec intersection va vb objects =
             intersection va vb rest
 
 let find_path planner src dst =
+  (* Remove the destination object from obstacles. *)
+  let objects = List.filter (fun obj -> distance dst obj >= object_radius) planner.objects in
   (* Build bounding boxes. *)
   let r1 = object_radius +. robot_size in
   let r2 = object_radius +. robot_size *. 3. /. 4. in
@@ -151,7 +153,7 @@ let find_path planner src dst =
          let set = add obj.x (obj.y +. r2) set in
          let set = add (obj.x -. r2) obj.y set in
          set)
-      Vertice_set.empty planner.objects
+      Vertice_set.empty objects
   in
   (* Add the source and the destination. *)
   let vertices = Vertice_set.add src (Vertice_set.add dst vertices) in
@@ -179,7 +181,7 @@ let find_path planner src dst =
     let path, weight = Dijkstra.shortest_path graph src dst in
     List.map (fun (a, b) -> b) path
   with Not_found ->
-    [dst]
+    []
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
