@@ -155,11 +155,11 @@ Executable "krobot-planner"
   MainIs: krobot_planner.ml
   BuildDepends: krobot, lwt.syntax, ocamlgraph
 
-Executable "krobot-objects"
+Executable "krobot-webcam"
   Path: src/tools
   Install: true
   CompiledObject: best
-  MainIs: krobot_objects.ml
+  MainIs: krobot_webcam.ml
   BuildDepends: krobot, lwt.syntax
 
 Executable "krobot-kill"

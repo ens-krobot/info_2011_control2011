@@ -481,8 +481,5 @@ lwt () =
   (* Handle krobot message. *)
   E.keep (E.map (handle_message planner) (Krobot_bus.recv bus));
 
-  (* Ask for objects. *)
-  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Send) in
-
   (* Wait forever. *)
   fst (wait ())
