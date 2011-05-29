@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 2b0a35e51cf2e902c1aae093db385268)
+# DO NOT EDIT (digest: b3a149aa36135c075418226bdf8c680d)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -44,11 +44,9 @@
 <examples/dump_can.{native,byte}>: pkg_lwt.react
 # Executable krobot-planner
 <src/tools/krobot_planner.{native,byte}>: use_krobot
-<src/tools/krobot_planner.{native,byte}>: pkg_ocamlgraph
 <src/tools/krobot_planner.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_planner.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_planner.{native,byte}>: pkg_lwt.react
-<src/tools/*.ml{,i}>: pkg_ocamlgraph
 # Executable krobot-record
 <src/tools/krobot_record.{native,byte}>: use_krobot
 <src/tools/krobot_record.{native,byte}>: pkg_lwt.unix

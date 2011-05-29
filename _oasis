@@ -38,6 +38,8 @@ Library krobot
     Krobot_bus,
     Krobot_message,
     Krobot_geom,
+    Krobot_solve,
+    Krobot_pathfinding,
     Krobot_config
   CSources:
     krobot_message_stubs.c
@@ -153,7 +155,7 @@ Executable "krobot-planner"
   Install: true
   CompiledObject: best
   MainIs: krobot_planner.ml
-  BuildDepends: krobot, lwt.syntax, ocamlgraph
+  BuildDepends: krobot, lwt.syntax
 
 Executable "krobot-objects"
   Path: src/tools

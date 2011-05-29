@@ -1,7 +1,7 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: d2e269dc4718223067ec6884e511c44b) *)
+(* DO NOT EDIT (digest: fd331bd6e5dd6cce06b8b38cd2cc1f54) *)
 module OASISGettext = struct
-# 21 "/home/dim/sources/oasis-0.2.1~alpha1/src/oasis/OASISGettext.ml"
+# 21 "/home/chambart/bordel/oasis_0/src/oasis/OASISGettext.ml"
   
   let ns_ str =
     str
@@ -24,7 +24,7 @@ module OASISGettext = struct
 end
 
 module OASISExpr = struct
-# 21 "/home/dim/sources/oasis-0.2.1~alpha1/src/oasis/OASISExpr.ml"
+# 21 "/home/chambart/bordel/oasis_0/src/oasis/OASISExpr.ml"
   
   
   
@@ -115,7 +115,7 @@ end
 
 
 module BaseEnvLight = struct
-# 21 "/home/dim/sources/oasis-0.2.1~alpha1/src/base/BaseEnvLight.ml"
+# 21 "/home/chambart/bordel/oasis_0/src/base/BaseEnvLight.ml"
   
   module MapString = Map.Make(String)
   
@@ -212,7 +212,7 @@ end
 
 
 module MyOCamlbuildFindlib = struct
-# 21 "/home/dim/sources/oasis-0.2.1~alpha1/src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml"
+# 21 "/home/chambart/bordel/oasis_0/src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml"
   
   (** OCamlbuild extension, copied from 
     * http://brion.inria.fr/gallium/index.php/Using_ocamlfind_with_ocamlbuild
@@ -321,7 +321,7 @@ module MyOCamlbuildFindlib = struct
 end
 
 module MyOCamlbuildBase = struct
-# 21 "/home/dim/sources/oasis-0.2.1~alpha1/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
+# 21 "/home/chambart/bordel/oasis_0/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
   
   (** Base functions for writing myocamlbuild.ml
       @author Sylvain Le Gall
@@ -336,7 +336,7 @@ module MyOCamlbuildBase = struct
   type name = string 
   type tag = string 
   
-# 55 "/home/dim/sources/oasis-0.2.1~alpha1/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
+# 55 "/home/chambart/bordel/oasis_0/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
   
   type t =
       {

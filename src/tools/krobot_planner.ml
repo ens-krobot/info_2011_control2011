@@ -62,40 +62,6 @@ type planner = {
    | Motion planning                                                 |
    +-----------------------------------------------------------------+ *)
 
-module Vertice_set = Set.Make(struct type t = vertice let compare = compare end)
-module Vertice_map = Map.Make(struct type t = vertice let compare = compare end)
-
-module Dijkstra =
-  Graph.Path.Dijkstra
-    (struct
-       type t = Vertice_set.t Vertice_map.t
-
-       module V = struct
-         type t = vertice
-         let compare = Pervasives.compare
-         let hash = Hashtbl.hash
-         let equal = (=)
-       end
-
-       module E = struct
-         type t = vertice * vertice
-         type label = float
-         let label (a, b) = distance a b
-         let dst (a, b) = b
-       end
-
-       let iter_succ_e f graph v =
-         Vertice_set.iter (fun v' -> f (v, v')) (Vertice_map.find v graph)
-     end)
-    (struct
-       type label = float
-       type t = float
-       let weight d = d
-       let compare a b = compare a b
-       let add a b = a +. b
-       let zero = 0.
-     end)
-
 let sqr x = x *. x
 
 (* Distance from borders to the robot. *)
@@ -104,84 +70,14 @@ let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
 (* Minimum distance from the center of objects to the center robot. *)
 let object_safety_distance = object_radius +. robot_size /. 2.
 
-(* Test whether there is an intersection between the line (va, vb) and
-   one of the objects. *)
-let rec intersection va vb objects =
-  match objects with
-    | [] ->
-        false
-    | vc :: rest ->
-        (* Compute coefficients of the polynomial. *)
-        let a = sqr (distance va vb)
-        and b = -2. *. prod (vector va vc) (vector va vb)
-        and c = sqr (distance va vc) -. sqr object_safety_distance in
-        let delta = sqr b -. 4. *. a *. c in
-        if delta < 0. then
-          intersection va vb rest
-        else
-          let k1 = (-. b -. sqrt delta) /. (2. *. a)
-          and k2 = (-. b +. sqrt delta) /. (2. *. a) in
-          if (k1 >= 0. && k1 <= 1.) || (k2 >= 0. && k2 <= 1.) then
-            true
-          else
-            intersection va vb rest
-
 let find_path planner src dst =
-  (* Remove the destination object from obstacles. *)
   let objects = List.filter (fun obj -> distance dst obj >= object_radius) planner.objects in
-  (* Build bounding boxes. *)
-  let r1 = object_radius +. robot_size in
-  let r2 = object_radius +. robot_size *. 3. /. 4. in
-  let vertices =
-    List.fold_left
-      (fun set obj ->
-         let add x y set =
-           if (x >= border_safety_distance
-               && x <= world_width -. border_safety_distance
-               && y >= border_safety_distance
-               && y <= world_height -. border_safety_distance) then
-             Vertice_set.add { x; y } set
-           else
-             set
-         in
-         let set = add obj.x (obj.y -. r1) set in
-         let set = add (obj.x +. r1) obj.y set in
-         let set = add obj.x (obj.y +. r1) set in
-         let set = add (obj.x -. r1) obj.y set in
-         let set = add obj.x (obj.y -. r2) set in
-         let set = add (obj.x +. r2) obj.y set in
-         let set = add obj.x (obj.y +. r2) set in
-         let set = add (obj.x -. r2) obj.y set in
-         set)
-      Vertice_set.empty objects
-  in
-  (* Add the source and the destination. *)
-  let vertices = Vertice_set.add src (Vertice_set.add dst vertices) in
-  (* Build the graph. *)
-  let graph =
-    Vertice_set.fold
-      (fun va map ->
-         let successors =
-           Vertice_set.fold
-             (fun vb set ->
-                if va <> vb then
-                  if intersection va vb planner.objects then
-                    set
-                  else
-                    Vertice_set.add vb set
-                else
-                  set)
-             vertices Vertice_set.empty
-         in
-         Vertice_map.add va successors map)
-      vertices Vertice_map.empty
-  in
-  try
-    (* Compute the shortest path. *)
-    let path, weight = Dijkstra.shortest_path graph src dst in
-    List.map (fun (a, b) -> b) path
-  with Not_found ->
-    []
+  match
+    Krobot_pathfinding.find_path ~src ~dst
+    (List.map (fun v -> v,object_safety_distance) objects)
+  with
+    | None -> []
+    | Some l -> l
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
