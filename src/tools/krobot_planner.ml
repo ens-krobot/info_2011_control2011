@@ -71,9 +71,13 @@ let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
 let object_safety_distance = object_radius +. robot_size /. 2.
 
 let find_path planner src dst =
-  let objects = List.filter (fun obj -> distance dst obj >= object_radius) planner.objects in
+  let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
   match
     Krobot_pathfinding.find_path ~src ~dst
+      ({ x = border_safety_distance;
+	 y = border_safety_distance},
+       { x = world_width -. border_safety_distance;
+	 y = world_height -. border_safety_distance})
     (List.map (fun v -> v,object_safety_distance) objects)
   with
     | None -> []

@@ -1,6 +1,9 @@
 
+open Krobot_geom
+
 val find_path :
-  src:Krobot_geom.vertice ->
-  dst:Krobot_geom.vertice ->
-  ( Krobot_geom.vertice * float ) list ->
-  Krobot_geom.vertice list option
+  src:vertice ->
+  dst:vertice ->
+  vertice * vertice ->
+  ( vertice * float ) list ->
+  vertice list option

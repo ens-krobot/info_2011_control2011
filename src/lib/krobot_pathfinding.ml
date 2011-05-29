@@ -129,7 +129,8 @@ include Tangentes
 
 type board = { src : point;
 	       dst : point;
-	       obstacles : circle list; }
+	       obstacles : circle list;
+	       box : point*point }
 
 type tangente =
     { orig : point;
@@ -143,16 +144,17 @@ type result =
     { path : segment list;
       length : float }
 
+let middle s p =
+  ( scal
+      (vect s.p1 s.p2)
+      (vect s.p1 p) >= 0. )
+  && ( scal
+	(vect s.p2 s.p1)
+	(vect s.p2 p) >= 0. )
+
+
 let distance' s nv p =
-  let middle =
-    ( scal
-	(vect s.p1 s.p2)
-	(vect s.p1 p) >= 0. )
-    && ( scal
-	  (vect s.p2 s.p1)
-	  (vect s.p2 p) >= 0. )
-  in
-  if middle
+  if middle s p
   then
     abs_float (scal (turn_trigo nv) (vect s.p1 p))
   else
@@ -233,6 +235,9 @@ let intersect l1 l2 =
 let after {p1;p2} p =
   scal (vect p1 p2) (vect p2 p) >= 0.
 
+let in_box (p1,p2) p =
+  p1.px <= p.px && p1.py <= p.py && p2.px >= p.px && p2.py >= p.py
+
 let make_tangente b t c ({p1;p2} as s) =
   if (scal (line s).v (vect t.contact t.circle.c) >= 0.)
     && (check_segment_circle b (t.circle,c) s)
@@ -242,7 +247,8 @@ let make_tangente b t c ({p1;p2} as s) =
     match intersect l1 l2 with
       | None -> None
       | Some inter ->
-	if (after {p1 = t.orig;p2 = t.contact} inter)
+	if (in_box b.box inter)
+	  && (after {p1 = t.orig;p2 = t.contact} inter)
 	  && (check_segment_circle b (t.circle,c) {p1 = inter; p2 = t.contact})
 	then
 	  Some { distance = norm (vect t.orig inter) +. t.distance;
@@ -336,8 +342,14 @@ let v_of_vertice { Krobot_geom.x; y } =
 let vertice_of_seg { p1 = {px;py} } =
   { Krobot_geom.x = px; y = py }
 
-let find_path ~src ~dst objects =
-  let b = { src = v_of_vertice src;
-	    dst = v_of_vertice dst;
-	    obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects; } in
-  map_option (fun res -> List.rev_map vertice_of_seg res.path) (fst (stepn b 10))
+let find_path ~src ~dst (box_min,box_max) objects =
+  let box = (v_of_vertice box_min, v_of_vertice box_max) in
+  let dst = v_of_vertice dst in
+  if not (in_box box dst)
+  then None
+  else
+    let b = { src = v_of_vertice src;
+	      dst;
+	      obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects;
+	      box } in
+    map_option (fun res -> List.rev_map vertice_of_seg res.path) (fst (stepn b 10))
