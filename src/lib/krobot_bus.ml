@@ -30,6 +30,7 @@ type message =
   | Trajectory_add_vertice of vertice
   | Trajectory_simplify of float
   | Trajectory_go of float * float * float * float
+  | Trajectory_goto of vertice
   | Trajectory_stop
   | Trajectory_moving of bool
   | Trajectory_find_path
@@ -97,6 +98,10 @@ let string_of_message = function
       sprintf
         "Trajectory_go(%f, %f, %f, %f)"
         a b c d
+  | Trajectory_goto v ->
+      sprintf
+        "Trajectory_goto %s"
+        (string_of_vertice v)
   | Trajectory_stop ->
       "Trajectory_stop"
   | Trajectory_moving b ->

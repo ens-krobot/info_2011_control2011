@@ -72,16 +72,12 @@ let object_safety_distance = object_radius +. robot_size /. 2.
 
 let find_path planner src dst =
   let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
-  match
-    Krobot_pathfinding.find_path ~src ~dst
-      ({ x = border_safety_distance;
-	 y = border_safety_distance},
-       { x = world_width -. border_safety_distance;
-	 y = world_height -. border_safety_distance})
+  Krobot_pathfinding.find_path ~src ~dst
+    ({ x = border_safety_distance;
+       y = border_safety_distance},
+     { x = world_width -. border_safety_distance;
+       y = world_height -. border_safety_distance})
     (List.map (fun v -> v,object_safety_distance) objects)
-  with
-    | None -> []
-    | Some l -> l
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
@@ -181,6 +177,73 @@ let wait_start planner =
   in
   Lwt_log.info "robot started the new trajectory"
 
+(* Send a bezier curve to the robot. *)
+let send_curve planner sign p q r s v_end =
+  (* Compute parameters. *)
+  let d1 = sign *. distance p q and d2 = distance r s in
+  let v = vector r s in
+  let theta_end = atan2 v.vy v.vx in
+
+  ignore (
+    Lwt_log.info_f
+      "sending bezier curve, x = %f, y = %f, d1 = %f, d2 = %f, theta_end = %f, v_end = %f"
+      s.x s.y d1 d2 theta_end v_end
+  );
+
+  (* Send the curve. *)
+  Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end))
+
+(* Remove the first vertice of the trajecotry. *)
+let drop_vertice planner =
+  set_vertices planner ~curves:(List.tl planner.curves) (List.tl planner.vertices)
+
+(* Follow the given path, updating [current_curve] each time we follow
+   a new curve. *)
+let follow_path planner current_curve path =
+  let rec loop = function
+    | [] ->
+        lwt () = wait_done planner in
+        set_vertices planner [];
+        return ()
+
+    | [(sign, p, q, r, s)] ->
+        lwt () = wait_middle planner in
+        lwt () = send_curve planner sign p q r s 0.01 in
+        lwt () = wait_start planner in
+        current_curve := Bezier.of_vertices p q r s;
+        drop_vertice planner;
+        lwt () = wait_done planner in
+        set_vertices planner [];
+        return ()
+
+    | (sign, p, q, r, s) :: rest ->
+        lwt () = wait_middle planner in
+        lwt () = send_curve planner sign p q r s 0.5 in
+        lwt () = wait_start planner in
+        current_curve := Bezier.of_vertices p q r s;
+        drop_vertice planner;
+        loop rest
+  in
+
+  (* Add the origin of the trajectory to keep displaying it. *)
+  planner.vertices <- planner.position :: path;
+  match planner.curves with
+    | [] ->
+        set_vertices planner [];
+        return ()
+
+    | [(sign, p, q, r, s)] ->
+        current_curve := Bezier.of_vertices p q r s;
+        lwt () = send_curve planner sign p q r s 0.01 in
+        lwt () = wait_done planner in
+        set_vertices planner [];
+        return ()
+
+    | (sign, p, q, r, s) :: rest ->
+        current_curve := Bezier.of_vertices p q r s;
+        lwt () = send_curve planner sign p q r s 0.5 in
+        loop rest
+
 let go planner rotation_speed rotation_acceleration moving_speed moving_acceleration =
   if planner.moving then
     return ()
@@ -188,70 +251,62 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
     set_moving planner true;
     planner.mover <- (
       try_lwt
-        (* Send a bezier curve to the robot. *)
-        let send_curve (sign, p, q, r, s) v_end =
-          (* Compute parameters. *)
-          let d1 = sign *. distance p q and d2 = distance r s in
-          let v = vector r s in
-          let theta_end = atan2 v.vy v.vx in
+        follow_path planner (ref (Bezier.of_vertices origin origin origin origin)) planner.vertices
 
-          ignore (
-            Lwt_log.info_f
-              "sending bezier curve, x = %f, y = %f, d1 = %f, d2 = %f, theta_end = %f, v_end = %f"
-              s.x s.y d1 d2 theta_end v_end
-          );
+      with exn ->
+        Lwt_log.error_f ~section ~exn "failed to move"
 
-          (* Send the curve. *)
-          lwt () = Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)) in
+      finally
+        set_moving planner false;
+        return ()
+    );
+    return ()
+  end
 
-          return (s, theta_end)
+let abort planner =
+  Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0, 0.0))
+
+let check planner curve =
+  let rec loop i =
+    if i = 256 then
+      true
+    else
+      let v = Bezier.vertice curve (float i /. 255.) in
+      if List.for_all (fun obj -> distance v obj >= object_safety_distance) planner.objects then
+        loop (i + 1)
+      else
+        false
+  in
+  loop planner.curve_status
+
+(* Go to the given destination. *)
+let goto planner dst =
+  if planner.moving then
+    return ()
+  else begin
+    set_moving planner true;
+    planner.mover <- (
+      try_lwt
+        let rec loop () =
+          match find_path planner planner.position dst with
+            | None ->
+                ignore (Lwt_log.info ~section "cannot find a path to the destination");
+                return ()
+            | Some path ->
+                let current_curve = ref (Bezier.of_vertices origin origin origin origin) in
+                match_lwt
+                  pick [
+                    follow_path planner current_curve path >> return true;
+                    Lwt_unix.sleep 0.01 >> while_lwt check planner !current_curve do Lwt_unix.sleep 0.01 done >> return false;
+                  ]
+                with
+                  | true ->
+                      return ()
+                  | false ->
+                      lwt () = abort planner in
+                      loop ()
         in
-
-        (* Remove the first vertice of the trajecotry. *)
-        let drop_vertice (s, theta) =
-          set_vertices planner ~curves:(List.tl planner.curves) (List.tl planner.vertices)
-        in
-
-        let rec loop x = function
-          | [] ->
-              lwt () = wait_done planner in
-              set_vertices planner [];
-              return ()
-
-          | [points] ->
-              lwt () = wait_middle planner in
-              lwt _ = send_curve points 0.01 in
-              lwt () = wait_start planner in
-              drop_vertice x;
-              lwt () = wait_done planner in
-              set_vertices planner [];
-              return ()
-
-          | points :: rest ->
-              lwt () = wait_middle planner in
-              lwt y = send_curve points 0.5 in
-              lwt () = wait_start planner in
-              drop_vertice x;
-              loop y rest
-        in
-
-        (* Add the origin of the trajectory to keep displaying it. *)
-        planner.vertices <- planner.position :: planner.vertices;
-        match planner.curves with
-          | [] ->
-              set_vertices planner [];
-              return ()
-
-          | [points] ->
-              lwt _ = send_curve points 0.01 in
-              lwt () = wait_done planner in
-              set_vertices planner [];
-              return ()
-
-          | points :: rest ->
-              lwt x = send_curve points 0.5 in
-              loop x rest
-
+        loop ()
       with exn ->
         Lwt_log.error_f ~section ~exn "failed to move"
 
@@ -311,17 +366,21 @@ let handle_message planner (timestamp, message) =
         if not planner.moving then
           ignore (go planner rotation_speed rotation_acceleration moving_speed moving_acceleration)
 
+    | Trajectory_goto v ->
+        if not planner.moving then
+          ignore (goto planner v)
+
     | Trajectory_stop ->
         cancel planner.mover;
         set_moving planner false;
         set_vertices planner [];
-        ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0,0.0)))
+        ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0, 0.0)))
 
     | Trajectory_find_path ->
         if not planner.moving then begin
           match planner.vertices with
             | v :: _ ->
-                set_vertices planner (find_path planner planner.position v)
+                set_vertices planner (match find_path planner planner.position v with Some p -> p | None -> [])
             | _ ->
                 ()
         end

@@ -552,6 +552,18 @@ lwt () =
           false));
 
   ignore
+    (ui#button_goto#event#connect#button_release
+       (fun ev ->
+          if GdkEvent.Button.button ev = 1 then begin
+            match viewer.vertices with
+              | [] ->
+                  ()
+              | v :: _ ->
+                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_goto v))
+          end;
+          false));
+
+  ignore
     (ui#button_start_red#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then

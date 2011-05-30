@@ -46,6 +46,8 @@ type message =
   | Trajectory_go of float * float * float * float
       (** [Trajectory_go(rotation_speed, rotation_acceleration,
           moving_speed, moving_acceleration)]. *)
+  | Trajectory_goto of vertice
+      (** [Trajectory_goto dest] go to the given position. *)
   | Trajectory_stop
       (** Stop the current trajectory. *)
   | Trajectory_moving of bool
