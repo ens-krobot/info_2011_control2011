@@ -22,6 +22,16 @@ type t =
       (** The position of the beacon relative to the robot *)
   | Beacon_lowlevel_position of float * float * int
       (** The position of the beacon as internally stored (for calibration) *)
+  | Switch1_status of bool * bool * bool * bool * bool * bool * bool * bool
+      (** The status of the first 8 switches *)
+  | Switch2_status of bool * bool * bool * bool * bool * bool * bool * bool
+      (** The status of the other 8 switches *)
+  | Switch_request of int * bool
+      (** A request to switch something on/off *)
+  | Adc1_values of int * int * int * int
+      (** The values of the first 4 ADCs *)
+  | Adc2_values of int * int * int * int
+      (** The values of the other 4 ADCs *)
   | Encoder_position_direction_1_2 of int * direction * int * direction
       (** The position and direction of encoders 1 and 2. *)
   | Encoder_position_direction_3_4 of int * direction * int * direction

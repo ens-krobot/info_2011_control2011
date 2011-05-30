@@ -23,6 +23,11 @@ type t =
   | Battery2_voltages of float * float * float * float
   | Beacon_position of float * float * float
   | Beacon_lowlevel_position of float * float * int
+  | Switch1_status of bool * bool * bool * bool * bool * bool * bool * bool
+  | Switch2_status of bool * bool * bool * bool * bool * bool * bool * bool
+  | Switch_request of int * bool
+  | Adc1_values of int * int * int * int
+  | Adc2_values of int * int * int * int
   | Encoder_position_direction_1_2 of int * direction * int * direction
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
@@ -74,6 +79,27 @@ let to_string = function
         angle
         width
         period
+  | Switch1_status(s1, s2, s3, s4, s5, s6, s7, s8) ->
+      sprintf
+        "Switch1_status(%B, %B, %B, %B, %B, %B, %B, %B)"
+        s1 s2 s3 s4 s5 s6 s7 s8
+  | Switch2_status(s1, s2, s3, s4, s5, s6, s7, s8) ->
+      sprintf
+        "Switch2_status(%B, %B, %B, %B, %B, %B, %B, %B)"
+        s1 s2 s3 s4 s5 s6 s7 s8
+  | Switch_request(switch, status) ->
+      sprintf
+        "Switch_request(%d, %s)"
+        switch
+        (if status then "ON" else "OFF")
+  | Adc1_values(v1, v2, v3, v4) ->
+      sprintf
+        "Adc1_values(%d, %d, %d, %d)"
+        v1 v2 v3 v4
+  | Adc2_values(v1, v2, v3, v4) ->
+      sprintf
+        "Adc2_values(%d, %d, %d, %d)"
+        v1 v2 v3 v4
   | Encoder_position_direction_1_2(pos1, dir1, pos2, dir2) ->
       sprintf
         "Encoder_position_direction_1_2(%d, %s, %d, %s)"
@@ -292,6 +318,72 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Switch1_status(sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8) ->
+      let data = String.create 8 in
+      put_uint8 data 0 (if sw1 then 1 else 0);
+      put_uint8 data 1 (if sw2 then 1 else 0);
+      put_uint8 data 2 (if sw3 then 1 else 0);
+      put_uint8 data 3 (if sw4 then 1 else 0);
+      put_uint8 data 4 (if sw5 then 1 else 0);
+      put_uint8 data 5 (if sw6 then 1 else 0);
+      put_uint8 data 6 (if sw7 then 1 else 0);
+      put_uint8 data 7 (if sw8 then 1 else 0);
+      frame
+        ~identifier:311
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:data
+  | Switch2_status(sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8) ->
+      let data = String.create 8 in
+      put_uint8 data 0 (if sw1 then 1 else 0);
+      put_uint8 data 1 (if sw2 then 1 else 0);
+      put_uint8 data 2 (if sw3 then 1 else 0);
+      put_uint8 data 3 (if sw4 then 1 else 0);
+      put_uint8 data 4 (if sw5 then 1 else 0);
+      put_uint8 data 5 (if sw6 then 1 else 0);
+      put_uint8 data 6 (if sw7 then 1 else 0);
+      put_uint8 data 7 (if sw8 then 1 else 0);
+      frame
+        ~identifier:312
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:data
+  | Switch_request(switch, status) ->
+      let data = String.create 2 in
+      put_uint8 data 0 switch;
+      put_uint8 data 1 (if status then 1 else 0);
+      frame
+        ~identifier:313
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:data
+  | Adc1_values(v1, v2, v3, v4) ->
+      let data = String.create 8 in
+      put_uint16 data 0 v1;
+      put_uint16 data 2 v2;
+      put_uint16 data 4 v3;
+      put_uint16 data 6 v4;
+      frame
+        ~identifier:321
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:data
+  | Adc2_values(v1, v2, v3, v4) ->
+      let data = String.create 8 in
+      put_uint16 data 0 v1;
+      put_uint16 data 2 v2;
+      put_uint16 data 4 v3;
+      put_uint16 data 6 v4;
+      frame
+        ~identifier:322
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data:data
   | Battery1_voltages(elem1, elem2, elem3, elem4) ->
       let data = String.create 8 in
       put_uint16 data 0 (truncate (elem1 *. 10000.));
@@ -447,6 +539,42 @@ let decode frame =
               (float (get_uint16 frame.data 0) /. 10000.,
                float (get_uint16 frame.data 2) /. 100000.,
                get_uint32 frame.data 4)
+        | 311 ->
+            Switch1_status
+              (get_uint8 frame.data 0 <> 0,
+               get_uint8 frame.data 1 <> 0,
+               get_uint8 frame.data 2 <> 0,
+               get_uint8 frame.data 3 <> 0,
+               get_uint8 frame.data 4 <> 0,
+               get_uint8 frame.data 5 <> 0,
+               get_uint8 frame.data 6 <> 0,
+               get_uint8 frame.data 7 <> 0)
+        | 312 ->
+            Switch2_status
+              (get_uint8 frame.data 0 <> 0,
+               get_uint8 frame.data 1 <> 0,
+               get_uint8 frame.data 2 <> 0,
+               get_uint8 frame.data 3 <> 0,
+               get_uint8 frame.data 4 <> 0,
+               get_uint8 frame.data 5 <> 0,
+               get_uint8 frame.data 6 <> 0,
+               get_uint8 frame.data 7 <> 0)
+        | 313 ->
+            Switch_request
+              (get_uint8 frame.data 0,
+               get_uint8 frame.data 1 <> 0)
+        | 321 ->
+            Adc1_values
+              (get_uint16 frame.data 0,
+               get_uint16 frame.data 2,
+               get_uint16 frame.data 4,
+               get_uint16 frame.data 6)
+        | 322 ->
+            Adc2_values
+              (get_uint16 frame.data 0,
+               get_uint16 frame.data 2,
+               get_uint16 frame.data 4,
+               get_uint16 frame.data 6)
         | 401 ->
             Battery1_voltages
               (float (get_uint16 frame.data 0) /. 10000.,
