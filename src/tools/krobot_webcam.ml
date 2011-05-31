@@ -29,8 +29,8 @@ let rec parse bus objects ic =
     parse bus [] ic
   end else begin
     (* Otherwise read one and add it to the current list of objects. *)
-    let cx, cy, w, h, alpha = Scanf.sscanf line "%d %d %d %d %f" (fun cx cy w h alpha -> (cx, cy, w, h, alpha)) in
-    parse bus ({ x = float cx; y = float cy } :: objects) ic
+    let cx, cy = Scanf.sscanf line "%f %f" (fun cx cy-> (cx, cy)) in
+    parse bus ({ x = cx; y = cy } :: objects) ic
   end
 
 (* +-----------------------------------------------------------------+
@@ -81,8 +81,11 @@ lwt () =
   (* Handle krobot message. *)
   E.keep (E.map (handle_message bus) (Krobot_bus.recv bus));
 
+  (* for printf to print floats with points and not colons *)
+  Unix.putenv "LANG" "C";
+
   (* Launch the objects finder. *)
-  let process = Lwt_process.open_process_in ("krobot-find-objects", [|"krobot-find-objects"|]) in
+  let process = Lwt_process.open_process_in ("krobot-find-objects", [|"krobot-find-objects"; Sys.argv.(1); Sys.argv.(2); Sys.argv.(3)|]) in
 
   (* Read the first separator. *)
   lwt _ = Lwt_io.read_line process#stdout in
