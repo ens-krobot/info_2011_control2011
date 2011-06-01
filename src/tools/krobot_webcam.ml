@@ -85,7 +85,7 @@ lwt () =
   Unix.putenv "LANG" "C";
 
   (* Launch the objects finder. *)
-  let process = Lwt_process.open_process_in ("krobot-find-objects", [|"krobot-find-objects"; Sys.argv.(1); Sys.argv.(2); Sys.argv.(3)|]) in
+  let process = Lwt_process.open_process_in ("krobot-find-objects", [|"krobot-find-objects"; Sys.argv.(1); Sys.argv.(2); Sys.argv.(3); Sys.argv.(4)|]) in
 
   (* Read the first separator. *)
   lwt _ = Lwt_io.read_line process#stdout in
