@@ -57,7 +57,7 @@ let options = Arg.align [
 ]
 
 let usage = "\
-Usage: krobot-planner [options]
+Usage: krobot-objects [options]
 options are:"
 
 (* +-----------------------------------------------------------------+

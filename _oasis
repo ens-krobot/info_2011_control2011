@@ -185,6 +185,13 @@ Executable "krobot-calibrate-sharps"
   MainIs: krobot_calibrate_sharps.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-sharps"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_sharps.ml
+  BuildDepends: krobot, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+

@@ -60,6 +60,11 @@ type message =
   | Objects of vertice list
       (** The list of objects on the board. *)
 
+  (** Sharps *)
+
+  | Sharps of float array
+      (** Distances measured by the sharps. *)
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

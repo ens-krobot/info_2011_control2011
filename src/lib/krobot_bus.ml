@@ -35,6 +35,7 @@ type message =
   | Trajectory_moving of bool
   | Trajectory_find_path
   | Objects of vertice list
+  | Sharps of float array
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -114,6 +115,10 @@ let string_of_message = function
       sprintf
         "Objects [%s]"
         (String.concat "; " (List.map string_of_vertice objects))
+  | Sharps a ->
+      sprintf
+        "Sharps [|%s|]"
+        (String.concat "; " (List.map string_of_float (Array.to_list a)))
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |
