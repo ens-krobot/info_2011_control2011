@@ -34,3 +34,12 @@ val rotary_beacon_index_pos : float
 
 val object_radius : float
   (** Radius of objects. *)
+
+val border_safety_distance : float
+  (** Minimum distance between borders and the robot. *)
+
+val object_safety_distance : float
+  (** Minimum distance from the center of objects to the center robot. *)
+
+val beacon_safety_distance : float
+  (** Minimum distance between the center of the robot and the beacon. *)

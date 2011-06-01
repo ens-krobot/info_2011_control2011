@@ -54,6 +54,9 @@ type planner = {
   mutable objects : vertice list;
   (* The list of objects on the board. *)
 
+  mutable beacon : vertice option;
+  (* Position of the beacon. *)
+
   mutable event : unit event;
   (* Event kept in the planner. *)
 }
@@ -62,22 +65,22 @@ type planner = {
    | Motion planning                                                 |
    +-----------------------------------------------------------------+ *)
 
-let sqr x = x *. x
-
-(* Distance from borders to the robot. *)
-let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
-
-(* Minimum distance from the center of objects to the center robot. *)
-let object_safety_distance = object_radius +. robot_size /. 2.
-
 let find_path planner src dst =
   let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
+  let l = List.map (fun v -> (v, object_safety_distance)) objects in
+  let l =
+    match planner.beacon with
+      | Some v ->
+          (v, beacon_safety_distance) :: l
+      | None ->
+          l
+  in
   Krobot_pathfinding.find_path ~src ~dst
     ({ x = border_safety_distance;
        y = border_safety_distance},
      { x = world_width -. border_safety_distance;
        y = world_height -. border_safety_distance})
-    (List.map (fun v -> v,object_safety_distance) objects)
+    l
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
@@ -272,7 +275,10 @@ let check planner curve =
       true
     else
       let v = Bezier.vertice curve (float i /. 255.) in
-      if List.for_all (fun obj -> distance v obj >= object_safety_distance) planner.objects then
+      if (List.for_all (fun obj -> distance v obj >= object_safety_distance) planner.objects
+          && (match planner.beacon with
+                | Some v' -> distance v v' >= beacon_safety_distance
+                | None -> true)) then
         loop (i + 1)
       else
         false
@@ -332,6 +338,16 @@ let handle_message planner (timestamp, message) =
           | Odometry_ghost(x, y, theta, u, following) ->
               planner.curve_status <- u;
               planner.motors_moving <- following
+
+          | Beacon_position(angle, distance, period) ->
+              if distance <> 0. then
+                let angle = math_mod_float (planner.orientation +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
+                planner.beacon <- Some{
+                  x = planner.position.x +. distance *. cos angle;
+                  y = planner.position.y +. distance *. sin angle;
+                }
+              else
+                planner.beacon <- None
 
           | _ ->
               ()
@@ -436,6 +452,7 @@ lwt () =
     position = { x = 0.; y = 0. };
     orientation = 0.;
     objects = [];
+    beacon = None;
     event = E.never;
   } in
 
