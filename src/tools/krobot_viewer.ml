@@ -556,10 +556,10 @@ lwt () =
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then begin
             match viewer.vertices with
-              | [] ->
-                  ()
-              | v :: _ ->
+              | _ :: v :: _ ->
                   ignore (Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_goto v))
+              | _ ->
+                  ()
           end;
           false));
 

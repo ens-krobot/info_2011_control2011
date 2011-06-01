@@ -130,6 +130,9 @@ let hosts = ref []
 lwt () =
   Arg.parse options (fun host -> hosts := host :: !hosts) usage;
 
+  (* Ignore SIGPIPE. *)
+  Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
+
   (* Create the local HUB. *)
   let hub = { connections = Lwt_sequence.create () } in
 

@@ -67,11 +67,11 @@ type planner = {
 
 let find_path planner src dst =
   let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
-  let l = List.map (fun v -> (v, object_safety_distance)) objects in
+  let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
   let l =
     match planner.beacon with
       | Some v ->
-          (v, beacon_safety_distance) :: l
+          (v, beacon_safety_distance +. 0.01) :: l
       | None ->
           l
   in
@@ -198,7 +198,11 @@ let send_curve planner sign p q r s v_end =
 
 (* Remove the first vertice of the trajecotry. *)
 let drop_vertice planner =
-  set_vertices planner ~curves:(List.tl planner.curves) (List.tl planner.vertices)
+  match planner.vertices with
+    | [] ->
+        ()
+    | _ :: vertices ->
+        set_vertices planner ~curves:(List.tl planner.curves) vertices
 
 (* Follow the given path, updating [current_curve] each time we follow
    a new curve. *)
@@ -299,6 +303,7 @@ let goto planner dst =
                 ignore (Lwt_log.info ~section "cannot find a path to the destination");
                 return ()
             | Some path ->
+                set_vertices planner (planner.position :: path);
                 let current_curve = ref (Bezier.of_vertices origin origin origin origin) in
                 match_lwt
                   pick [
@@ -309,6 +314,7 @@ let goto planner dst =
                   | true ->
                       return ()
                   | false ->
+                      ignore (Lwt_log.info ~section "aborting current trajectory");
                       lwt () = abort planner in
                       loop ()
         in
@@ -458,6 +464,9 @@ lwt () =
 
   (* Handle krobot message. *)
   E.keep (E.map (handle_message planner) (Krobot_bus.recv bus));
+
+  (* Ask for initial parameters. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Send) in
 
   (* Wait forever. *)
   fst (wait ())
