@@ -40,7 +40,8 @@ Library krobot
     Krobot_geom,
     Krobot_solve,
     Krobot_pathfinding,
-    Krobot_config
+    Krobot_config,
+    Krobot_path
   CSources:
     krobot_message_stubs.c
 
