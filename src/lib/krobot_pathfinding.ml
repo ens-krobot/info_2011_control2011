@@ -144,6 +144,9 @@ type result =
     { path : segment list;
       length : float }
 
+let check_point b p =
+  List.for_all (fun c -> norm (vect c.c p) < c.r) b.obstacles
+
 let middle s p =
   ( scal
       (vect s.p1 s.p2)
@@ -343,13 +346,11 @@ let vertice_of_seg { p1 = {px;py} } =
   { Krobot_geom.x = px; y = py }
 
 let find_path ~src ~dst (box_min,box_max) objects =
-  let box = (v_of_vertice box_min, v_of_vertice box_max) in
-  let dst = v_of_vertice dst in
-  if not (in_box box dst)
+  let b = { src = v_of_vertice src;
+	    dst = v_of_vertice dst;
+	    obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects;
+	    box = (v_of_vertice box_min, v_of_vertice box_max)} in
+  if not ( (in_box b.box b.dst) && (check_point b b.dst) && (check_point b b.src) )
   then None
   else
-    let b = { src = v_of_vertice src;
-	      dst;
-	      obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects;
-	      box } in
     map_option (fun res -> List.rev_map vertice_of_seg res.path) (fst (stepn b 10))
