@@ -41,6 +41,7 @@ type t =
   | Odometry_ghost of float * float * float * int * bool
   | Set_odometry of float * float * float
   | Set_controller_mode of bool
+  | Elevator of float * float
   | Req_motor_status
   | Unknown of frame
 
@@ -154,6 +155,10 @@ let to_string = function
       sprintf
         "Set_controller_mode(%B)"
         b
+  | Elevator(p1, p2) ->
+      sprintf
+        "Elevator(%f, %f)"
+        p1 p2
   | Req_motor_status ->
       "Req_motor_status"
   | Unknown frame ->
@@ -425,6 +430,16 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data:(if b then "\x01" else "\x00")
+  | Elevator(p1, p2) ->
+      let data = String.create 8 in
+      put_float32 data 0 p1;
+      put_float32 data 4 p2;
+      frame
+        ~identifier:231
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Req_motor_status ->
       frame
         ~identifier:103
@@ -529,6 +544,9 @@ let decode frame =
                          float d2 /. 100.,
                          float theta /. 100.,
                          float v /. 1000.)
+        | 231 ->
+            Elevator(get_float32 frame.data 0,
+                     get_float32 frame.data 4)
         | 301 ->
             Beacon_position
               (float (get_uint16 frame.data 0) /. 10000.,

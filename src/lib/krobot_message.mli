@@ -75,6 +75,9 @@ type t =
           odometry to the given ones. *)
   | Set_controller_mode of bool
       (** Put the card into simulation mode or not. *)
+  | Elevator of float * float
+      (** Set the position of the elevators, between 0 and 1. Negative
+          positions are ignored. *)
 
   | Req_motor_status
       (** Request the status of the motors. *)
