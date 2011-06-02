@@ -69,7 +69,7 @@ let find_path planner src dst =
   (* Remove objects that are near the destination. *)
   let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
   (* Remove objects that are near the curent position. *)
-  let objects = List.filter (fun obj -> distance src obj >= object_safety_distance) objects in
+  let objects = List.filter (fun obj -> distance src obj >= object_safety_distance +. 0.01) objects in
   let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
   let l =
     match planner.beacon with
@@ -276,6 +276,8 @@ let go planner rotation_speed rotation_acceleration moving_speed moving_accelera
 let abort planner =
   Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0, 0.0))
 
+let seen_beacon = ref None
+
 let check planner curve =
   let rec loop i =
     if i = 256 then
@@ -283,9 +285,14 @@ let check planner curve =
     else
       let v = Bezier.vertice curve (float i /. 255.) in
       if (List.for_all (fun obj -> distance v obj >= object_safety_distance) planner.objects
-          && (match planner.beacon with
-                | Some v' -> distance v v' >= beacon_safety_distance
-                | None -> true)) then
+          && (match planner.beacon , !seen_beacon with
+                | Some v',_ ->
+		  seen_beacon := Some (Unix.gettimeofday ());
+		  false
+		  (* distance v v' >= beacon_safety_distance *)
+		| None, Some x when (Unix.gettimeofday ()) < 4. ->
+		  false
+                | None,_ -> true)) then
         loop (i + 1)
       else
         false
@@ -301,7 +308,16 @@ let goto planner dst =
     planner.mover <- (
       try_lwt
         let rec loop () =
-          match find_path planner planner.position dst with
+	  if (match planner.beacon , !seen_beacon with
+                | Some v',_ ->
+		  seen_beacon := Some (Unix.gettimeofday ());
+		  false
+		(* distance v v' >= beacon_safety_distance *)
+		| None, Some x when (Unix.gettimeofday ()) < 4. ->
+		  false
+                | None,_ -> true)
+	  then
+            (match find_path planner planner.position dst with
             | None ->
                 ignore (Lwt_log.info ~section "cannot find a path to the destination");
                 return ()
@@ -331,7 +347,10 @@ let goto planner dst =
                       ignore (Lwt_log.info ~section "aborting current trajectory");
                       lwt () = abort planner in
                       lwt () = Lwt_unix.sleep 1.0 in
-                      loop ()
+                      loop ())
+	  else
+	    lwt () = Lwt_unix.sleep 1.0 in
+	    loop ()
         in
         loop ()
       with exn ->
@@ -361,7 +380,7 @@ let handle_message planner (timestamp, message) =
               planner.motors_moving <- following
 
           | Beacon_position(angle, distance, period) ->
-              if distance <> 0. then
+            if distance <> 0. then
                 let angle = math_mod_float (planner.orientation +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
                 planner.beacon <- Some{
                   x = planner.position.x +. distance *. cos angle;

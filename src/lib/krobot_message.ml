@@ -334,8 +334,8 @@ let encode = function
         ~data
   | Beacon_lowlevel_position(angle, width, period) ->
       let data = String.create 8 in
-      put_uint16 data 0 (truncate (angle *. 10000.));
-      put_uint16 data 2 (truncate (width *. 100000.));
+      put_uint16 data 0 (truncate (angle));
+      put_uint16 data 2 (truncate (width *. 10000.));
       put_uint32 data 4 period;
       frame
         ~identifier:302
@@ -616,8 +616,8 @@ let decode frame =
                float (get_uint16 frame.data 4) /. 10000.)
         | 302 ->
             Beacon_lowlevel_position
-              (float (get_uint16 frame.data 0) /. 10000.,
-               float (get_uint16 frame.data 2) /. 100000.,
+              (float (get_uint16 frame.data 0),
+               float (get_uint16 frame.data 2) /. 10000.,
                get_uint32 frame.data 4)
         | 311 ->
             Switch1_status

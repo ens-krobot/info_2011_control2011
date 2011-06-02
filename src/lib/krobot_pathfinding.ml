@@ -1,3 +1,6 @@
+
+let section = Lwt_log.Section.make "krobot(pathfinding)"
+
 let rec map_filter f = function
   | [] -> []
   | t::q ->
@@ -146,6 +149,10 @@ type result =
 
 let check_point b p =
   List.for_all (fun c -> norm (vect c.c p) >= c.r) b.obstacles
+
+let filter_far_objects b p =
+  { b with obstacles =
+      List.filter (fun c -> norm (vect c.c p) >= c.r) b.obstacles }
 
 let middle s p =
   ( scal
@@ -350,7 +357,15 @@ let find_path ~src ~dst (box_min,box_max) objects =
 	    dst = v_of_vertice dst;
 	    obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects;
 	    box = (v_of_vertice box_min, v_of_vertice box_max)} in
+  let b = filter_far_objects b b.src in
   if not ( (in_box b.box b.dst) && (check_point b b.dst) && (check_point b b.src) )
-  then None
+  then
+    (if not (in_box b.box b.dst)
+     then ignore (Lwt_log.info ~section "destination too close from the border");
+     if not (check_point b b.dst)
+     then ignore (Lwt_log.info ~section "destionation too close from an object");
+     if not (check_point b b.src)
+     then ignore (Lwt_log.info_f ~section "origin too close from an object");
+     None)
   else
     map_option (fun res -> List.rev_map vertice_of_seg res.path) (fst (stepn b 10))
