@@ -28,6 +28,10 @@ type t =
   | Switch_request of int * bool
   | Adc1_values of int * int * int * int
   | Adc2_values of int * int * int * int
+  | Ax12_State of int * int * int * int
+  | Ax12_Request_State of int
+  | Ax12_Goto of int * int * int
+  | Ax12_Reset of int
   | Encoder_position_direction_1_2 of int * direction * int * direction
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
@@ -101,6 +105,22 @@ let to_string = function
       sprintf
         "Adc2_values(%d, %d, %d, %d)"
         v1 v2 v3 v4
+  | Ax12_State(addr, position, speed, torque) ->
+      sprintf
+        "Ax12_State(%d, %d, %d, %d)"
+        addr position speed torque
+  | Ax12_Request_State(addr) ->
+      sprintf
+        "Ax12_Request_State(%d)"
+        addr
+  | Ax12_Goto(addr, position, speed) ->
+      sprintf
+        "Ax12_Goto(%d, %d, %d)"
+        addr position speed
+  | Ax12_Reset(new_addr) ->
+      sprintf
+        "Ax12_Reset(%d)"
+        new_addr
   | Encoder_position_direction_1_2(pos1, dir1, pos2, dir2) ->
       sprintf
         "Encoder_position_direction_1_2(%d, %s, %d, %s)"
@@ -396,7 +416,7 @@ let encode = function
       put_uint16 data 4 (truncate (elem3 *. 10000.));
       put_uint16 data 5 (truncate (elem4 *. 10000.));
       frame
-        ~identifier:401
+        ~identifier:331
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -408,7 +428,48 @@ let encode = function
       put_uint16 data 4 (truncate (elem3 *. 10000.));
       put_uint16 data 5 (truncate (elem4 *. 10000.));
       frame
-        ~identifier:402
+        ~identifier:332
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Ax12_State(address, position, speed, torque) ->
+      let data = String.create 7 in
+      put_uint8 data 0 address;
+      put_uint16 data 1 position;
+      put_uint16 data 3 speed;
+      put_uint16 data 5 torque;
+      frame
+        ~identifier:341
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Ax12_Request_State(address) ->
+      let data = String.create 1 in
+      put_uint8 data 0 address;
+      frame
+        ~identifier:342
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Ax12_Goto(address, position, speed) ->
+      let data = String.create 5 in
+      put_uint8 data 0 address;
+      put_uint16 data 1 position;
+      put_uint16 data 3 speed;
+      frame
+        ~identifier:343
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Ax12_Reset(future_address) ->
+      let data = String.create 1 in
+      put_uint8 data 0 future_address;
+      frame
+        ~identifier:344
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -593,18 +654,35 @@ let decode frame =
                get_uint16 frame.data 2,
                get_uint16 frame.data 4,
                get_uint16 frame.data 6)
-        | 401 ->
+        | 331 ->
             Battery1_voltages
               (float (get_uint16 frame.data 0) /. 10000.,
                float (get_uint16 frame.data 2) /. 10000.,
                float (get_uint16 frame.data 4) /. 10000.,
                float (get_uint16 frame.data 6) /. 10000.)
-        | 402 ->
+        | 332 ->
             Battery2_voltages
               (float (get_uint16 frame.data 0) /. 10000.,
                float (get_uint16 frame.data 2) /. 10000.,
                float (get_uint16 frame.data 4) /. 10000.,
                float (get_uint16 frame.data 6) /. 10000.)
+        | 341 ->
+            Ax12_State
+              (get_uint8 frame.data 0,
+               get_uint16 frame.data 1,
+               get_uint16 frame.data 3,
+               get_uint16 frame.data 5)
+        | 342 ->
+            Ax12_Request_State
+              (get_uint8 frame.data 0)
+        | 343 ->
+            Ax12_Goto
+              (get_uint8 frame.data 0,
+               get_uint16 frame.data 1,
+               get_uint16 frame.data 3)
+        | 344 ->
+            Ax12_Reset
+              (get_uint8 frame.data 0)
         | _ ->
             Unknown frame
   with Invalid_argument _ ->
