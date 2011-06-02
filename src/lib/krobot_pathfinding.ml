@@ -145,7 +145,7 @@ type result =
       length : float }
 
 let check_point b p =
-  List.for_all (fun c -> norm (vect c.c p) < c.r) b.obstacles
+  List.for_all (fun c -> norm (vect c.c p) >= c.r) b.obstacles
 
 let middle s p =
   ( scal
