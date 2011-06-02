@@ -20,17 +20,25 @@ let section = Lwt_log.Section.make "krobot(webcam)"
    | Parsing                                                         |
    +-----------------------------------------------------------------+ *)
 
+type ellipse = { ex : int; ey : int; rx : int; ry : int }
+
+let filter_objects objects =
+  (* detect stacks *)
+  List.map fst objects
+
 let rec parse bus objects ic =
   (* Read one line from the object finder. *)
   lwt line = Lwt_io.read_line ic in
   if line = "=====" then begin
     (* If it is a new frame, send current objects. *)
-    ignore (Krobot_bus.send bus (Unix.gettimeofday (), Objects objects));
+    ignore (Krobot_bus.send bus (Unix.gettimeofday (),
+				 Objects (filter_objects objects)));
     parse bus [] ic
   end else begin
     (* Otherwise read one and add it to the current list of objects. *)
-    let cx, cy = Scanf.sscanf line "%f %f" (fun cx cy-> (cx, cy)) in
-    parse bus ({ x = cx; y = cy } :: objects) ic
+    let cx, cy, elipse = Scanf.sscanf line "%f %f %d %d %d %d"
+      (fun cx cy ex ey rx ry -> (cx, cy, {ex;ey;rx;ry})) in
+    parse bus (({ x = cx; y = cy },elipse) :: objects) ic
   end
 
 (* +-----------------------------------------------------------------+
