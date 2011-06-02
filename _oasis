@@ -193,6 +193,13 @@ Executable "krobot-sharps"
   MainIs: krobot_sharps.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-homo"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_homo.ml
+  BuildDepends: krobot, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+
