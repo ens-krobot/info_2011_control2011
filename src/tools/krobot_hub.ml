@@ -19,7 +19,7 @@ let port = 50000
    +-----------------------------------------------------------------+ *)
 
 type hub = {
-  connections : (Lwt_io.input_channel * Lwt_io.output_channel) Lwt_sequence.t;
+  connections : (Lwt_io.input_channel * Lwt_io.output_channel * unit Lwt.t * unit Lwt.u) Lwt_sequence.t;
   (* Connections to programs or other HUBs. *)
 }
 
@@ -28,7 +28,7 @@ type hub = {
    +-----------------------------------------------------------------+ *)
 
 let dispatch hub node =
-  let ic, oc = Lwt_sequence.get node in
+  let ic, oc, waiter, wakener = Lwt_sequence.get node in
   let header = String.create Marshal.header_size in
   try_lwt
     while_lwt true do
@@ -43,18 +43,20 @@ let dispatch hub node =
       String.blit header 0 buffer 0 Marshal.header_size;
 
       (* Read the rest of the message. *)
-      lwt () = Lwt_io.read_into_exactly ic buffer Marshal.header_size data_size in
+      lwt () = pick [Lwt_io.read_into_exactly ic buffer Marshal.header_size data_size; waiter] in
 
       (* Broadcast the message on other connections. *)
       Lwt_sequence.iter_node_l
         (fun node' ->
            if node != node' then
              ignore begin
-               let _, oc = Lwt_sequence.get node' in
+               let _, oc, _, wakener = Lwt_sequence.get node' in
                try_lwt
                  Lwt_io.write_from_exactly oc buffer 0 (String.length buffer)
                with exn ->
-                 Lwt_log.error_f ~section ~exn "failed to send message"
+                 ignore (Lwt_log.error_f ~section ~exn "failed to send message");
+                 wakeup_exn wakener Exit;
+                 return ()
              end)
         hub.connections;
 
@@ -82,10 +84,12 @@ let link hub host =
       let addr = Unix.ADDR_INET(entry.Unix.h_addr_list.(0), port) in
 
       (* Try to connect to the remote HUB. *)
-      lwt channels = Lwt_io.open_connection addr in
+      lwt ic, oc = Lwt_io.open_connection addr in
+
+      let waiter, wakener = wait () in
 
       (* Add the connection to the local HUB. *)
-      let node = Lwt_sequence.add_r channels hub.connections in
+      let node = Lwt_sequence.add_r (ic, oc, waiter, wakener) hub.connections in
 
       (* Dispatch until error. *)
       dispatch hub node
@@ -100,9 +104,10 @@ let link hub host =
    | Connection handler                                              |
    +-----------------------------------------------------------------+ *)
 
-let handle_connection hub channels =
+let handle_connection hub (ic, oc) =
+  let waiter, wakener = wait () in
   (* Add the connection to the local HUB. *)
-  let node = Lwt_sequence.add_r channels hub.connections in
+  let node = Lwt_sequence.add_r (ic, oc, waiter, wakener) hub.connections in
 
   (* Dispatch until error. *)
   ignore (dispatch hub node)
