@@ -35,6 +35,9 @@ type robot = {
 
   mutable beacon : vertice option;
   (* Position of the beacon. *)
+
+  mutable jack : bool;
+  (* Is the jack present or not ? *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -58,6 +61,9 @@ let handle_message robot (timestamp, message) =
                 }
               else
                 robot.beacon <- None
+
+          | Switch1_status(b, _, _, _, _, _, _, _) ->
+              robot.jack <- not b
 
           | _ ->
               ()
@@ -86,6 +92,7 @@ lwt () =
     orientation = 0.;
     objects = [];
     beacon = None;
+    jack = true;
   } in
 
   E.keep (E.map (handle_message robot) (Krobot_bus.recv bus));
@@ -97,6 +104,12 @@ lwt () =
   in
 
   lwt () = Lwt_unix.sleep 1.0 in
+
+  lwt () =
+    while_lwt robot.jack do
+      Lwt_unix.sleep 0.1
+    done
+  in
 
   let v = { x = 1.675; y = 1.225 } in
   lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_goto v) in
