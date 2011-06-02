@@ -90,15 +90,26 @@ lwt () =
 
   E.keep (E.map (handle_message robot) (Krobot_bus.recv bus));
 
+  lwt () =
+    Krobot_message.send bus
+      (Unix.gettimeofday (),
+       Set_odometry(0.215 -. Krobot_config.robot_size /. 2. +. Krobot_config.wheels_position, 1.885, 0.))
+  in
+
   lwt () = Lwt_unix.sleep 1.0 in
 
-  let dst = { x = 1.5; y = 1.05 } in
-  match Krobot_path.goto_object ~src:robot.position ~dst ~objects:robot.objects ~beacon:robot.beacon with
-    | None ->
-        Lwt_io.eprintl "no solution"
-    | Some v ->
-        lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_goto v) in
-        lwt () = Lwt_unix.sleep 1.0 in
-        while_lwt robot.moving do
-          Lwt_unix.sleep 0.01
-        done
+  let v = { x = 1.675; y = 1.225 } in
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_goto v) in
+  lwt () = Lwt_unix.sleep 1.0 in
+  lwt () =
+    while_lwt robot.moving do
+      Lwt_unix.sleep 0.01
+    done
+  in
+
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Motor_turn(-3. *. pi /. 4. -. robot.orientation, 1., 2.)) in
+  lwt () = Lwt_unix.sleep 4.0 in
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Motor_move(0.3, 0.2, 0.4)) in
+  lwt () = Lwt_unix.sleep 2.0 in
+
+  return ()

@@ -66,7 +66,10 @@ type planner = {
    +-----------------------------------------------------------------+ *)
 
 let find_path planner src dst =
+  (* Remove objects that are near the destination. *)
   let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
+  (* Remove objects that are near the curent position. *)
+  let objects = List.filter (fun obj -> distance src obj >= object_safety_distance) objects in
   let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
   let l =
     match planner.beacon with
@@ -304,11 +307,22 @@ let goto planner dst =
                 return ()
             | Some path ->
                 set_vertices planner (planner.position :: path);
-                let current_curve = ref (Bezier.of_vertices origin origin origin origin) in
+                let dummy = Bezier.of_vertices origin origin origin origin in
+                let current_curve = ref dummy in
                 match_lwt
                   pick [
-                    follow_path planner current_curve path >> return true;
-                    Lwt_unix.sleep 0.01 >> while_lwt check planner !current_curve do Lwt_unix.sleep 0.01 done >> return false;
+                    (lwt () = follow_path planner current_curve path in return true);
+                    (lwt () =
+                       while_lwt !current_curve = dummy do
+                         Lwt_unix.sleep 0.01
+                       done
+                     in
+                     lwt () =
+                       while_lwt check planner !current_curve do
+                         Lwt_unix.sleep 0.01
+                       done
+                     in
+                     return false);
                   ]
                 with
                   | true ->
@@ -316,6 +330,7 @@ let goto planner dst =
                   | false ->
                       ignore (Lwt_log.info ~section "aborting current trajectory");
                       lwt () = abort planner in
+                      lwt () = Lwt_unix.sleep 1.0 in
                       loop ()
         in
         loop ()
