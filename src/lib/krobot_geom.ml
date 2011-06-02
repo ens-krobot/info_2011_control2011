@@ -175,7 +175,7 @@ module Bezier = struct
           and v2, _ = tangents q r s in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
-          loop sign (add_vertices sign q r v1 v2 acc) vertices
+          loop 1. (add_vertices sign q r v1 v2 acc) vertices
       | [q; r] ->
           let initial, sign = if prod initial (vector q r) < 0. then (minus initial, -1.) else (initial, 1.) in
           let v1 = initial
