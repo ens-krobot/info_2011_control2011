@@ -37,9 +37,9 @@ type t =
   | Ax12_Request_State of int
       (** Request the state of the AX-12 servo *)
   | Ax12_Goto of int * int * int
-      (** Move the AX-12 servo in position at the given speed*)
-  | Ax12_Reset of int
-      (** Reset the only plugged AX-12 servo *)
+      (** Move the AX-12 servo in position at the given speed *)
+  | Ax12_Set_Torque_Enable of int * bool
+      (** Set the torque status of the AX-12 servo *)
   | Encoder_position_direction_1_2 of int * direction * int * direction
       (** The position and direction of encoders 1 and 2. *)
   | Encoder_position_direction_3_4 of int * direction * int * direction

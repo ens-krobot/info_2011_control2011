@@ -31,7 +31,7 @@ type t =
   | Ax12_State of int * int * int * int
   | Ax12_Request_State of int
   | Ax12_Goto of int * int * int
-  | Ax12_Reset of int
+  | Ax12_Set_Torque_Enable of int * bool
   | Encoder_position_direction_1_2 of int * direction * int * direction
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
@@ -117,10 +117,10 @@ let to_string = function
       sprintf
         "Ax12_Goto(%d, %d, %d)"
         addr position speed
-  | Ax12_Reset(new_addr) ->
+  | Ax12_Set_Torque_Enable(addr, state) ->
       sprintf
-        "Ax12_Reset(%d)"
-        new_addr
+        "Ax12_Set_Torque_Enable(%d, %B)"
+        addr state
   | Encoder_position_direction_1_2(pos1, dir1, pos2, dir2) ->
       sprintf
         "Encoder_position_direction_1_2(%d, %s, %d, %s)"
@@ -465,11 +465,12 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Ax12_Reset(future_address) ->
-      let data = String.create 1 in
-      put_uint8 data 0 future_address;
+  | Ax12_Set_Torque_Enable(address, state) ->
+      let data = String.create 2 in
+      put_uint8 data 0 address;
+      put_uint8 data 1 (if state then 1 else 0);
       frame
-        ~identifier:344
+        ~identifier:345
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -680,9 +681,10 @@ let decode frame =
               (get_uint8 frame.data 0,
                get_uint16 frame.data 1,
                get_uint16 frame.data 3)
-        | 344 ->
-            Ax12_Reset
-              (get_uint8 frame.data 0)
+        | 345 ->
+            Ax12_Set_Torque_Enable
+              ((get_uint8 frame.data 0),
+              (if (get_uint8 frame.data 1) == 0 then false else true))
         | _ ->
             Unknown frame
   with Invalid_argument _ ->
