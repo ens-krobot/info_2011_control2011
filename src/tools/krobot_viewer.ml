@@ -25,15 +25,9 @@ type state = {
   theta : float;
 }
 
-type beacon = {
-  xbeacon : float;
-  ybeacon : float;
-  valid : bool;
-}
-
 type viewer = {
   bus : Krobot_bus.t;
-  (* The D-Bus message bus used by this viwer. *)
+  (* The bus used by this viwer. *)
 
   ui : Krobot_viewer_ui.window;
   (* The UI of the viewer. *)
@@ -47,14 +41,14 @@ type viewer = {
   mutable ghost : state;
   (* The state of the ghost. *)
 
-  mutable beacon : beacon;
-  (* The state of the beacon. *)
+  mutable beacon : vertice option;
+  (* The position of the beacon, if any. *)
 
-  mutable vertices : vertice list;
-  (* The current trajectory. *)
+  mutable planner_path : Bezier.curve list;
+  (* The path of the planner. *)
 
-  mutable curves : (vertice * vertice * vertice * vertice) list;
-  (* The current bezier curves of the trajectory. *)
+  mutable vm_path : Bezier.curve list option;
+  (* The path of the VM. *)
 
   mutable motor_status : bool * bool * bool *bool;
   (* Status of the four motor controller. *)
@@ -275,30 +269,43 @@ let draw viewer =
      (viewer.state, 1.0)];
 
   (* Draw the beacon *)
-  if viewer.beacon.valid then begin
-    Cairo.arc ctx viewer.beacon.xbeacon viewer.beacon.ybeacon 0.04 0. (2. *. pi);
-    set_color ctx Purple;
-    Cairo.fill ctx;
-    Cairo.arc ctx viewer.beacon.xbeacon viewer.beacon.ybeacon 0.04 0. (2. *. pi);
-    set_color ctx Black;
-    Cairo.stroke ctx
+  begin
+    match viewer.beacon with
+      | Some v ->
+          Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
+          set_color ctx Purple;
+          Cairo.fill ctx;
+          Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
+          set_color ctx Black;
+          Cairo.stroke ctx
+      | None ->
+          ()
   end;
+
+  (* Draw the path of the VM if any or the path of the planner if the
+     VM is not following a trajectory. *)
+  let path =
+    match viewer.vm_path with
+      | Some path -> path
+      | None -> viewer.planner_path
+  in
 
   (* Draw points. *)
   Cairo.set_source_rgb ctx 255. 255. 0.;
-  (match viewer.vertices with
+  (match path with
      | [] ->
          ()
-     | o :: l ->
-         Cairo.move_to ctx o.x o.y;
-         List.iter (fun { x; y } -> Cairo.line_to ctx x y) l;
+     | curve :: curves ->
+         let src = Bezier.src curve and dst = Bezier.dst curve in
+         Cairo.move_to ctx src.x src.y;
+         Cairo.line_to ctx dst.x dst.y;
+         List.iter (fun curve -> let v = Bezier.dst curve in Cairo.line_to ctx v.x v.y) curves;
          Cairo.stroke ctx);
 
   (* Draw bezier curves. *)
   Cairo.set_source_rgb ctx 255. 0. 255.;
   List.iter
-    (fun (p, q, r, s) ->
-       let curve = Bezier.of_vertices p q r s in
+    (fun curve ->
        let { x; y } = Bezier.vertice curve 0. in
        Cairo.move_to ctx x y;
        for i = 1 to 100 do
@@ -306,7 +313,7 @@ let draw viewer =
          Cairo.line_to ctx x y
        done;
        Cairo.stroke ctx)
-    viewer.curves;
+    path;
 
   let ctx = Cairo_lablgtk.create viewer.ui#scene#misc#window in
   Cairo.set_source_surface ctx surface 0. 0.;
@@ -389,14 +396,19 @@ let handle_message viewer (timestamp, message) =
               end
 
           | Beacon_position(angle, distance, period) ->
-              let newangle = math_mod_float (viewer.state.theta +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
-              let x = viewer.state.pos.x +. distance *. cos (newangle) in
-              let y = viewer.state.pos.y +. distance *. sin (newangle) in
-              let valid = distance <> 0. in
-              let beacon = { xbeacon = x; ybeacon = y; valid; } in
+              let beacon =
+                if distance <> 0. then begin
+                  let angle = math_mod_float (viewer.state.theta +. rotary_beacon_index_pos +. angle) (2. *. pi) in
+                  Some {
+                    x = viewer.state.pos.x +. distance *. cos angle;
+                    y = viewer.state.pos.y +. distance *. sin angle;
+                  }
+                end else
+                  None
+              in
               if beacon <> viewer.beacon then begin
                 viewer.beacon <- beacon;
-                viewer.ui#beacon_status#set_text (if valid then "valid" else "-");
+                viewer.ui#beacon_status#set_text (if beacon = None then "-" else "valid");
                 viewer.ui#beacon_distance#set_text (string_of_float distance);
                 viewer.ui#beacon_angle#set_text (string_of_float angle);
                 viewer.ui#beacon_period#set_text (string_of_float period);
@@ -416,13 +428,19 @@ let handle_message viewer (timestamp, message) =
     | Kill "viewer" ->
         exit 0
 
-    | Trajectory_vertices(vertices, curves) ->
-        viewer.vertices <- vertices;
-        viewer.curves <- curves;
+    | Trajectory_path curves ->
+        viewer.planner_path <- curves;
         queue_draw viewer
 
-    | Trajectory_moving moving ->
-        viewer.ui#button_go#misc#set_sensitive (not moving)
+    | Strategy_path None ->
+        viewer.vm_path <- None;
+        viewer.ui#button_go#misc#set_sensitive true;
+        queue_draw viewer
+
+    | Strategy_path(Some curves) ->
+        viewer.vm_path <- Some curves;
+        viewer.ui#button_go#misc#set_sensitive false;
+        queue_draw viewer
 
     | Log line ->
         viewer.ui#logs#buffer#insert (line ^ "\n");
@@ -487,9 +505,9 @@ lwt () =
     ui;
     state = init;
     ghost = init;
-    beacon = { xbeacon = 1.; ybeacon = 1.; valid = false };
-    vertices = [];
-    curves = [];
+    beacon = None;
+    planner_path = [];
+    vm_path = None;
     statusbar_context = ui#statusbar#new_context "";
     motor_status = (false, false, false, false);
     objects = [];
@@ -541,23 +559,16 @@ lwt () =
     (ui#button_go#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
-            ignore (
-              Krobot_bus.send bus
-                (Unix.gettimeofday (),
-                 Trajectory_go(ui#rotation_speed#adjustment#value,
-                               ui#rotation_acceleration#adjustment#value,
-                               ui#moving_speed#adjustment#value,
-                               ui#moving_acceleration#adjustment#value))
-            );
+            ignore (Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_go));
           false));
 
   ignore
     (ui#button_goto#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then begin
-            match viewer.vertices with
-              | _ :: v :: _ ->
-                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_goto v))
+            match viewer.planner_path with
+              | curve :: _ ->
+                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Goto(Bezier.dst curve)]))
               | _ ->
                   ()
           end;
@@ -567,29 +578,21 @@ lwt () =
     (ui#button_start_red#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
-            ignore (
-              Krobot_message.send bus
-                (Unix.gettimeofday (),
-                 Set_odometry(0.215 -. Krobot_config.robot_size /. 2. +. Krobot_config.wheels_position, 1.885, 0.))
-            );
+            ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Reset_odometry `Red]));
           false));
 
   ignore
     (ui#button_start_blue#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
-            ignore_result (
-              Krobot_message.send bus
-                (Unix.gettimeofday (),
-                 Set_odometry(2.77, 1.915, pi))
-            );
+            ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Reset_odometry `Blue]));
           false));
 
   ignore
     (ui#button_stop#event#connect#button_release
        (fun ev ->
           if GdkEvent.Button.button ev = 1 then
-            ignore (Krobot_bus.send bus (Unix.gettimeofday (), Trajectory_stop));
+            ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_stop));
           false));
 
   ignore

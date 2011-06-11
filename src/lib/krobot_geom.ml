@@ -98,6 +98,8 @@ let tangents a b c =
 module Bezier = struct
 
   type curve = {
+    src : vertice;
+    dst : vertice;
     p : vector;
     a : vector;
     b : vector;
@@ -105,6 +107,7 @@ module Bezier = struct
   }
 
   let of_vertices p q r s =
+    let src = p and dst = s in
     let p = vector origin p
     and q = vector origin q
     and r = vector origin r
@@ -112,7 +115,13 @@ module Bezier = struct
     let c = (q -| p) *| 3. in
     let b = (r -| q) *| 3. -| c in
     let a = s -| p -| c -| b in
-    { p; a; b; c }
+    { src; dst; p; a; b; c }
+
+  let src c = c.src
+  let dst c = c.dst
+
+  let string_of_curve c =
+    Printf.sprintf "<bezier { x = %f; y = %f } -> { x = %f; y = %f }>" c.src.x c.src.y c.dst.x c.dst.y
 
   let make ~p ~s ~vp ~vs ~a ~error_max =
     let sp = norm vp and ss = norm vs in

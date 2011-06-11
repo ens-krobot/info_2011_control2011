@@ -27,23 +27,13 @@ type planner = {
   (* The message bus used to communicate with the robot. *)
 
   mutable vertices : vertice list;
-  (* The list of vertices for the trajectory. *)
+  (* The list of vertices of the current trajectory. *)
 
-  mutable curves : (float * vertice * vertice * vertice * vertice) list;
-  (* The parameters of bezier curves. *)
+  mutable curves : Bezier.curve list;
+  (* The list of bezier curves of the current trajectory. *)
 
-  mutable moving : bool;
-  (* Is the robot moving ? *)
-
-  mutable motors_moving : bool;
-  (* Are the motor currently active ? *)
-
-  mutable curve_status : int;
-  (* The status of the trajectory controller on the curve (between 0
-     and 255). *)
-
-  mutable mover : unit Lwt.t;
-  (* The thread moving the robot. *)
+  mutable following_path : bool;
+  (* Is the VM following a path ? *)
 
   mutable position : vertice;
   (* The position of the robot on the board. *)
@@ -56,9 +46,6 @@ type planner = {
 
   mutable beacon : vertice option;
   (* Position of the beacon. *)
-
-  mutable event : unit event;
-  (* Event kept in the planner. *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -66,54 +53,18 @@ type planner = {
    +-----------------------------------------------------------------+ *)
 
 let find_path planner src dst =
-  (* Remove objects that are near the destination. *)
-  let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) planner.objects in
-  (* Remove objects that are near the curent position. *)
-  let objects = List.filter (fun obj -> distance src obj >= object_safety_distance +. 0.01) objects in
-  let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
-  let l =
-    match planner.beacon with
-      | Some v ->
-          (v, beacon_safety_distance +. 0.01) :: l
-      | None ->
-          l
-  in
-  Krobot_pathfinding.find_path ~src ~dst
-    ({ x = border_safety_distance;
-       y = border_safety_distance},
-     { x = world_width -. border_safety_distance;
-       y = world_height -. border_safety_distance})
-    l
+  Krobot_path.find ~src ~dst ~objects:planner.objects ~beacon:planner.beacon
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
    +-----------------------------------------------------------------+ *)
 
-let set_vertices planner ?curves vertices =
+let set_vertices planner vertices =
+  let v = { vx = cos planner.orientation; vy = sin planner.orientation } in
+  let curves = List.rev (Bezier.fold_curves (fun curve acc -> curve :: acc) v (planner.position :: vertices) []) in
   planner.vertices <- vertices;
-  (* If the robot is not moving, add its current position to the
-     trajectory. *)
-  let vertices =
-    match planner.moving with
-      | true -> vertices
-      | false -> planner.position :: vertices
-  in
-  (* Compute bezier curves if not provided. *)
-  let curves =
-    match curves with
-      | Some l ->
-          l
-      | None ->
-          let v = { vx = cos planner.orientation; vy = sin planner.orientation } in
-          List.rev (Bezier.fold_vertices (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) v vertices [])
-  in
   planner.curves <- curves;
-  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_vertices(vertices,
-                                                                                 List.map (fun (sign, p, q, r, s) -> (p, q, r, s)) curves)))
-
-let set_moving planner moving =
-  planner.moving <- moving;
-  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_moving moving))
+  ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_path curves))
 
 let simplify planner tolerance =
   match planner.vertices with
@@ -154,215 +105,6 @@ let simplify planner tolerance =
         let result = loop [0; Array.length points - 1] in
         set_vertices planner (List.map (fun i -> points.(i)) result)
 
-let wait_done planner =
-  lwt () = Lwt_log.info "waiting for the robot to stop moving" in
-  lwt () = Lwt_unix.sleep 0.3 in
-  lwt () =
-    while_lwt planner.motors_moving do
-      Lwt_unix.sleep 0.1
-    done
-  in
-  Lwt_log.info "trajectory done"
-
-let wait_middle planner =
-  lwt () = Lwt_log.info "waiting for the robot to be in the middle of the trajectory" in
-  lwt () = Lwt_unix.sleep 0.3 in
-  lwt () =
-    while_lwt planner.curve_status < 128 do
-      Lwt_unix.sleep 0.001
-    done
-  in
-  Lwt_log.info "robot in the middle of the trajectory"
-
-let wait_start planner =
-  lwt () = Lwt_log.info "waiting for the robot to start the new trajectory" in
-  lwt () =
-    while_lwt planner.curve_status >= 128 do
-      Lwt_unix.sleep 0.001
-    done
-  in
-  Lwt_log.info "robot started the new trajectory"
-
-(* Send a bezier curve to the robot. *)
-let send_curve planner sign p q r s v_end =
-  (* Compute parameters. *)
-  let d1 = sign *. distance p q and d2 = distance r s in
-  let v = vector r s in
-  let theta_end = atan2 v.vy v.vx in
-
-  ignore (
-    Lwt_log.info_f
-      "sending bezier curve, x = %f, y = %f, d1 = %f, d2 = %f, theta_end = %f, v_end = %f"
-      s.x s.y d1 d2 theta_end v_end
-  );
-
-  (* Send the curve. *)
-  Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end))
-
-(* Remove the first vertice of the trajecotry. *)
-let drop_vertice planner =
-  match planner.vertices with
-    | [] ->
-        ()
-    | _ :: vertices ->
-        set_vertices planner ~curves:(List.tl planner.curves) vertices
-
-(* Follow the given path, updating [current_curve] each time we follow
-   a new curve. *)
-let follow_path planner current_curve path =
-  let rec loop = function
-    | [] ->
-        lwt () = wait_done planner in
-        set_vertices planner [];
-        return ()
-
-    | [(sign, p, q, r, s)] ->
-        lwt () = wait_middle planner in
-        lwt () = send_curve planner sign p q r s 0.01 in
-        lwt () = wait_start planner in
-        current_curve := Bezier.of_vertices p q r s;
-        drop_vertice planner;
-        lwt () = wait_done planner in
-        set_vertices planner [];
-        return ()
-
-    | (sign, p, q, r, s) :: rest ->
-        lwt () = wait_middle planner in
-        lwt () = send_curve planner sign p q r s 0.5 in
-        lwt () = wait_start planner in
-        current_curve := Bezier.of_vertices p q r s;
-        drop_vertice planner;
-        loop rest
-  in
-
-  (* Add the origin of the trajectory to keep displaying it. *)
-  planner.vertices <- planner.position :: path;
-  match planner.curves with
-    | [] ->
-        set_vertices planner [];
-        return ()
-
-    | [(sign, p, q, r, s)] ->
-        current_curve := Bezier.of_vertices p q r s;
-        lwt () = send_curve planner sign p q r s 0.01 in
-        lwt () = wait_done planner in
-        set_vertices planner [];
-        return ()
-
-    | (sign, p, q, r, s) :: rest ->
-        current_curve := Bezier.of_vertices p q r s;
-        lwt () = send_curve planner sign p q r s 0.5 in
-        loop rest
-
-let go planner rotation_speed rotation_acceleration moving_speed moving_acceleration =
-  if planner.moving then
-    return ()
-  else begin
-    set_moving planner true;
-    planner.mover <- (
-      try_lwt
-        follow_path planner (ref (Bezier.of_vertices origin origin origin origin)) planner.vertices
-
-      with exn ->
-        Lwt_log.error_f ~section ~exn "failed to move"
-
-      finally
-        set_moving planner false;
-        return ()
-    );
-    return ()
-  end
-
-let abort planner =
-  Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0, 0.0))
-
-let seen_beacon = ref None
-
-let check planner curve =
-  let rec loop i =
-    if i = 256 then
-      true
-    else
-      let v = Bezier.vertice curve (float i /. 255.) in
-      if (List.for_all (fun obj -> distance v obj >= object_safety_distance) planner.objects
-          && (match planner.beacon , !seen_beacon with
-                | Some v',_ ->
-		  seen_beacon := Some (Unix.gettimeofday ());
-		  false
-		  (* distance v v' >= beacon_safety_distance *)
-		| None, Some x when (Unix.gettimeofday ()) < 4. ->
-		  false
-                | None,_ -> true)) then
-        loop (i + 1)
-      else
-        false
-  in
-  loop planner.curve_status
-
-(* Go to the given destination. *)
-let goto planner dst =
-  if planner.moving then
-    return ()
-  else begin
-    set_moving planner true;
-    planner.mover <- (
-      try_lwt
-        let rec loop () =
-	  if (match planner.beacon , !seen_beacon with
-                | Some v',_ ->
-		  seen_beacon := Some (Unix.gettimeofday ());
-		  false
-		(* distance v v' >= beacon_safety_distance *)
-		| None, Some x when (Unix.gettimeofday ()) < 4. ->
-		  false
-                | None,_ -> true)
-	  then
-            (match find_path planner planner.position dst with
-            | None ->
-                ignore (Lwt_log.info ~section "cannot find a path to the destination");
-                return ()
-            | Some path ->
-                set_vertices planner (planner.position :: path);
-                let dummy = Bezier.of_vertices origin origin origin origin in
-                let current_curve = ref dummy in
-                match_lwt
-                  pick [
-                    (lwt () = follow_path planner current_curve path in return true);
-                    (lwt () =
-                       while_lwt !current_curve = dummy do
-                         Lwt_unix.sleep 0.01
-                       done
-                     in
-                     lwt () =
-                       while_lwt check planner !current_curve do
-                         Lwt_unix.sleep 0.01
-                       done
-                     in
-                     return false);
-                  ]
-                with
-                  | true ->
-                      return ()
-                  | false ->
-                      ignore (Lwt_log.info ~section "aborting current trajectory");
-                      lwt () = abort planner in
-                      lwt () = Lwt_unix.sleep 1.0 in
-                      loop ())
-	  else
-	    lwt () = Lwt_unix.sleep 1.0 in
-	    loop ()
-        in
-        loop ()
-      with exn ->
-        Lwt_log.error_f ~section ~exn "failed to move"
-
-      finally
-        set_moving planner false;
-        return ()
-    );
-    return ()
-  end
-
 (* +-----------------------------------------------------------------+
    | Message handling                                                |
    +-----------------------------------------------------------------+ *)
@@ -375,12 +117,8 @@ let handle_message planner (timestamp, message) =
               planner.position <- { x; y };
               planner.orientation <- math_mod_float theta (2. *. pi)
 
-          | Odometry_ghost(x, y, theta, u, following) ->
-              planner.curve_status <- u;
-              planner.motors_moving <- following
-
           | Beacon_position(angle, distance, period) ->
-            if distance <> 0. then
+              if distance <> 0. then
                 let angle = math_mod_float (planner.orientation +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
                 planner.beacon <- Some{
                   x = planner.position.x +. distance *. cos angle;
@@ -397,49 +135,29 @@ let handle_message planner (timestamp, message) =
         exit 0
 
     | Send ->
-        ignore (
-          let ts = Unix.gettimeofday () in
-          let vertices = if planner.moving then planner.vertices else planner.position :: planner.vertices in
-          join [
-            Krobot_bus.send planner.bus (ts, Trajectory_vertices(vertices, List.map (fun (sign, p, q, r, s) -> (p, q, r, s)) planner.curves));
-            Krobot_bus.send planner.bus (ts, Trajectory_moving planner.moving);
-          ]
-        )
+        ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_path planner.curves))
 
     | Trajectory_set_vertices l ->
-        if not planner.moving then
-          set_vertices planner l
+        set_vertices planner l
 
     | Trajectory_add_vertice vertice ->
-        if not planner.moving then
-          set_vertices planner (planner.vertices @ [vertice])
+        set_vertices planner (planner.vertices @ [vertice])
 
     | Trajectory_simplify tolerance ->
-        if not planner.moving then
-          simplify planner tolerance
+        simplify planner tolerance
 
-    | Trajectory_go(rotation_speed, rotation_acceleration, moving_speed, moving_acceleration) ->
-        if not planner.moving then
-          ignore (go planner rotation_speed rotation_acceleration moving_speed moving_acceleration)
+    | Trajectory_go ->
+        let path = planner.vertices in
+        ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Follow_path path]));
+        set_vertices planner []
 
-    | Trajectory_goto v ->
-        if not planner.moving then
-          ignore (goto planner v)
-
-    | Trajectory_stop ->
-        cancel planner.mover;
-        set_moving planner false;
-        set_vertices planner [];
-        ignore (Krobot_message.send planner.bus (Unix.gettimeofday (), Motor_stop(1.0, 0.0)))
-
-    | Trajectory_find_path ->
-        if not planner.moving then begin
-          match planner.vertices with
-            | v :: _ ->
-                set_vertices planner (match find_path planner planner.position v with Some p -> p | None -> [])
-            | _ ->
-                ()
-        end
+    | Trajectory_find_path -> begin
+        match planner.vertices with
+          | v :: _ ->
+              set_vertices planner (match find_path planner planner.position v with Some p -> p | None -> [])
+          | _ ->
+              ()
+      end
 
     | Objects l ->
         planner.objects <- l
@@ -485,15 +203,11 @@ lwt () =
     bus;
     vertices = [];
     curves = [];
-    moving = false;
-    motors_moving = false;
-    curve_status = 0;
-    mover = return ();
+    following_path = false;
     position = { x = 0.; y = 0. };
     orientation = 0.;
     objects = [];
     beacon = None;
-    event = E.never;
   } in
 
   (* Handle krobot message. *)

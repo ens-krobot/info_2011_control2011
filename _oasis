@@ -41,7 +41,8 @@ Library krobot
     Krobot_solve,
     Krobot_pathfinding,
     Krobot_config,
-    Krobot_path
+    Krobot_path,
+    Krobot_action
   CSources:
     krobot_message_stubs.c
 
@@ -193,11 +194,18 @@ Executable "krobot-sharps"
   MainIs: krobot_sharps.ml
   BuildDepends: krobot, lwt.syntax
 
-Executable "krobot-homo"
+Executable "krobot-vm"
   Path: src/tools
   Install: true
   CompiledObject: best
-  MainIs: krobot_homo.ml
+  MainIs: krobot_vm.ml
+  BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-ia"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_ia.ml
   BuildDepends: krobot, lwt.syntax
 
 # +-------------------------------------------------------------------+

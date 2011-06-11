@@ -52,6 +52,16 @@ module Bezier : sig
   type curve
     (** Type of cubic Bezier curves. *)
 
+  val string_of_curve : curve -> string
+    (** Returns the string representation of the given bezier
+        curve. *)
+
+  val src : curve -> vertice
+    (** Return the source vertice of the given bezier curve. *)
+
+  val dst : curve -> vertice
+    (** Return the destination vertice of the given bezier curve. *)
+
   val of_vertices : vertice -> vertice -> vertice -> vertice -> curve
     (** [of_vertices p q r s] creates a bezier curve from the given
         four control points. [p] and [s] are the first and end point

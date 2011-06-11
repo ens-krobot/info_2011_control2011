@@ -25,17 +25,18 @@ type message =
   | Log of string
   | Send
   | Kill of string
-  | Trajectory_vertices of vertice list * (vertice * vertice * vertice * vertice) list
+  | Trajectory_path of Bezier.curve list
   | Trajectory_set_vertices of vertice list
   | Trajectory_add_vertice of vertice
   | Trajectory_simplify of float
-  | Trajectory_go of float * float * float * float
-  | Trajectory_goto of vertice
-  | Trajectory_stop
-  | Trajectory_moving of bool
+  | Trajectory_go
   | Trajectory_find_path
   | Objects of vertice list
   | Sharps of float array
+  | Strategy_append of Krobot_action.t list
+  | Strategy_stop
+  | Strategy_set of Krobot_action.t list
+  | Strategy_path of Bezier.curve list option
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -70,19 +71,10 @@ let string_of_message = function
       sprintf
         "Kill %S"
         name
-  | Trajectory_vertices(vertices, curves) ->
+  | Trajectory_path curves ->
       sprintf
-        "Trajectory_vertices([%s], [%s])"
-        (String.concat "; " (List.map string_of_vertice vertices))
-        (String.concat "; " (List.map
-                               (fun (p, q, r, s) ->
-                                  Printf.sprintf
-                                    "(%s, %s, %s, %s)"
-                                    (string_of_vertice p)
-                                    (string_of_vertice q)
-                                    (string_of_vertice r)
-                                    (string_of_vertice s))
-                               curves))
+        "Trajectory_path [%s]"
+        (String.concat "; " (List.map Bezier.string_of_curve curves))
   | Trajectory_set_vertices l ->
       sprintf
         "Trajectory_set_vertices [%s]"
@@ -95,20 +87,8 @@ let string_of_message = function
       sprintf
         "Trajectory_simplify %f"
         tolerance
-  | Trajectory_go(a, b, c, d) ->
-      sprintf
-        "Trajectory_go(%f, %f, %f, %f)"
-        a b c d
-  | Trajectory_goto v ->
-      sprintf
-        "Trajectory_goto %s"
-        (string_of_vertice v)
-  | Trajectory_stop ->
-      "Trajectory_stop"
-  | Trajectory_moving b ->
-      sprintf
-        "Trajectory_moving %B"
-        b
+  | Trajectory_go ->
+      "Trajectory_go"
   | Trajectory_find_path ->
       "Trajectory_find_path"
   | Objects objects ->
@@ -119,6 +99,18 @@ let string_of_message = function
       sprintf
         "Sharps [|%s|]"
         (String.concat "; " (List.map string_of_float (Array.to_list a)))
+  | Strategy_append l ->
+      sprintf "Strategy_append [%s]" (String.concat "; " (List.map Krobot_action.to_string l))
+  | Strategy_stop ->
+      "Strategy_stop"
+  | Strategy_set l ->
+      sprintf "Strategy_set [%s]" (String.concat "; " (List.map Krobot_action.to_string l))
+  | Strategy_path None ->
+      "Strategy_path None"
+  | Strategy_path(Some curves)  ->
+      sprintf
+        "Strategy_path(Some [%s])"
+        (String.concat "; " (List.map Bezier.string_of_curve curves))
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |

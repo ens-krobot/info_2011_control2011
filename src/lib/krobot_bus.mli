@@ -34,24 +34,16 @@ type message =
 
   (** Trajectory messages. *)
 
-  | Trajectory_vertices of vertice list * (vertice * vertice * vertice * vertice) list
-      (** The list of vertices for the planned trajectory, along with
-          the bezier curves. *)
+  | Trajectory_path of Bezier.curve list
+      (** The planned trajectory. *)
   | Trajectory_set_vertices of vertice list
       (** Sets the trajectory. *)
   | Trajectory_add_vertice of vertice
       (** Add a vertice to the trajectory. *)
   | Trajectory_simplify of float
       (** Simplify the trajectory with the given tolerance. *)
-  | Trajectory_go of float * float * float * float
-      (** [Trajectory_go(rotation_speed, rotation_acceleration,
-          moving_speed, moving_acceleration)]. *)
-  | Trajectory_goto of vertice
-      (** [Trajectory_goto dest] go to the given position. *)
-  | Trajectory_stop
-      (** Stop the current trajectory. *)
-  | Trajectory_moving of bool
-      (** Is the robot following a trajectory ? *)
+  | Trajectory_go
+      (** Follow currently registered trajectory. *)
   | Trajectory_find_path
       (** Find a path avoiding objects. *)
 
@@ -64,6 +56,18 @@ type message =
 
   | Sharps of float array
       (** Distances measured by the sharps. *)
+
+  (** Strategy *)
+
+  | Strategy_append of Krobot_action.t list
+      (** Append the given list of action to the current strategy. *)
+  | Strategy_stop
+      (** Stop and empty the current strategy. *)
+  | Strategy_set of Krobot_action.t list
+      (** Stop and replace the current stategy by the given one. *)
+  | Strategy_path of (Bezier.curve list) option
+      (** Message emitted when the robot starts or stops a
+          trajectory. *)
 
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
