@@ -40,6 +40,28 @@ type t =
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
       (** Wait for the curve parameter of the odometry to reach the
           given state. *)
+  | Load of [ `Front | `Back ]
+      (** Load a pawn. *)
+  | Lift_down of [ `Front | `Back ]
+      (** Move the front or back lift down. *)
+  | Lift_up of [ `Front | `Back ]
+      (** Move the front or back lift up. *)
+  | Open_grip_low of [ `Front | `Back ]
+      (** Open the front or back low grip. *)
+  | Close_grip_low of [ `Front | `Back ]
+      (** Close the front or back low grip. *)
+  | Open_grip_high of [ `Front | `Back ]
+      (** Open the front or back low grip. *)
+  | Close_grip_high of [ `Front | `Back ]
+      (** Close the front or back low grip. *)
+  | Wait_for of float
+      (** Wait for the given number of seconds. *)
+  | Wait_until of float
+      (** Wait until the given date. *)
+  | Wait_for_grip_open_low of [ `Front | `Back ]
+      (** Wait for the given low grip to be opened. *)
+  | Wait_for_grip_close_low of [ `Front | `Back ]
+      (** Wait for the given low grip to be opened. *)
 
 val to_string : t -> string
   (** [to_string action] returns the string representation of the

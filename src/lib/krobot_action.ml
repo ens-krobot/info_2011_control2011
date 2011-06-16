@@ -22,8 +22,23 @@ type t =
   | Wait_for_moving of bool
   | Reset_odometry of [ `Red | `Blue | `Auto ]
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
+  | Load of [ `Front | `Back ]
+  | Lift_down of [ `Front | `Back ]
+  | Lift_up of [ `Front | `Back ]
+  | Open_grip_low of [ `Front | `Back ]
+  | Close_grip_low of [ `Front | `Back ]
+  | Open_grip_high of [ `Front | `Back ]
+  | Close_grip_high of [ `Front | `Back ]
+  | Wait_for of float
+  | Wait_until of float
+  | Wait_for_grip_open_low of [ `Front | `Back ]
+  | Wait_for_grip_close_low of [ `Front | `Back ]
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
+
+let string_of_face = function
+  | `Front -> "`Front"
+  | `Back -> "`Back"
 
 let rec to_string = function
   | Node l ->
@@ -69,3 +84,25 @@ let rec to_string = function
            | `Lt -> "Lt"
            | `Le -> "Le")
         value
+  | Load face ->
+      sprintf "Load %s" (string_of_face face)
+  | Lift_down face ->
+      sprintf "Lift_down %s" (string_of_face face)
+  | Lift_up face ->
+      sprintf "Lift_up %s" (string_of_face face)
+  | Open_grip_low face ->
+      sprintf "Open_grip_low %s" (string_of_face face)
+  | Close_grip_low face ->
+      sprintf "Close_grip_low %s" (string_of_face face)
+  | Open_grip_high face ->
+      sprintf "Open_grip_high %s" (string_of_face face)
+  | Close_grip_high face ->
+      sprintf "Close_grip_high %s" (string_of_face face)
+  | Wait_for t ->
+      sprintf "Wait_for %f" t
+  | Wait_until t ->
+      sprintf "Wait_until %f" t
+  | Wait_for_grip_open_low face ->
+      sprintf "Wait_for_grip_open_low %S" (string_of_face face)
+  | Wait_for_grip_close_low face ->
+      sprintf "Wait_for_grip_close_low %S" (string_of_face face)

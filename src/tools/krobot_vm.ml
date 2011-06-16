@@ -21,6 +21,13 @@ open Krobot_action
    | Types                                                           |
    +-----------------------------------------------------------------+ *)
 
+(* State of an AX12. *)
+type ax12 = {
+  mutable ax12_position : int;
+  mutable ax12_speed : int;
+  mutable ax12_torque : int;
+}
+
 (* Type of robots. *)
 type robot = {
   bus : Krobot_bus.t;
@@ -68,6 +75,16 @@ type robot = {
 
   mutable team : [ `Red | `Blue ];
   (* The state of the team selector. *)
+
+  ax12_front_low_left : ax12;
+  ax12_front_low_right : ax12;
+  ax12_front_high_left : ax12;
+  ax12_front_high_right : ax12;
+  ax12_back_low_left : ax12;
+  ax12_back_low_right : ax12;
+  ax12_back_high_left : ax12;
+  ax12_back_high_right : ax12;
+  (* State of AX12s. *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -99,6 +116,20 @@ let handle_message robot (timestamp, message) =
 
           | Switch1_status(b, _, _, _, _, _, _, _) ->
               robot.jack <- not b
+
+          | Ax12_State(id, position, speed, torque) -> begin
+              let set ax12 =
+                ax12.ax12_position <- position;
+                ax12.ax12_speed <- speed;
+                ax12.ax12_torque <- torque
+              in
+              match id with
+                | 1 -> set robot.ax12_front_low_left
+                | 2 -> set robot.ax12_front_low_right
+                | 3 -> set robot.ax12_front_high_left
+                | 4 -> set robot.ax12_front_high_right
+                | _ -> ()
+            end
 
           | _ ->
               ()
@@ -198,6 +229,13 @@ let rec exec robot actions =
           exec robot rest
         else
           (actions, Wait)
+    | Wait_for t :: rest ->
+        exec robot (Wait_until (Unix.gettimeofday () +. t) :: rest)
+    | Wait_until t :: rest ->
+        if Unix.gettimeofday () >= t then
+          exec robot rest
+        else
+          (actions, Wait)
     | Set_curve None :: rest ->
         reset robot;
         exec robot rest
@@ -278,7 +316,25 @@ let rec exec robot actions =
                   Set_odometry(0.215 -. robot_size /. 2. +. wheels_position, 1.885, 0.)
               | `Blue, _ | `Auto, `Blue ->
                   Set_odometry(2.77, 1.915, pi)))
+    | Load face :: rest ->
+        exec robot (Node [
+                      Lift_down face;
+                      Open_grip_low face;
+                      Wait_for_grip_open_low face;
+                      Wait_for 0.5;
+                      (* Move_to_pawn *)
+                      Close_grip_low face;
+                      Lift_up face;
+                      Wait_for_grip_close_low face;
+                      Wait_for 0.5;
+                    ] :: rest)
+    | Lift_down `Front :: rest ->
+        (rest, Send(Elevator(0., -1.)))
+    | Lift_up `Front :: rest ->
+        (rest, Send(Elevator(1., -1.)))
     | Think :: rest ->
+        exec robot rest
+    | _ :: rest ->
         exec robot rest
 
 (* +-----------------------------------------------------------------+
@@ -390,6 +446,14 @@ lwt () =
     beacon = None;
     date_seen_beacon = 0.;
     team = `Red;
+    ax12_front_low_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_front_low_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_front_high_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_front_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_back_low_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_back_low_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_back_high_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    ax12_back_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
   } in
 
   (* Handle krobot message. *)
