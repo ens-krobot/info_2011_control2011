@@ -49,12 +49,16 @@ Library krobot
 Library "krobot-can"
   FindlibName: can
   FindlibParent: krobot
-  BuildDepends: krobot, lwt.syntax
+  BuildDepends: krobot, lwt.syntax, sexplib, sexplib.syntax, bitstring
   XMETADescription: CAN interface using SocketCAN
-  XMETARequires: krobot
+  XMETARequires: krobot, sexplib, bitstring
   Path: src/can
   Install: true
-  Modules: Krobot_can_bus
+  Modules:
+   Krobot_can_bus,
+   Krobot_can_decoder,
+   Krobot_can_desc_lexer,
+   Krobot_can_desc_parser
   CSources: can_stubs.c
 
 # +-------------------------------------------------------------------+
@@ -207,6 +211,14 @@ Executable "krobot-ia"
   CompiledObject: best
   MainIs: krobot_ia.ml
   BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-can-display"
+  Path: src/tools
+  Build$: flag(gtk)
+  Install$: flag(gtk)
+  CompiledObject: best
+  MainIs: krobot_can_display.ml
+  BuildDepends: krobot.can, lwt.syntax, sexplib, sexplib.syntax, cairo.lablgtk2, lwt.glib
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
