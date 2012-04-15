@@ -24,14 +24,13 @@ type field =
       endian : endian;
       field_description : string option } with sexp
 
-type desc = field list with sexp
-type description = field list with sexp
-
 type frame_desc =
     { frame_name : string;
       frame_id : int;
       frame_data : field list;
-      frame_description : string option }
+      frame_description : string option } with sexp
+
+type description = frame_desc with sexp
 
 type result_field =
   | R_bit of bool
@@ -42,8 +41,7 @@ type result_field =
 
 type result = ( string * result_field ) list with sexp
 
-type decode_table =
-    (int * kind,desc * string option) Hashtbl.t
+type decode_table = (int,frame_desc) Hashtbl.t
 
 let is_description_correct desc =
   ( List.for_all (fun { display; size } ->
@@ -58,7 +56,7 @@ let is_description_correct desc =
     else true
 
 let check_description desc =
-  if is_description_correct desc
+  if is_description_correct desc.frame_data
   then Some desc
   else None
 
@@ -69,6 +67,13 @@ let split_bitstring (acc,bitstring) field =
   else let value = Bitstring.takebits field.size bitstring in
        let rest = Bitstring.dropbits field.size bitstring in
        ((value,field)::acc,rest)
+
+let bit n i = ((1 lsl i) land n) lsr i
+let ones n = max_int mod (1 lsl n)
+let resize_signed ~n ~size =
+  if bit n (size - 1) = 1
+  then n lor ((lnot 0) lsl size)
+  else n
 
 let read_field ((str,start,end_),field) =
   let i = Bitstring.extract_int_ee_unsigned field.endian str start end_ field.size in
@@ -82,7 +87,9 @@ let read_field ((str,start,end_),field) =
         Some (field.name,R_bit b)
       end
     | Int sign ->
-      failwith "handle sign here...";
+      let i = match sign with
+        | Unsigned -> i
+        | Signed -> resize_signed ~n:i ~size:field.size in
       Some (field.name,R_int i)
     | Hex -> Some (field.name,R_hex i)
     | Char -> Some (field.name,R_char (Char.chr i))
@@ -119,15 +126,21 @@ let default_desc =
     field; field; field; field ]
 
 let decode_frame frame table =
-  let desc,name = try Hashtbl.find table (frame.identifier, frame.kind) with
-    | Not_found -> default_desc,None in
+  let desc,name =
+    try
+      let desc = Hashtbl.find table frame.identifier in
+      desc.frame_data, Some desc.frame_name
+    with
+      | Not_found -> default_desc,None in
   decode_frame' frame desc,name
 
-let init_decode_table () =
-  Hashtbl.create 0
+let set_description t desc =
+  Hashtbl.replace t desc.frame_id desc
 
-let set_description t (i,kind) ?name desc =
-  Hashtbl.replace t (i,kind) (desc,name)
+let init_decode_table l : decode_table =
+  let t = Hashtbl.create 0 in
+  List.iter (set_description t) l;
+  t
 
 let result_to_string = function
   | R_bit b -> string_of_bool b
@@ -136,3 +149,22 @@ let result_to_string = function
   | R_float f -> string_of_float f
   | R_char c -> Printf.sprintf "%c" c
 
+
+(* configuration *)
+type cap =
+  | Value
+  | Min
+  | Max
+
+let cap_of_string = function
+  | "min" -> Min
+  | "max" -> Max
+  | "value" -> Value
+  | s -> failwith (Printf.sprintf "unknown option: %s" s)
+
+type opt =
+    | Field of (string * cap list)
+
+type config =
+    { frame : string;
+      options : opt list; }

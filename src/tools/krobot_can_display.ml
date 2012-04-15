@@ -1,7 +1,7 @@
 open Lwt
 open Krobot_can_decoder
 
-type frame_identifie =
+type frame_identifier =
   | Text of string
   | Num of int
 
@@ -30,6 +30,10 @@ object (self)
   method clear () = ignore (self#new_box ())
 
 end
+
+let type_name type_ = match type_ with
+  | Text t -> t
+  | Num i -> string_of_int i
 
 class packet_list ~packing =
   let box = GPack.vbox ~packing () in
@@ -65,10 +69,8 @@ class packet_list ~packing =
 
 object
 
-  method add type_ id timestamp (content:result) =
-    let type_name = match type_ with
-      | Text t -> t
-      | Num i -> string_of_int i in
+  method add_packet (type_:frame_identifier) id timestamp (content:result) =
+    let type_name = type_name type_ in
     let iter = packet_store#append () in
     packet_store#set ~row:iter ~column:packet_time timestamp;
     packet_store#set ~row:iter ~column:packet_id id;
@@ -84,19 +86,77 @@ object
 
 end
 
+module StringMap = Map.Make(String)
+
+class field_info ~packing field_name caps =
+  let box = GPack.hbox ~packing () in
+  let _ = GMisc.label ~packing:box#add ~text:field_name () in
+  let result_widgets = List.map (fun cap -> cap, GMisc.label ~packing:box#add ()) caps in
+object
+  method set_result result =
+    List.iter (fun (cap, widget) ->
+      match cap with
+        | Value -> widget#set_label (result_to_string result)
+        | Min | Max -> failwith "TODO min/max display") result_widgets
+  method clear () = List.iter (fun (_,widget) -> widget#set_label "") result_widgets
+end
+
+class kind_info ~packing type_ (options:Krobot_can_decoder.opt list) =
+  let box = GPack.hbox ~packing () in
+  let _ = GMisc.label ~packing:box#add ~text:(type_name type_) () in
+  let count_widget = GMisc.label ~packing:box#add ~text:"0" () in
+  let count = ref 0 in
+  let id = ref 0 in
+  let timestamp = ref 0. in
+  let field_widgets = List.fold_left
+    (fun map -> function
+      | Field (name,cap) ->
+        let field_info = new field_info ~packing:box#add name cap in
+        StringMap.add name field_info map)
+    StringMap.empty options in
+object (self)
+  method add_packet p_id p_timestamp (content:result) =
+    id := p_id;
+    timestamp := p_timestamp;
+    count := !count + 1;
+    count_widget#set_label (string_of_int !count);
+    List.iter (fun (name,result) ->
+      try (StringMap.find name field_widgets)#set_result result
+      with
+        | Not_found -> ()) content
+end
+
+class display_box ~packing =
+  let box = GPack.vbox ~packing () in
+  let displayed = Hashtbl.create 0 in
+object
+  method add_packet (type_:frame_identifier) id timestamp (content:result) =
+    try
+      let kind_info = Hashtbl.find displayed type_ in
+      kind_info#add_packet id timestamp content;
+      true
+    with
+      | Not_found -> false
+  method add_kind type_ options =
+    Hashtbl.add displayed type_ (new kind_info ~packing:box#add type_ options)
+  method clear () = Hashtbl.clear displayed
+end
+
 class ui () =
   (* The toplevel window. *)
   let window = GWindow.window ~title:"can debug" ~width:800 ~height:600 () in
   let main_vbox = GPack.vbox ~packing:window#add () in
   let packet_list = new packet_list ~packing:main_vbox#add in
   let packet_store = ref [] in
-  let decode_table = init_decode_table () in
+  let decode_table = init_decode_table [] in
   let packet_count = ref 0 in
+  let display_box = new display_box ~packing:main_vbox#add in
 
 object (self)
   method window = window
   method main_vbox = main_vbox
   method packet_list = packet_list
+  method display_box = display_box
 
   method display_frame id timestamp frame =
     let result,name = decode_frame frame decode_table in
@@ -104,7 +164,8 @@ object (self)
       | None -> Num frame.Krobot_can.identifier
       | Some n -> Text n
     in
-    self#packet_list#add ident id timestamp result
+    if not (display_box#add_packet ident id timestamp result)
+    then self#packet_list#add_packet ident id timestamp result
 
   method add_packet (timestamp:float) frame =
     let id = !packet_count in
@@ -119,8 +180,11 @@ object (self)
 
   method refresh () =
     packet_list#clear ();
+    display_box#clear ();
     List.iter (fun (id,timestamp,frame) -> self#display_frame id timestamp frame)
       (List.rev !packet_store)
+
+  method decode_table = decode_table
 
   initializer
     ignore (window#connect#destroy quit);
@@ -129,12 +193,55 @@ end
 
 let decode_table = ref None
 let iface = ref None
+let config_file = ref None
 
 let parse_arg () =
   let desc =
-    [ "-c", Arg.String (fun s -> decode_table := Some s), "file containing the configuration";
+    [ "-p", Arg.String (fun s -> decode_table := Some s), "file containing the protocol";
+      "-c", Arg.String (fun s -> config_file := Some s), "file containing the configuration";
       "-i", Arg.String (fun s -> iface := Some s), "can interface";] in
   Arg.parse desc (function "" -> () | _ -> Arg.usage desc ""; exit 2) ""
+
+let report_error f s e lexbuf =
+  let open Lexing in
+      let p1 = lexeme_start_p lexbuf in
+      let p2 = lexeme_end_p lexbuf in
+      let exn = Printexc.to_string e in
+      let off1 = p1.pos_cnum - p1.pos_bol in
+      let off2 = p2.pos_cnum - p1.pos_bol in
+      Printf.eprintf "File \"%s\", line %i, characters %i-%i:\nError: %s %s\n"
+	f p1.pos_lnum off1 off2
+	s exn;
+      exit 1
+
+let load_frames_desc f =
+  let channel = open_in f in
+  let lexbuf = Lexing.from_channel channel in
+  try
+    let r =
+      Krobot_can_desc_parser.file
+        Krobot_can_desc_lexer.token
+        lexbuf in
+    close_in channel;
+    r
+  with
+    | e -> report_error f "while parsing frame descriptions" e lexbuf
+
+let load_conf f =
+  match f with
+    | None -> []
+    | Some f ->
+      let channel = open_in f in
+      let lexbuf = Lexing.from_channel channel in
+      try
+        let r =
+          Krobot_can_desc_parser.config
+            Krobot_can_desc_lexer.token
+            lexbuf in
+        close_in channel;
+        r
+      with
+      | e -> report_error f "while parsing configuration" e lexbuf
 
 let loop ui bus =
   let rec aux () =
@@ -149,6 +256,17 @@ let init iface =
   ignore (GMain.init ~setlocale:false ());
   Lwt_glib.install ();
   let ui = new ui () in
+  begin match !decode_table with
+    | None -> ()
+    | Some f ->
+      let l = load_frames_desc f in
+      List.iter (fun d ->
+        match Krobot_can_decoder.check_description d with
+          | None -> ()
+          | Some d -> Krobot_can_decoder.set_description ui#decode_table d) l
+  end;
+  let config = load_conf !config_file in
+  List.iter (fun c -> ui#display_box#add_kind (Text c.frame) c.options) config;
   ui#window#show ();
   pick
     [waiter;

@@ -9,8 +9,9 @@
 %token LCOLON, LCBRACKET, RCBRACKET, SEMICOLON, DBLQUOTE
 %token EOF
 
-%start file
+%start file config
 %type <Krobot_can_decoder.frame_desc list> file
+%type <Krobot_can_decoder.config list> config
 %%
 
 file :
@@ -54,5 +55,30 @@ endianness :
   | BIGENDIAN { BigEndian }
   | LITTLEENDIAN  { LittleEndian }
 */
+
+config :
+  | config_field EOF { [$1] }
+  | config_field config { $1 :: $2 }
+;
+
+config_field :
+  | IDENT LCBRACKET options RCBRACKET
+    { { frame = $1; options = $3 } }
+
+options :
+  | option { [$1] }
+  | option SEMICOLON { [$1] }
+  | option SEMICOLON options { $1 :: $3 }
+
+option :
+  | IDENT { Field ($1,[]) }
+  | IDENT caps { Field ($1,$2) }
+
+caps :
+  | cap { [$1] }
+  | cap caps { $1 :: $2 }
+
+cap :
+  | IDENT { cap_of_string $1 }
 
 %%

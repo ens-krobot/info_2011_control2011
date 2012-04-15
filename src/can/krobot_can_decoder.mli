@@ -28,9 +28,8 @@ type frame_desc =
     { frame_name : string;
       frame_id : int;
       frame_data : field list;
-      frame_description : string option }
+      frame_description : string option } with sexp
 
-type desc = field list with sexp
 type description with sexp
 
 type result_field =
@@ -44,12 +43,28 @@ type result = ( string * result_field ) list with sexp
 
 type decode_table
 
-val check_description : desc -> description option
+val check_description : frame_desc -> description option
 
 val decode_frame  : Krobot_can.frame -> decode_table -> result * string option
 
-val init_decode_table : unit -> decode_table
+val init_decode_table : frame_desc list -> decode_table
 
-val set_description : decode_table -> (int * Krobot_can.kind) -> ?name:string -> description -> unit
+val set_description : decode_table -> description -> unit
 
 val result_to_string : result_field -> string
+
+(* configuration file *)
+
+type cap =
+  | Value
+  | Min
+  | Max
+
+val cap_of_string : string -> cap
+
+type opt =
+    | Field of (string * cap list)
+
+type config =
+    { frame : string;
+      options : opt list; }
