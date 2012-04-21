@@ -88,17 +88,57 @@ end
 
 module StringMap = Map.Make(String)
 
+class basic_field ~packing =
+object
+  val widget = GMisc.label ~packing ()
+  method clear () = widget#set_label ""
+end
+
+class value_field ~packing =
+object
+  inherit basic_field ~packing
+  method set_result result =
+    widget#set_label (result_to_string result)
+end
+
+class text_field ~packing text =
+object
+  inherit basic_field ~packing
+  method set_result (result:result_field) =
+    widget#set_label text
+  method! clear () = ()
+end
+
+class filter_field ~packing filter =
+  let old_v = ref None in
+object
+  inherit basic_field ~packing
+  method set_result result =
+    match result_to_float result with
+      | None -> ()
+      | Some f ->
+        let new_v =
+          match !old_v with
+            | None -> f
+            | Some old -> filter old f in
+        old_v := Some new_v;
+        widget#set_label (string_of_float new_v)
+end
+
+let cap_field ~packing = function
+  | Value -> new value_field ~packing
+  | C_text t -> new text_field ~packing t
+  | Min -> new filter_field ~packing min
+  | Max -> new filter_field ~packing max
+
 class field_info ~packing field_name caps =
   let box = GPack.hbox ~packing () in
   let _ = GMisc.label ~packing:box#add ~text:field_name () in
-  let result_widgets = List.map (fun cap -> cap, GMisc.label ~packing:box#add ()) caps in
+  let result_widgets = List.map (cap_field ~packing:box#add) caps in
 object
   method set_result result =
-    List.iter (fun (cap, widget) ->
-      match cap with
-        | Value -> widget#set_label (result_to_string result)
-        | Min | Max -> failwith "TODO min/max display") result_widgets
-  method clear () = List.iter (fun (_,widget) -> widget#set_label "") result_widgets
+    List.iter (fun widget -> widget#set_result result) result_widgets
+  method clear () = List.iter (fun widget -> widget#clear ()) result_widgets
 end
 
 class kind_info ~packing type_ (options:Krobot_can_decoder.opt list) =
@@ -194,12 +234,14 @@ end
 let decode_table = ref None
 let iface = ref None
 let config_file = ref None
+let use_krobot_bus = ref false
 
 let parse_arg () =
   let desc =
     [ "-p", Arg.String (fun s -> decode_table := Some s), "file containing the protocol";
       "-c", Arg.String (fun s -> config_file := Some s), "file containing the configuration";
-      "-i", Arg.String (fun s -> iface := Some s), "can interface";] in
+      "-i", Arg.String (fun s -> iface := Some s), "can interface";
+      "-b", Arg.Set use_krobot_bus, "use krobot bus"; ] in
   Arg.parse desc (function "" -> () | _ -> Arg.usage desc ""; exit 2) ""
 
 let report_error f s e lexbuf =
@@ -243,7 +285,7 @@ let load_conf f =
       with
       | e -> report_error f "while parsing configuration" e lexbuf
 
-let loop ui bus =
+let loop_can bus ui =
   let rec aux () =
     lwt (timestamp, frame) = Krobot_can_bus.recv bus in
     lwt () = ui#add_packet timestamp frame in
@@ -251,8 +293,18 @@ let loop ui bus =
   in
   aux ()
 
-let init iface =
-  lwt bus = Krobot_can_bus.open_can iface in
+let loop_krobot_bus bus ui =
+  let ev = Krobot_bus.recv bus in
+  Lwt_react.E.keep
+    (Lwt_react.E.map_s
+       (function
+         | timestamp, Krobot_bus.CAN (_, frame) ->
+           ui#add_packet timestamp frame
+         | _ -> return ()) ev);
+  let s,_ = Lwt.wait () in
+  s
+
+let init loop =
   ignore (GMain.init ~setlocale:false ());
   Lwt_glib.install ();
   let ui = new ui () in
@@ -270,16 +322,23 @@ let init iface =
   ui#window#show ();
   pick
     [waiter;
-     loop ui bus]
+     loop ui]
 
 lwt () =
   parse_arg ();
-  let iface =
-    match !iface with
-      | None -> "slcan0"
-      | Some s -> s in
   try_lwt
-    init iface
-  with Unix.Unix_error(error, func, arg) ->
-    Lwt_log.error_f "'%s' failed with: %s" func (Unix.error_message error)
-
+    if !use_krobot_bus
+    then
+      lwt bus = Krobot_bus.get () in
+      init (loop_krobot_bus bus)
+    else
+      let iface =
+        match !iface with
+          | None -> "slcan0"
+          | Some s -> s in
+      lwt bus = Krobot_can_bus.open_can iface in
+      init (loop_can bus)
+  with
+    | Unix.Unix_error(error, func, arg) ->
+      Lwt_log.error_f "'%s' failed with: %s" func (Unix.error_message error)
+    | exn -> Lwt_log.error_f ~exn "Uncaught exception"

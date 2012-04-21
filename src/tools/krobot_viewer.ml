@@ -617,4 +617,25 @@ lwt () =
             );
           false));
 
+
+  let send_motor_limit () =
+    let v_max = ui#v_max#adjustment#value in
+    let a_tan_max = ui#a_tan_max#adjustment#value in
+    let a_rad_max = ui#a_rad_max#adjustment#value in
+    ignore (Krobot_bus.send viewer.bus
+              (Unix.gettimeofday (),
+               CAN (Info,
+                    Krobot_message.encode
+                      (Motor_bezier_limits (v_max, a_tan_max, a_rad_max))))) in
+
+  ignore
+    (ui#v_max#connect#value_changed
+       (fun () -> send_motor_limit ()));
+  ignore
+    (ui#a_tan_max#connect#value_changed
+       (fun () -> send_motor_limit ()));
+  ignore
+    (ui#a_rad_max#connect#value_changed
+       (fun () -> send_motor_limit ()));
+
   waiter

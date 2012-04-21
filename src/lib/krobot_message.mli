@@ -72,6 +72,11 @@ type t =
           - [lin_acc] in m/s^2
           - [rot_acc] in rad/s^2
       *)
+  | Motor_bezier_limits of float * float * float
+      (** [Motor_bezier_limits(v_max, a_tan_max, a_rad_max)]
+          - [v_max] in m/s
+          - [a_tan_max] in m/s^2
+          - [a_rad_max] in m/s^2 *)
   | Odometry of float * float * float
       (** [Odometry(x, y, theta)] the position of the robot on the
           table. *)

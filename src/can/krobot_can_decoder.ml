@@ -149,12 +149,19 @@ let result_to_string = function
   | R_float f -> string_of_float f
   | R_char c -> Printf.sprintf "%c" c
 
+let result_to_float = function
+  | R_bit b -> None
+  | R_hex i -> Some (float i)
+  | R_int i -> Some (float i)
+  | R_float f -> Some f
+  | R_char c -> None
 
 (* configuration *)
 type cap =
   | Value
   | Min
   | Max
+  | C_text of string
 
 let cap_of_string = function
   | "min" -> Min

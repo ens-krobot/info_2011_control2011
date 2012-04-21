@@ -64,6 +64,8 @@ config :
 config_field :
   | IDENT LCBRACKET options RCBRACKET
     { { frame = $1; options = $3 } }
+  | IDENT LCBRACKET RCBRACKET
+    { { frame = $1; options = [] } }
 
 options :
   | option { [$1] }
@@ -80,5 +82,6 @@ caps :
 
 cap :
   | IDENT { cap_of_string $1 }
+  | DESCRIPTION { C_text $1 }
 
 %%

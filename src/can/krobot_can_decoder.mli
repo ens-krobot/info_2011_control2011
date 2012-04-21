@@ -53,12 +53,15 @@ val set_description : decode_table -> description -> unit
 
 val result_to_string : result_field -> string
 
+val result_to_float : result_field -> float option
+
 (* configuration file *)
 
 type cap =
   | Value
   | Min
   | Max
+  | C_text of string
 
 val cap_of_string : string -> cap
 

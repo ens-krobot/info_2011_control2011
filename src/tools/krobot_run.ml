@@ -1,5 +1,6 @@
 #require "krobot"
 
+open Lwt
 open Lwt_react
 open Krobot_message
 open Krobot_bus
@@ -42,8 +43,8 @@ let handle_message state_ref (timestamp, message) =
   let state = !state_ref in
   let state =
     (match message with
-      | Trajectory_moving b ->
-	{ state with moving = b }
+(*      | Trajectory_moving b ->
+	{ state with moving = b } *)
       | Objects objects ->
 	{ state with objects = objects }
       | CAN (_,f) ->
@@ -118,8 +119,8 @@ let rewrite_action bus = function
     [ Can [Elevator (0.,-.1.)] ]
   | Lift_up ->
     [ Can [Elevator (1.,-.1.)] ]
-  | Goto v ->
-    [ Bus [Trajectory_goto v]]
+(*  | Goto v ->
+    [ Bus [Trajectory_goto v]] *)
   | Move_to_pawn ->
     [ ]
   | Close_grip_low ->
