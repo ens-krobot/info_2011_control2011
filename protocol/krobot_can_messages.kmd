@@ -1,0 +1,170 @@
+encoders34 100 {
+    encoder1_pos int unsigned 16;
+    encoder2_pos int unsigned 16;
+    encoder1_dir int unsigned 8;
+    encoder2_dir int unsigned 8;
+}
+
+motor3 101 {
+    position float;
+    speed float;
+}
+
+motor4 102 {
+    position float;
+    speed float;
+}
+
+status 103 {
+    is_moving int unsigned 8;
+}
+
+odometry 104 {
+    x int signed 16 "in mm";
+    y int signed 16 "in mm";
+    theta int signed 16 "in 1/10000 radians";
+}
+
+ghost 105 {
+    x int signed 16 "in mm";
+    y int signed 16 "in mm";
+    theta int signed 16 "in 1/10000 radians";
+    u int unsigned 8 "proportion of the spline between 0 and 255";
+    state int unsigned 8 "1 if trajectory in progress, else 0";
+}
+
+move 201 {
+    distance int signed 32 "in mm";
+    speed int unsigned 16 "in mm/s";
+    acceleration int unsigned 16 "in mm/s^2";
+}
+
+turn 202 {
+    angle int signed 32 "in 1/10000 radians";
+    speed int unsigned 16 "in 1/1000 rad/s";
+    acceleration int unsigned 16 "in 1/1000 rad/s^2"
+}
+
+odometry_set 203 {
+    x int signed 16 "in mm";
+    y int signed 16 "in mm";
+    theta int signed 16 "in 1/10000 radians";
+}
+
+stop 204 {
+    lin_acc float;
+    rot_acc float;
+}
+
+controller_mode 205 {
+    mode int unsigned 8;
+}
+
+bezier_add 206 {
+    x_end int unsigned 12 "in mm";
+    y_end int unsigned 12 "in mm";
+    d1 int signed 9 "in cm";
+    d2 int unsigned 10 "in cm";
+    theta_end int signed 12 "in 1/100 rad";
+    v_end int unsigned 1;
+}
+
+bezier_limits 207 {
+    v_max int unsigned 16 "in mm";
+    a_tan_max int unsigned 16 "in mm/s^2";
+    a_rad_max int unsigned 16 "in mm/s^2";
+}
+
+beacon_position 301 {
+    angle int unsigned 16 "in 1/10000 radians";
+    distance int unsigned 16 "in mm";
+    period int unsigned 16 "in 1/10000 s";
+}
+
+beacon_lowlevel_position 302 {
+    angle int unsigned 16 "in 1/10000 radians";
+    width int unsigned 16 "in 1/100000 radians";
+    period int unsigned 32 "in timer ticks";
+}
+
+breacon_calibration 303 {
+    width int unsigned 16 "in 1/100000 rad";
+    distance int unsigned 16 "in mm";
+}
+
+switch_status_1 311 {
+    sw1 int unsigned 8;
+    sw2 int unsigned 8;
+    sw3 int unsigned 8;
+    sw4 int unsigned 8;
+    sw5 int unsigned 8;
+    sw6 int unsigned 8;
+    sw7 int unsigned 8;
+    sw8 int unsigned 8;
+}
+
+switch_status_2 312 {
+    sw1 int unsigned 8;
+    sw2 int unsigned 8;
+    sw3 int unsigned 8;
+    sw4 int unsigned 8;
+    sw5 int unsigned 8;
+    sw6 int unsigned 8;
+    sw7 int unsigned 8;
+    sw8 int unsigned 8;
+}
+
+switch_set 313 {
+    num int unsigned 8;
+    state int unsigned 8;
+}
+
+adc_values_1 321 {
+    val1 int unsigned 16;
+    val2 int unsigned 16;
+    val3 int unsigned 16;
+    val4 int unsigned 16;
+}
+
+adc_values_2 322 {
+    val1 int unsigned 16;
+    val2 int unsigned 16;
+    val3 int unsigned 16;
+    val4 int unsigned 16;
+}
+
+battery_status_1 331 {
+    elem1 int unsigned 16 "in 1/10000 V";
+    elem2 int unsigned 16 "in 1/10000 V";
+    elem3 int unsigned 16 "in 1/10000 V";
+    elem4 int unsigned 16 "in 1/10000 V";
+}
+
+battery_status_2 332 {
+    elem1 int unsigned 16 "in 1/10000 V";
+    elem2 int unsigned 16 "in 1/10000 V";
+    elem3 int unsigned 16 "in 1/10000 V";
+    elem4 int unsigned 16 "in 1/10000 V";
+}
+
+ax12_state 341 {
+    address int unsigned 8;
+    position int unsigned 16;
+    speed int unsigned 16;
+    torque int unsigned 16;
+}
+
+ax12_request_state 342 {
+    address int unsigned 8;
+}
+
+ax12_goto 343 {
+    address int unsigned 8;
+    position int unsigned 16;
+    speed int unsigned 16;
+}
+
+ax12_set_torque_enable 345 {
+    address int unsigned 8;
+    enable int unsigned 8;
+}
