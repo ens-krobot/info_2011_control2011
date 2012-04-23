@@ -592,83 +592,173 @@
                     <property name="can_focus">True</property>
                     <property name="expanded">True</property>
                     <child>
-                      <widget class="GtkHBox" id="settings_subbox">
+                      <widget class="GtkHBox" id="settings_overbox">
                         <property name="visible">True</property>
-                        <property name="homogeneous">True</property>
+                        <property name="orientation">vertical</property>
                         <child>
-                          <widget class="GtkVBox" id="line_settings_box">
+                          <widget class="GtkHBox" id="settings_subbox">
                             <property name="visible">True</property>
-                            <property name="orientation">vertical</property>
+                            <property name="homogeneous">True</property>
                             <child>
-                              <widget class="GtkLabel" id="line_settings_label">
+                              <widget class="GtkVBox" id="line_settings_box">
                                 <property name="visible">True</property>
-                                <property name="label" translatable="yes">Lines</property>
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <widget class="GtkLabel" id="line_settings_label">
+                                    <property name="visible">True</property>
+                                    <property name="label" translatable="yes">Lines</property>
+                                  </widget>
+                                  <packing>
+                                    <property name="position">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <widget class="GtkHBox" id="line_settings_label_box">
+                                    <property name="visible">True</property>
+                                    <property name="homogeneous">True</property>
+                                    <child>
+                                      <widget class="GtkLabel" id="lines_speed_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">speed</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <widget class="GtkLabel" id="lines_acceleration_label">
+                                        <property name="visible">True</property>
+                                        <property name="yalign">0.47999998927116394</property>
+                                        <property name="label" translatable="yes">accel</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">1</property>
+                                      </packing>
+                                    </child>
+                                  </widget>
+                                  <packing>
+                                    <property name="position">1</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <widget class="GtkHBox" id="line_settings_value_box">
+                                    <property name="visible">True</property>
+                                    <property name="homogeneous">True</property>
+                                    <child>
+                                      <widget class="GtkSpinButton" id="moving_speed">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="invisible_char">&#x25CF;</property>
+                                        <property name="adjustment">0.99999999999999989 0 2 0.10000000000000001 0 0</property>
+                                        <property name="digits">2</property>
+                                        <property name="numeric">True</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <widget class="GtkSpinButton" id="moving_acceleration">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="invisible_char">&#x25CF;</property>
+                                        <property name="adjustment">1 0 10 0.10000000000000001 0 0</property>
+                                        <property name="digits">2</property>
+                                        <property name="numeric">True</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">1</property>
+                                      </packing>
+                                    </child>
+                                  </widget>
+                                  <packing>
+                                    <property name="position">2</property>
+                                  </packing>
+                                </child>
                               </widget>
                               <packing>
                                 <property name="position">0</property>
                               </packing>
                             </child>
                             <child>
-                              <widget class="GtkHBox" id="line_settings_label_box">
+                              <widget class="GtkVBox" id="rotation_settings_box">
                                 <property name="visible">True</property>
-                                <property name="homogeneous">True</property>
+                                <property name="orientation">vertical</property>
                                 <child>
-                                  <widget class="GtkLabel" id="lines_speed_label">
+                                  <widget class="GtkLabel" id="rotation_settings_label">
                                     <property name="visible">True</property>
-                                    <property name="label" translatable="yes">speed</property>
+                                    <property name="label" translatable="yes">Rotation</property>
+                                    <property name="selectable">True</property>
                                   </widget>
                                   <packing>
                                     <property name="position">0</property>
                                   </packing>
                                 </child>
                                 <child>
-                                  <widget class="GtkLabel" id="lines_acceleration_label">
+                                  <widget class="GtkHBox" id="rotation_settings_label_box">
                                     <property name="visible">True</property>
-                                    <property name="yalign">0.47999998927116394</property>
-                                    <property name="label" translatable="yes">accel</property>
+                                    <property name="homogeneous">True</property>
+                                    <child>
+                                      <widget class="GtkLabel" id="rotation_speed_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">speed</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <widget class="GtkLabel" id="rotation_acceleration_label">
+                                        <property name="visible">True</property>
+                                        <property name="label" translatable="yes">accel</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">1</property>
+                                      </packing>
+                                    </child>
                                   </widget>
                                   <packing>
                                     <property name="position">1</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <widget class="GtkHBox" id="rotation_settings_value_box">
+                                    <property name="visible">True</property>
+                                    <property name="homogeneous">True</property>
+                                    <child>
+                                      <widget class="GtkSpinButton" id="rotation_speed">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="invisible_char">&#x25CF;</property>
+                                        <property name="adjustment">2.0000000000000004 0 4 0.10000000000000001 0 0</property>
+                                        <property name="digits">2</property>
+                                        <property name="numeric">True</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <widget class="GtkSpinButton" id="rotation_acceleration">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="invisible_char">&#x25CF;</property>
+                                        <property name="adjustment">2.0000000000000009 0 10 0.10000000000000001 0 0</property>
+                                        <property name="digits">2</property>
+                                        <property name="numeric">True</property>
+                                      </widget>
+                                      <packing>
+                                        <property name="position">1</property>
+                                      </packing>
+                                    </child>
+                                  </widget>
+                                  <packing>
+                                    <property name="position">2</property>
                                   </packing>
                                 </child>
                               </widget>
                               <packing>
                                 <property name="position">1</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <widget class="GtkHBox" id="line_settings_value_box">
-                                <property name="visible">True</property>
-                                <property name="homogeneous">True</property>
-                                <child>
-                                  <widget class="GtkSpinButton" id="moving_speed">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="invisible_char">&#x2022;</property>
-                                    <property name="adjustment">0.99999999999999989 0 2 0.10000000000000001 0 0</property>
-                                    <property name="digits">2</property>
-                                    <property name="numeric">True</property>
-                                  </widget>
-                                  <packing>
-                                    <property name="position">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <widget class="GtkSpinButton" id="moving_acceleration">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="invisible_char">&#x2022;</property>
-                                    <property name="adjustment">1 0 10 0.10000000000000001 0 0</property>
-                                    <property name="digits">2</property>
-                                    <property name="numeric">True</property>
-                                  </widget>
-                                  <packing>
-                                    <property name="position">1</property>
-                                  </packing>
-                                </child>
-                              </widget>
-                              <packing>
-                                <property name="position">2</property>
                               </packing>
                             </child>
                           </widget>
@@ -677,36 +767,60 @@
                           </packing>
                         </child>
                         <child>
-                          <widget class="GtkVBox" id="rotation_settings_box">
+                          <widget class="GtkVBox" id="bezier_limits_vbox">
                             <property name="visible">True</property>
-                            <property name="orientation">vertical</property>
                             <child>
-                              <widget class="GtkLabel" id="rotation_settings_label">
+                              <widget class="GtkVBox" id="v_max_box">
                                 <property name="visible">True</property>
-                                <property name="label" translatable="yes">Rotation</property>
-                                <property name="selectable">True</property>
-                              </widget>
-                              <packing>
-                                <property name="position">0</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <widget class="GtkHBox" id="rotation_settings_label_box">
-                                <property name="visible">True</property>
-                                <property name="homogeneous">True</property>
+                                <property name="orientation">vertical</property>
                                 <child>
-                                  <widget class="GtkLabel" id="rotation_speed_label">
+                                  <widget class="GtkLabel" id="v_max_label">
                                     <property name="visible">True</property>
-                                    <property name="label" translatable="yes">speed</property>
+                                    <property name="label" translatable="yes">max speed</property>
                                   </widget>
                                   <packing>
                                     <property name="position">0</property>
                                   </packing>
                                 </child>
                                 <child>
-                                  <widget class="GtkLabel" id="rotation_acceleration_label">
+                                  <widget class="GtkSpinButton" id="v_max">
                                     <property name="visible">True</property>
-                                    <property name="label" translatable="yes">accel</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="invisible_char">&#x25CF;</property>
+                                    <property name="adjustment">0.5 0.01 2 0.10000000000000001 1 1</property>
+                                    <property name="digits">2</property>
+                                    <property name="numeric">True</property>
+                                  </widget>
+                                  <packing>
+                                    <property name="position">1</property>
+                                  </packing>
+                                </child>
+                              </widget>
+                              <packing>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <widget class="GtkVBox" id="a_tan_max_box">
+                                <property name="visible">True</property>
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <widget class="GtkLabel" id="a_tan_max_label">
+                                    <property name="visible">True</property>
+                                    <property name="label" translatable="yes">max tangential accel</property>
+                                  </widget>
+                                  <packing>
+                                    <property name="position">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <widget class="GtkSpinButton" id="a_tan_max">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="invisible_char">&#x25CF;</property>
+                                    <property name="adjustment">1 0.01 4 0.10000000000000001 1 1</property>
+                                    <property name="digits">2</property>
+                                    <property name="numeric">True</property>
                                   </widget>
                                   <packing>
                                     <property name="position">1</property>
@@ -718,28 +832,24 @@
                               </packing>
                             </child>
                             <child>
-                              <widget class="GtkHBox" id="rotation_settings_value_box">
+                              <widget class="GtkVBox" id="a_rand_max_box">
                                 <property name="visible">True</property>
-                                <property name="homogeneous">True</property>
+                                <property name="orientation">vertical</property>
                                 <child>
-                                  <widget class="GtkSpinButton" id="rotation_speed">
+                                  <widget class="GtkLabel" id="a_rad_max_label">
                                     <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="invisible_char">&#x2022;</property>
-                                    <property name="adjustment">2.0000000000000004 0 4 0.10000000000000001 0 0</property>
-                                    <property name="digits">2</property>
-                                    <property name="numeric">True</property>
+                                    <property name="label" translatable="yes">max radial accel</property>
                                   </widget>
                                   <packing>
                                     <property name="position">0</property>
                                   </packing>
                                 </child>
                                 <child>
-                                  <widget class="GtkSpinButton" id="rotation_acceleration">
+                                  <widget class="GtkSpinButton" id="a_rad_max">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
-                                    <property name="invisible_char">&#x2022;</property>
-                                    <property name="adjustment">2.0000000000000009 0 10 0.10000000000000001 0 0</property>
+                                    <property name="invisible_char">&#x25CF;</property>
+                                    <property name="adjustment">1 0.01 4 0.10000000000000001 1 1</property>
                                     <property name="digits">2</property>
                                     <property name="numeric">True</property>
                                   </widget>
