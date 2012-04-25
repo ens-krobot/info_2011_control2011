@@ -220,6 +220,14 @@ Executable "krobot-can-display"
   MainIs: krobot_can_display.ml
   BuildDepends: krobot.can, lwt.syntax, sexplib, sexplib.syntax, cairo.lablgtk2, lwt.glib
 
+Executable "krobot-ax12-control"
+  Path: src/tools
+  Build$: flag(gtk)
+  Install$: flag(gtk)
+  CompiledObject: best
+  MainIs: krobot_ax12_control.ml
+  BuildDepends: krobot.can, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+
