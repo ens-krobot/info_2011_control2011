@@ -222,10 +222,16 @@ Executable "krobot-can-display"
 
 Executable "krobot-ax12-control"
   Path: src/tools
-  Build$: flag(gtk)
-  Install$: flag(gtk)
+  Install: true
   CompiledObject: best
   MainIs: krobot_ax12_control.ml
+  BuildDepends: krobot.can, lwt.syntax
+
+Executable "krobot-dump-ax12"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_dump_ax12.ml
   BuildDepends: krobot.can, lwt.syntax
 
 # +-------------------------------------------------------------------+

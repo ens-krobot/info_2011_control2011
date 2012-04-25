@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 3852a61af000802215e40b6ad6830d71)
+# DO NOT EDIT (digest: 77bb0a0cf22171b21400c7924cce86fe)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -91,10 +91,6 @@
 <src/tools/krobot_ax12_control.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_ax12_control.{native,byte}>: pkg_lwt.react
 <src/tools/krobot_ax12_control.{native,byte}>: pkg_bitstring
-<src/tools/*.ml{,i}>: use_krobot-can
-<src/tools/*.ml{,i}>: pkg_sexplib.syntax
-<src/tools/*.ml{,i}>: pkg_sexplib
-<src/tools/*.ml{,i}>: pkg_bitstring
 # Executable krobot-viewer
 <src/tools/krobot_viewer.{native,byte}>: use_krobot
 <src/tools/krobot_viewer.{native,byte}>: pkg_lwt.unix
@@ -185,6 +181,19 @@
 <src/tools/krobot_plot.{native,byte}>: pkg_cairo.lablgtk2
 <src/tools/*.ml{,i}>: pkg_lwt.glib
 <src/tools/*.ml{,i}>: pkg_cairo.lablgtk2
+# Executable krobot-dump-ax12
+<src/tools/krobot_dump_ax12.{native,byte}>: use_krobot-can
+<src/tools/krobot_dump_ax12.{native,byte}>: use_krobot
+<src/tools/krobot_dump_ax12.{native,byte}>: pkg_sexplib.syntax
+<src/tools/krobot_dump_ax12.{native,byte}>: pkg_sexplib
+<src/tools/krobot_dump_ax12.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_dump_ax12.{native,byte}>: pkg_lwt.syntax
+<src/tools/krobot_dump_ax12.{native,byte}>: pkg_lwt.react
+<src/tools/krobot_dump_ax12.{native,byte}>: pkg_bitstring
+<src/tools/*.ml{,i}>: use_krobot-can
+<src/tools/*.ml{,i}>: pkg_sexplib.syntax
+<src/tools/*.ml{,i}>: pkg_sexplib
+<src/tools/*.ml{,i}>: pkg_bitstring
 # Executable krobot-dump
 <src/tools/krobot_dump.{native,byte}>: use_krobot
 <src/tools/krobot_dump.{native,byte}>: pkg_lwt.unix
