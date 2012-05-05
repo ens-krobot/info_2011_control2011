@@ -234,6 +234,12 @@ Executable "krobot-dump-ax12"
   MainIs: krobot_dump_ax12.ml
   BuildDepends: krobot.can, lwt.syntax
 
+Executable "krobot-ax12-clean"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_ax12_clean.ml
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+
