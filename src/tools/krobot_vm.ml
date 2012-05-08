@@ -198,6 +198,13 @@ type effect =
   | Send of Krobot_message.t
       (* Send a message. *)
 
+let string_of_test = function
+  | `Eq -> "Eq"
+  | `Gt -> "Gt"
+  | `Ge -> "Ge"
+  | `Lt -> "Lt"
+  | `Le -> "Le"
+
 (* [exec robot actions] searches for the first action to execute in a
    tree of actions and returns a new tree of actions and an effect. *)
 let rec exec robot actions =
@@ -216,7 +223,8 @@ let rec exec robot actions =
           (actions, Wait)
     | Wait_for_moving state :: rest ->
         if robot.moving = state then
-          exec robot rest
+          (ignore (Lwt_log.info_f "Wait_for_moving %b done" state);
+           exec robot rest)
         else
           (actions, Wait)
     | Wait_for_odometry(test, value) :: rest ->
@@ -226,7 +234,9 @@ let rec exec robot actions =
               | `Ge -> robot.curve_parameter >= value
               | `Lt -> robot.curve_parameter < value
               | `Le -> robot.curve_parameter <= value) then
-          exec robot rest
+          (ignore (Lwt_log.info_f "Wait_for_odometry %i %s %i done"
+                     robot.curve_parameter (string_of_test test) value);
+           exec robot rest)
         else
           (actions, Wait)
     | Wait_for t :: rest ->
@@ -252,6 +262,7 @@ let rec exec robot actions =
               exec robot rest
       end
     | Follow_path vertices :: rest -> begin
+        ignore (Lwt_log.info_f "Follow_path %i vertices" (List.length vertices));
         (* Compute bezier curves. *)
         let vector = { vx = cos robot.orientation; vy = sin robot.orientation } in
         let curves = List.rev (Bezier.fold_vertices (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) vector (robot.position :: vertices) []) in
@@ -262,6 +273,7 @@ let rec exec robot actions =
           | [] ->
               [Wait_for_moving false]
           | [(sign, p, q, r, s)] ->
+              ignore (Lwt_log.info_f "add last %f %f" p.x p.y);
               [
                 (* Wait for the odometry to reach the middle of the
                    current trajectory. *)
@@ -278,6 +290,7 @@ let rec exec robot actions =
                 Set_curve None;
               ]
           | (sign, p, q, r, s) :: rest ->
+              ignore (Lwt_log.info_f "add middle %f %f" p.x p.y);
               Wait_for_odometry(`Ge, 128)
               :: Bezier(sign, p, q, r, s, 0.5)
               :: Wait_for_odometry(`Lt, 128)
@@ -291,15 +304,19 @@ let rec exec robot actions =
               exec robot (Node [
                             Set_curve(Some(Bezier.of_vertices p q r s));
                             Bezier(sign, p, q, r, s, 0.01);
+                            Wait_for_odometry(`Le, 128);
+                            Wait_for_odometry(`Ge, 128);
                             Wait_for_moving false;
                             Set_curve None;
                           ] :: rest)
           | (sign, p, q, r, s) :: curves ->
               exec robot (Node(Set_curve(Some(Bezier.of_vertices p q r s))
                                :: Bezier(sign, p, q, r, s, 0.5)
+                               :: Wait_for_odometry(`Le, 128)
                                :: loop curves) :: rest)
       end
     | Bezier(sign, p, q, r, s, v_end) :: rest ->
+        ignore (Lwt_log.info "Bezier");
         (* Compute parameters. *)
         let d1 = sign *. distance p q and d2 = distance r s in
         let v = vector r s in
@@ -419,6 +436,10 @@ lwt () =
 
   (* Display all informative messages. *)
   Lwt_log.append_rule "*" Lwt_log.Info;
+
+  Lwt_log.default :=
+    Lwt_log.channel ~template:"$(name): $(section): $(message) $(date) $(milliseconds)"
+    ~close_mode:`Keep ~channel:Lwt_io.stderr ();
 
   (* Open the krobot bus. *)
   lwt bus = Krobot_bus.get () in
