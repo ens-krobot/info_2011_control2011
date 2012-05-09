@@ -44,7 +44,7 @@ let log () =
 
 let rec loop_request () =
   lwt () = Lwt_unix.sleep 0.01 in
-  lwt () = Lwt_list.iter_s (fun i -> Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State i)))) [2;3] in
+  lwt () = Lwt_list.iter_s (fun i -> Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State i)))) [1;2;3;4] in
   loop_request ()
 
 let t = loop_request ()
