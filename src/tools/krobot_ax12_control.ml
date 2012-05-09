@@ -9,8 +9,9 @@ type action =
 let run_file = ref None
 
 let ax12_id = ref 0
-let ax12_speed = ref 1
+let ax12_speed = ref 50
 let commands = ref []
+let reset = ref false
 let add_goto pos = commands := ( Do (Ax12_Goto (!ax12_id, pos, !ax12_speed)) ) :: !commands
 let add_sleep t = commands := ( Sleep t ) :: !commands
 let add_torque b = commands := ( Do (Ax12_Set_Torque_Enable (!ax12_id, b)) ) :: !commands
@@ -27,6 +28,7 @@ let spec =
     "-state", Unit add_request, "request the ax12 state";
     "-sleep", Float add_sleep, "sleep";
     "-file", String (fun s -> run_file := Some s), "run sequence from file";
+    "-reset", Unit (fun () -> reset := true), "reset position";
   ]
 
 let msg = "do things with ax12"
@@ -41,7 +43,6 @@ let run = function
 let rec go = function
   | [] -> Lwt.return ()
   | t::q ->
-    Printf.printf "go\n%!";
     lwt () = run t in
     go q
 
@@ -73,11 +74,22 @@ let to_actions l =
   let _, l = List.fold_left f (0.,[]) l in
   List.rev l
 
+let init_servos l =
+  let f l v =
+    try ignore (List.find (fun x -> x.id = v.id) l);
+        l
+    with
+      | Not_found -> v::l in
+  let l = List.fold_left f [] l in
+  List.map (fun v -> { v with speed = float !ax12_speed }) l
+
 lwt () =
   match !run_file with
     | None -> go (List.rev !commands)
     | Some f ->
-      Printf.printf "run file\n%!";
-      let actions = to_actions (read (open_in f)) in
-      Printf.printf "truc %i\n%!" (List.length actions);
-      go actions
+      let file = read (open_in f) in
+      let orders =
+        if !reset
+        then init_servos file
+        else file in
+      go (to_actions orders)

@@ -82,7 +82,7 @@ let prepare l =
   l
 
 let map_speed l c =
-  let f v = { v with speed = v.speed *. c; time = v.time /. c } in
+  let f v = { v with speed = abs_float (v.speed *. c); time = v.time /. c } in
   List.map f l
 
 let print_info { id; pos; speed; torque; time } =
