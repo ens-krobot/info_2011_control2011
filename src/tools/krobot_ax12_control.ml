@@ -41,6 +41,7 @@ let run = function
 let rec go = function
   | [] -> Lwt.return ()
   | t::q ->
+    Printf.printf "go\n%!";
     lwt () = run t in
     go q
 
@@ -76,5 +77,7 @@ lwt () =
   match !run_file with
     | None -> go (List.rev !commands)
     | Some f ->
+      Printf.printf "run file\n%!";
       let actions = to_actions (read (open_in f)) in
+      Printf.printf "truc %i\n%!" (List.length actions);
       go actions

@@ -42,9 +42,22 @@ let log () =
            | _ -> ())
        (Krobot_bus.recv bus))
 
+let ax12_id = ref []
+let ax12_delay = ref 0.02
+let spec =
+  [ "-id", Arg.Int (fun i -> ax12_id := i::(!ax12_id)), "id of the recorded ax12";
+    "-delay", Arg.Set_float ax12_delay, "delay between to points"; ]
+
+let msg = "record ax12 movement ax12"
+let message _ = Arg.usage spec msg; flush stdout; exit 0
+let () = Arg.parse spec message msg
+
 let rec loop_request () =
-  lwt () = Lwt_unix.sleep 0.01 in
-  lwt () = Lwt_list.iter_s (fun i -> Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State i)))) [1;2;3;4] in
+  (*lwt () = Lwt_unix.sleep 0.01 in*)
+  lwt () = Lwt_list.iter_s (fun i ->
+    lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State i))) in
+    Lwt_unix.sleep !ax12_delay)
+      !ax12_id in
   loop_request ()
 
 let t = loop_request ()
