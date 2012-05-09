@@ -79,7 +79,9 @@ type t =
           - [a_rad_max] in m/s^2 *)
   | Odometry of float * float * float
       (** [Odometry(x, y, theta)] the position of the robot on the
-          table. *)
+          table.
+          - [x, y] in m
+          - [theta] in rad *)
   | Odometry_ghost of float * float * float * int * bool
       (** [Odometry_ghost(x, y, theta, following)]. [following] is
           [true] iff the robot is following the ghost. *)

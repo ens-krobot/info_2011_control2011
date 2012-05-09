@@ -48,6 +48,9 @@ type robot = {
   mutable position : vertice;
   (* The position of the robot on the table. *)
 
+  mutable ghost_position : vertice;
+  (* The position of the ghost on the table. *)
+
   mutable orientation : float;
   (* The orientation of the robot. *)
 
@@ -100,6 +103,7 @@ let handle_message robot (timestamp, message) =
               robot.orientation <- math_mod_float theta (2. *. pi)
 
           | Odometry_ghost(x, y, theta, u, following) ->
+              robot.ghost_position <- { x; y };
               robot.curve_parameter <- u;
               robot.moving <- following
 
@@ -389,6 +393,15 @@ let run robot =
             ()
         | Some curve ->
             try
+              (* Check that the robot is not too far from the ghost.
+                 if it is then stop brutaly:
+                 TODO do something interesting after the stop: retry what we were doing *)
+              if distance robot.ghost_position robot.position > 0.1 then begin
+                ignore (Lwt_log.info_f "Robot too far from the ghost");
+                robot.strategy <- [Stop];
+                reset robot;
+                raise Exit
+              end;
               (* Check that there is no colision between the current
                  position and the end of the current curve. *)
               for i = robot.curve_parameter to 255 do
@@ -457,6 +470,7 @@ lwt () =
     change_strategy = None;
     append_strategy = None;
     position = { x = 0.; y = 0. };
+    ghost_position = { x = 0.; y = 0. };
     orientation = 0.;
     objects = [];
     moving = false;
