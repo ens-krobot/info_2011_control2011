@@ -9,7 +9,7 @@
 
 let sqr x = x *. x
 
-let world_height = 2.1
+let world_height = 2.
 let world_width = 3.
 let robot_size = 0.26
 let wheels_diameter = 0.098
@@ -20,3 +20,5 @@ let object_radius = 0.1
 let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
 let object_safety_distance = object_radius +. robot_size /. 2.
 let beacon_safety_distance = 0.7
+
+let coin_radius = 0.12

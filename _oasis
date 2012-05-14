@@ -240,6 +240,13 @@ Executable "krobot-ax12-clean"
   CompiledObject: best
   MainIs: krobot_ax12_clean.ml
 
+Executable "krobot-see-coin"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_see_coin.ml
+  BuildDepends: krobot, cv, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+

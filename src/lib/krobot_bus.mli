@@ -69,6 +69,9 @@ type message =
       (** Message emitted when the robot starts or stops a
           trajectory. *)
 
+  (** Vision *)
+  | Coins of vertice list
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

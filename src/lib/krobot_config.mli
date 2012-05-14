@@ -43,3 +43,6 @@ val object_safety_distance : float
 
 val beacon_safety_distance : float
   (** Minimum distance between the center of the robot and the beacon. *)
+
+val coin_radius : float
+  (** Radius of coins. *)

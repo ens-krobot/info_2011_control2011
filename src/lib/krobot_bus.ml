@@ -37,6 +37,7 @@ type message =
   | Strategy_stop
   | Strategy_set of Krobot_action.t list
   | Strategy_path of Bezier.curve list option
+  | Coins of vertice list
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -111,6 +112,10 @@ let string_of_message = function
       sprintf
         "Strategy_path(Some [%s])"
         (String.concat "; " (List.map Bezier.string_of_curve curves))
+  | Coins coins ->
+      sprintf
+        "Coins [%s]"
+        (String.concat "; " (List.map string_of_vertice coins))
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |

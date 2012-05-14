@@ -46,6 +46,11 @@ val tangents : vertice -> vertice -> vertice -> vector * vector
   (** [tangents a b c] returns the two unitary vectors tangent to the
       triangle abc in b. *)
 
+val rot_mat : float -> float array array
+
+val mult : float array array -> float array -> float array
+(** [mult m v] matrix multiplication *)
+
 (** {6 Cubic Bezier curves} *)
 
 module Bezier : sig

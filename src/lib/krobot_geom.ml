@@ -91,6 +91,16 @@ let tangents a b c =
   let v1 = ba -| bc and v2 = bc -| ba in
   (v1 /| norm v1, v2 /| norm v2)
 
+let rot_mat theta =
+  [| [| cos theta; -. (sin theta); 0.; |];
+     [| sin theta; cos theta; 0. |];
+     [| 0.; 0.; 1. |]; |]
+
+let mult m v =
+  Array.init (Array.length m)
+    (fun k -> Array.fold_left (+.) 0.
+      (Array.mapi (fun i n -> v.(i) *. n) m.(k)))
+
 (* +-----------------------------------------------------------------+
    | Cubic bezier curves                                             |
    +-----------------------------------------------------------------+ *)
