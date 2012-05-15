@@ -343,9 +343,16 @@ let rec exec robot actions =
         ignore (Lwt_log.info "Bezier");
         (* Compute parameters. *)
         let d1 = sign *. distance p q and d2 = distance r s in
-        let v = vector r s in
-        let theta_end = atan2 v.vy v.vx in
-        (rest, Send(Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)))
+        if d1 = 0. || d2 = 0.
+        then
+          (* in that case: there is an error somewhere else:
+             search and destroy it ! *)
+          (ignore (Lwt_log.error_f "Error: Bezier with d1 = %f, d2 = %f" d1 d2);
+           ([], Wait))
+        else
+          let v = vector r s in
+          let theta_end = atan2 v.vy v.vx in
+          (rest, Send(Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)))
     | Stop :: rest ->
         reset robot;
         (rest, Send(Motor_stop(1.0, 0.0)))
@@ -354,9 +361,10 @@ let rec exec robot actions =
          Send
            (match which, robot.team with
               | `Red, _ | `Auto, `Red ->
-                  Set_odometry(0.215 -. robot_size /. 2. +. wheels_position, 1.885, 0.)
+                  Set_odometry(0.215 -. robot_size /. 2. +. wheels_position,
+                               world_height -. robot_size -. 0.1 , 0.)
               | `Blue, _ | `Auto, `Blue ->
-                  Set_odometry(2.77, 1.915, pi)))
+                  Set_odometry(2.77, world_height -. 0.1 , pi)))
     | Load face :: rest ->
         exec robot (Node [
                       Lift_down face;
