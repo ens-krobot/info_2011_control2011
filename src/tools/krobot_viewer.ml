@@ -78,11 +78,11 @@ let set_color ctx color =
   let r, g, b = match color with
     | Black -> (0., 0., 0.)
     | White -> (255., 255., 255.)
-    | Green -> (36., 145., 64.)
-    | Red -> (199., 23., 18.)
-    | Blue -> (0., 59., 128.)
-    | Yellow -> (252., 189., 31.)
-    | Purple -> (128., 0., 128.)
+    | Green -> (36., 200., 64.)
+    | Red -> (220., 23., 18.)
+    | Blue -> (20., 80., 170.)
+    | Yellow -> (232., 232., 0.)
+    | Purple -> (180., 0., 128.)
     | Brown -> (175., 89., 67.)
   in
   Cairo.set_source_rgb ctx (r /. 255.) (g /. 255.) (b /. 255.)
@@ -124,21 +124,27 @@ let draw viewer =
 
   (* Draw beacon supports *)
   Cairo.rectangle ctx (-0.102) (-0.102) 0.08 0.08;
+  set_color ctx Purple;
   Cairo.fill ctx;
 
   Cairo.rectangle ctx (-0.102) (world_height /. 2. -. 0.04) 0.08 0.08;
+  set_color ctx Red;
   Cairo.fill ctx;
 
   Cairo.rectangle ctx (-0.102) (world_height +. 0.022) 0.08 0.08;
+  set_color ctx Purple;
   Cairo.fill ctx;
 
   Cairo.rectangle ctx (world_width +. 0.022) (-0.102) 0.08 0.08;
+  set_color ctx Red;
   Cairo.fill ctx;
 
   Cairo.rectangle ctx (world_width +. 0.022) (world_height /. 2. -. 0.04) 0.08 0.08;
+  set_color ctx Purple;
   Cairo.fill ctx;
 
   Cairo.rectangle ctx (world_width +. 0.022) (world_height +. 0.022) 0.08 0.08;
+  set_color ctx Red;
   Cairo.fill ctx;
 
   (* Draw the viewer background *)
@@ -169,6 +175,7 @@ let draw viewer =
   set_color ctx Black;
   Cairo.set_line_width ctx (5. /. scale);
   Cairo.stroke ctx;
+  Cairo.set_line_width ctx (1. /. scale);
 
   (* draw the homes *)
   Cairo.move_to ctx 0. 0.;
@@ -226,6 +233,30 @@ let draw viewer =
 
   Cairo.arc ctx 1.5 1. 0.1 0. (2.*.pi);
   set_color ctx Green;
+  Cairo.fill ctx;
+
+  Cairo.rectangle ctx (0.64 +. 0.477 -. 0.125) (1. -. 0.125) 0.25 0.25;
+  set_color ctx Brown;
+  Cairo.fill ctx;
+
+  Cairo.rectangle ctx (world_width -. (0.64 +. 0.477 +. 0.125)) (1. -. 0.125) 0.25 0.25;
+  set_color ctx Brown;
+  Cairo.fill ctx;
+
+  Cairo.rectangle ctx 0.54 (-.0.1) 0.2 0.1;
+  set_color ctx Purple;
+  Cairo.fill ctx;
+
+  Cairo.rectangle ctx (0.54 +. 0.47)  (-.0.1) 0.2 0.1;
+  set_color ctx Red;
+  Cairo.fill ctx;
+
+  Cairo.rectangle ctx (world_width -. 0.74) (-.0.1) 0.2 0.1;
+  set_color ctx Red;
+  Cairo.fill ctx;
+
+  Cairo.rectangle ctx (world_width -. (0.74 +. 0.47))  (-.0.1) 0.2 0.1;
+  set_color ctx Purple;
   Cairo.fill ctx;
 
   (* Draw objects *)
