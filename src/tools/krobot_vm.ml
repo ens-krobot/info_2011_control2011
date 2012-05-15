@@ -57,6 +57,9 @@ type robot = {
   mutable objects : vertice list;
   (* Position of objects on the table. *)
 
+  mutable coins : vertice list;
+  (* Position of coins on the table *)
+
   mutable moving : bool;
   (* Is the robot moving ? *)
 
@@ -170,6 +173,14 @@ let handle_message robot (timestamp, message) =
 
     | Objects l ->
         robot.objects <- l
+
+    | Coins l ->
+        robot.coins <-
+          List.map
+            (fun v ->
+              let v = [|v.x;v.y;1.|] in
+              let v = mult (rot_mat robot.orientation) v in
+              Krobot_geom.translate robot.position { vx = v.(0); vy = v.(1) }) l
 
     | Strategy_append l -> begin
         match robot.append_strategy with
@@ -343,7 +354,7 @@ let rec exec robot actions =
         ignore (Lwt_log.info "Bezier");
         (* Compute parameters. *)
         let d1 = sign *. distance p q and d2 = distance r s in
-        if d1 = 0. || d2 = 0.
+        if abs_float d1 <= 0.01 || abs_float d2 = 0.01
         then
           (* in that case: there is an error somewhere else:
              search and destroy it ! *)
@@ -361,10 +372,13 @@ let rec exec robot actions =
          Send
            (match which, robot.team with
               | `Red, _ | `Auto, `Red ->
-                  Set_odometry(0.215 -. robot_size /. 2. +. wheels_position,
-                               world_height -. robot_size -. 0.1 , 0.)
+                let { Krobot_geom.x; y }, angle = Krobot_config.red_initial_position in
+                Set_odometry( x,
+                              y, 0. )
               | `Blue, _ | `Auto, `Blue ->
-                  Set_odometry(2.77, world_height -. 0.1 , pi)))
+                let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
+                Set_odometry( x,
+                              y, pi)))
     | Load face :: rest ->
         exec robot (Node [
                       Lift_down face;
@@ -501,6 +515,7 @@ lwt () =
     ghost_position = { x = 0.; y = 0. };
     orientation = 0.;
     objects = [];
+    coins = [];
     moving = false;
     path = None;
     curve = None;

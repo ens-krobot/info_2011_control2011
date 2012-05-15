@@ -101,6 +101,8 @@ let mult m v =
     (fun k -> Array.fold_left (+.) 0.
       (Array.mapi (fun i n -> v.(i) *. n) m.(k)))
 
+type obj = { pos : vertice; size : float }
+
 (* +-----------------------------------------------------------------+
    | Cubic bezier curves                                             |
    +-----------------------------------------------------------------+ *)

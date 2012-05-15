@@ -11,6 +11,7 @@
 
 open Krobot_bus
 open Krobot_action
+open Krobot_geom
 
 let init_pos, init_angle = Krobot_config.red_initial_position
 
@@ -21,14 +22,14 @@ let path =
     { x = 0.7; y = 1.15 };
     { x = 0.5; y = 1.15 };
     { x = 0.4; y = 1.15 };
-  ];
+  ]
 
 lwt () =
   lwt bus = Krobot_bus.get () in
   Krobot_bus.send bus
     (Unix.gettimeofday (),
      Strategy_set [
+       Reset_odometry `Red;
        Wait_for_jack false;
-       Reset_odometry `Auto;
        Follow_path path;
      ])

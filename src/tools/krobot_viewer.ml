@@ -283,6 +283,17 @@ let draw viewer =
        Cairo.stroke ctx)
     viewer.coins;
 
+  (* Draw obstacles *)
+  Cairo.set_source_rgba ctx 255. 255. 255. 0.5;
+  let () =
+    let open Krobot_geom in
+    List.iter
+      (fun { pos = { x; y }; size } ->
+        Cairo.arc ctx x y size 0. (2. *. pi);
+        Cairo.fill ctx)
+      Krobot_config.fixed_obstacles
+  in
+
   (* Draw the robot and the ghost *)
   List.iter
     (fun (state, alpha) ->
@@ -497,7 +508,7 @@ let handle_message viewer (timestamp, message) =
             (fun v ->
               let v = [|v.x;v.y;1.|] in
               let v = mult (rot_mat viewer.state.theta) v in
-              { x = v.(0); y = v.(1) }) l;
+              Krobot_geom.translate viewer.state.pos { vx = v.(0); vy = v.(1) }) l;
         queue_draw viewer
 
     | _ ->

@@ -79,9 +79,7 @@ lwt () =
                 Lwt_io.printl ""
             | Trajectory_go ->
               Lwt_io.printf "trajectory_go"
-            | _ ->
-              Lwt_io.printf "truc"
-                (*return ()*))
+            | _ -> return ())
        (Krobot_bus.recv bus));
 
   fst (wait ())

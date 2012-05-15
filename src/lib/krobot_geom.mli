@@ -20,6 +20,8 @@ val math_mod_float : float -> float -> float
 type vector = { vx : float; vy : float }
 type vertice = { x : float; y : float }
 
+type obj = { pos : vertice; size : float }
+
 val null : vector
 val origin : vertice
 

@@ -46,3 +46,12 @@ val beacon_safety_distance : float
 
 val coin_radius : float
   (** Radius of coins. *)
+
+val red_initial_position : Krobot_geom.vertice * float
+  (** position and angle of the robot as red *)
+
+val blue_initial_position : Krobot_geom.vertice * float
+  (** position and angle of the robot as blue *)
+
+
+val fixed_obstacles : Krobot_geom.obj list

@@ -23,14 +23,14 @@ module Vect = struct
   type circle = { c : point; r : float }
   type segment = { p1 : point; p2 : point }
   type line = { p : point; v : vect }
-      
+
   let epsilon = 0.0000000001
-    
+
   let vect p1 p2 = { vx = p2.px -. p1.px; vy = p2.py -. p1.py }
-    
+
   let ( +! ) p v = { px = v.vx +. p.px; py = v.vy +. p.py }
   let ( -! ) p v = { px = p.px -. v.vx; py = p.py -. v.vy }
-    
+
   let ( +| ) v1 v2 = { vx = v1.vx +. v2.vx; vy = v1.vy +. v2.vy }
   let ( -| ) v1 v2 = { vx = v1.vx -. v2.vx; vy = v1.vy -. v2.vy }
   let ( *@ ) n v = { vx = n *. v.vx; vy = n *. v.vy }
@@ -42,7 +42,7 @@ module Vect = struct
   let line s = { p = s.p1; v = vect s.p1 s.p2 }
   let scal v1 v2 = v1.vx *. v2.vx +. v1.vy *. v2.vy
   let colineaire v1 v2 = abs_float (v1.vx *. v2.vy -. v1.vy *. v2.vx) < epsilon
-    
+
   let distance s p =
     let middle =
       ( scal
