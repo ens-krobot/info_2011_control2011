@@ -23,11 +23,18 @@ type t =
   | Beacon_lowlevel_position of float * float * int
       (** The position of the beacon as internally stored (for calibration) *)
   | Switch1_status of bool * bool * bool * bool * bool * bool * bool * bool
-      (** The status of the first 8 switches *)
+      (** The status of the first 8 switches
+          1 : start
+          2 : team
+          3 : emergency stop *)
   | Switch2_status of bool * bool * bool * bool * bool * bool * bool * bool
       (** The status of the other 8 switches *)
   | Switch_request of int * bool
-      (** A request to switch something on/off *)
+      (** A request to switch something on/off
+          4 : buzzer
+          5 : yellow led
+          6 : red led
+          7 : green led *)
   | Adc1_values of int * int * int * int
       (** The values of the first 4 ADCs *)
   | Adc2_values of int * int * int * int

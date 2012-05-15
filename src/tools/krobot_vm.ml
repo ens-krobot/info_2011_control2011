@@ -79,6 +79,9 @@ type robot = {
   mutable team : [ `Red | `Blue ];
   (* The state of the team selector. *)
 
+  mutable emergency_stop : bool;
+  (* The state of the emergency button. *)
+
   ax12_front_low_left : ax12;
   ax12_front_low_right : ax12;
   ax12_front_high_left : ax12;
@@ -93,6 +96,20 @@ type robot = {
 (* +-----------------------------------------------------------------+
    | Message handling                                                |
    +-----------------------------------------------------------------+ *)
+
+let update_team_led robot =
+  let m1,m2 =
+    if robot.team = `Red then
+      Switch_request(6,true), Switch_request(7,false)
+    else
+      Switch_request(6,false), Switch_request(7,true)
+  in
+  lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (),m1) in
+  Krobot_message.send robot.bus (Unix.gettimeofday (), m2)
+
+let clear_team_led robot =
+  lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(6,false)) in
+  Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(7,false))
 
 let handle_message robot (timestamp, message) =
   match message with
@@ -118,8 +135,11 @@ let handle_message robot (timestamp, message) =
               end else
                 robot.beacon <- None
 
-          | Switch1_status(b, _, _, _, _, _, _, _) ->
-              robot.jack <- not b
+          | Switch1_status(jack, team, emergency, _, _, _, _, _) ->
+              robot.jack <- not jack;
+              robot.team <- if team then `Red else `Blue;
+              robot.emergency_stop <- emergency;
+              ignore (update_team_led robot)
 
           | Ax12_State(id, position, speed, torque) -> begin
               let set ax12 =
@@ -481,6 +501,7 @@ lwt () =
     beacon = None;
     date_seen_beacon = 0.;
     team = `Red;
+    emergency_stop = false;
     ax12_front_low_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     ax12_front_low_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     ax12_front_high_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
@@ -490,6 +511,8 @@ lwt () =
     ax12_back_high_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     ax12_back_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
   } in
+
+  lwt () = clear_team_led robot in
 
   (* Handle krobot message. *)
   E.keep (E.map (handle_message robot) (Krobot_bus.recv bus));
