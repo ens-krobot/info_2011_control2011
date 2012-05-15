@@ -36,10 +36,12 @@ type t =
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
   | Encoder_position_speed_4 of float * float
+  | Control_error of int * int
   | Motor_status of bool * bool * bool * bool
   | Motor_move of float * float * float
   | Motor_turn of float * float * float
   | Motor_bezier of float * float * float * float * float * float
+  | Motor_command of int * int
   | Motor_stop of float * float
   | Motor_bezier_limits of float * float * float
   | Odometry of float * float * float
@@ -144,6 +146,10 @@ let to_string = function
       sprintf
         "Motor_status(%B, %B, %B, %B)"
         m1 m2 m3 m4
+  | Control_error(e1, e2) ->
+      sprintf
+        "Control_error(%d, %d)"
+        e1 e2
   | Motor_move(dist, speed, acc) ->
       sprintf
         "Motor_move(%f, %f, %f)"
@@ -164,6 +170,10 @@ let to_string = function
       sprintf
         "Motor_bezier_limits(%f, %f, %f)"
         v_max a_tan_max a_rad_max
+  | Motor_command(motor_id, speed) ->
+      sprintf
+        "Motor_command(%d, %d)"
+        motor_id speed
   | Odometry(x, y, theta) ->
       sprintf
         "Odometry(%f, %f, %f)"
@@ -256,6 +266,16 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Control_error(e1, e2) ->
+      let data = String.create 2 in
+      put_uint8 data 0 e1;
+      put_uint8 data 1 e2;
+      frame
+        ~identifier:106
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Odometry(x, y, theta) ->
       let data = String.create 6 in
       put_sint16 data 0 (truncate (x *. 1000.));
@@ -315,6 +335,16 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data:(encode_bezier (x, y, d1, d2, theta, v))
+  | Motor_command(motor_id, speed) ->
+      let data = String.create 5 in
+      put_uint8 data 0 motor_id;
+      put_sint32 data 1 speed;
+      frame
+        ~identifier:208
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Set_odometry(x, y, theta) ->
       let data = String.create 6 in
       put_sint16 data 0 (truncate (x *. 1000.));
@@ -595,6 +625,10 @@ let decode frame =
                float (get_sint16 frame.data 4) /. 10000.,
                get_uint8 frame.data 6,
                get_uint8 frame.data 7 <> 0)
+        | 106 ->
+            Control_error
+              (get_uint8 frame.data 0,
+               get_uint8 frame.data 1)
         | 201 ->
             Motor_move
               (float (get_sint32 frame.data 0) /. 1000.,
@@ -630,6 +664,10 @@ let decode frame =
               (float (get_uint16 frame.data 0) /. 1000.,
                float (get_uint16 frame.data 2) /. 1000.,
                float (get_uint16 frame.data 4) /. 1000.)
+        | 208 ->
+            Motor_command
+              (get_uint8 frame.data 0,
+               get_sint32 frame.data 1)
         | 231 ->
             Elevator(get_float32 frame.data 0,
                      get_float32 frame.data 4)
@@ -641,7 +679,7 @@ let decode frame =
         | 302 ->
             Beacon_lowlevel_position
               (float (get_uint16 frame.data 0),
-               float (get_uint16 frame.data 2) /. 10000.,
+               float (get_uint16 frame.data 2) (*/. 10000*),
                get_uint32 frame.data 4)
         | 311 ->
             Switch1_status
