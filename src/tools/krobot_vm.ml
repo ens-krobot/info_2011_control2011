@@ -230,8 +230,8 @@ let rec remove_leftest_node = function
 type effect =
   | Wait
       (* Wait a bit. *)
-  | Send of Krobot_message.t
-      (* Send a message. *)
+  | Send of Krobot_message.t list
+      (* Send messages. *)
 
 let string_of_test = function
   | `Eq -> "Eq"
@@ -363,22 +363,22 @@ let rec exec robot actions =
         else
           let v = vector r s in
           let theta_end = atan2 v.vy v.vx in
-          (rest, Send(Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)))
+          (rest, Send[Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)])
     | Stop :: rest ->
         reset robot;
-        (rest, Send(Motor_stop(1.0, 0.0)))
+        (rest, Send[Motor_stop(1.0, 0.0)])
     | Reset_odometry which :: rest ->
         (rest,
          Send
            (match which, robot.team with
               | `Red, _ | `Auto, `Red ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.red_initial_position in
-                Set_odometry( x,
-                              y, 0. )
+                [Set_odometry( x, y, 0. );
+                 Set_odometry_indep( x, y, 0. ); ]
               | `Blue, _ | `Auto, `Blue ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
-                Set_odometry( x,
-                              y, pi)))
+                [Set_odometry( x, y, pi);
+                 Set_odometry( x, y, pi )]))
     | Load face :: rest ->
         exec robot (Node [
                       Lift_down face;
@@ -392,9 +392,9 @@ let rec exec robot actions =
                       Wait_for 0.5;
                     ] :: rest)
     | Lift_down `Front :: rest ->
-        (rest, Send(Elevator(0., -1.)))
+        (rest, Send[Elevator(0., -1.)])
     | Lift_up `Front :: rest ->
-        (rest, Send(Elevator(1., -1.)))
+        (rest, Send[Elevator(1., -1.)])
     | Think :: rest ->
         exec robot rest
     | _ :: rest ->
@@ -464,8 +464,10 @@ let run robot =
     match effect with
       | Wait ->
           Lwt_unix.sleep 0.01
-      | Send msg ->
-          Krobot_message.send robot.bus (timestamp, msg)
+      | Send msgs ->
+        Lwt_list.iter_s
+          (fun m -> Krobot_message.send robot.bus (timestamp, m))
+          msgs
   done
 
 (* +-----------------------------------------------------------------+

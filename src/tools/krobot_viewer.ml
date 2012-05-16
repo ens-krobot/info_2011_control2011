@@ -38,6 +38,9 @@ type viewer = {
   mutable state : state;
   (* The state of the robot. *)
 
+  mutable state_indep : state;
+  (* The state of the robot according to indep coder. *)
+
   mutable ghost : state;
   (* The state of the ghost. *)
 
@@ -417,6 +420,17 @@ let handle_message viewer (timestamp, message) =
                 queue_draw viewer
               end
 
+          | Odometry_indep(x, y, theta) ->
+              let angle = math_mod_float (theta) (2. *. pi) in
+              let state = { pos = { x; y }; theta = angle } in
+              if state <> viewer.state_indep then begin
+                viewer.state_indep <- state;
+                viewer.ui#entry_x_indep#set_text (string_of_float x);
+                viewer.ui#entry_y_indep#set_text (string_of_float y);
+                viewer.ui#entry_theta_indep#set_text (string_of_float theta);
+                queue_draw viewer
+              end
+
           | Odometry_ghost(x, y, theta, u, following) ->
               let angle = math_mod_float (theta) (2. *. pi) in
               let ghost = { pos = { x; y }; theta = angle } in
@@ -565,6 +579,7 @@ lwt () =
     bus;
     ui;
     state = init;
+    state_indep = init;
     ghost = init;
     beacon = None;
     planner_path = [];

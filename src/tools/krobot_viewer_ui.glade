@@ -442,6 +442,141 @@
                     <property name="position">3</property>
                   </packing>
                 </child>
+
+
+                <child>
+
+                  <widget class="GtkExpander" id="position_indep_expander">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="expanded">True</property>
+
+                    <child>
+                      <widget class="GtkHBox" id="position_values_indep">
+                        <property name="visible">True</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <widget class="GtkHBox" id="position_x_indep">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="position_x_label_indep">
+                                <property name="visible">True</property>
+                                <property name="xpad">2</property>
+                                <property name="label" translatable="yes">x</property>
+                              </widget>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+
+                            <child>
+                              <widget class="GtkEntry" id="entry_x_indep">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="editable">False</property>
+                                <property name="invisible_char">&#x2022;</property>
+                              </widget>
+                              <packing>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+
+                          </widget>
+                          <packing>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkHBox" id="position_y_indep">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="position_y_label_indep">
+                                <property name="visible">True</property>
+                                <property name="xpad">2</property>
+                                <property name="label" translatable="yes">y</property>
+                              </widget>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <widget class="GtkEntry" id="entry_y_indep">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="editable">False</property>
+                                <property name="invisible_char">&#x2022;</property>
+                              </widget>
+                              <packing>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                          </widget>
+                          <packing>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkHBox" id="position_theta_indep">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="position_theta_label_indep">
+                                <property name="visible">True</property>
+                                <property name="xpad">2</property>
+                                <property name="label" translatable="yes">&#x3B8;</property>
+                              </widget>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <widget class="GtkEntry" id="entry_theta_indep">
+                                <property name="width_request">1</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="editable">False</property>
+                                <property name="invisible_char">&#x2022;</property>
+                              </widget>
+                              <packing>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                          </widget>
+                          <packing>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="position_label_indep">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Robot position indep coder&lt;/b&gt;</property>
+                        <property name="use_markup">True</property>
+                        <property name="justify">center</property>
+                      </widget>
+                      <packing>
+                        <property name="type">label_item</property>
+                      </packing>
+                    </child>
+
+                  </widget>
+                  <packing>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
+
+                <child>
+                  <widget class="GtkHSeparator" id="hseparator2_">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">5</property>
+                  </packing>
+                </child>
                 <child>
                   <widget class="GtkExpander" id="beacon_expander">
                     <property name="visible">True</property>
@@ -574,7 +709,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">4</property>
+                    <property name="position">6</property>
                   </packing>
                 </child>
                 <child>
@@ -583,7 +718,7 @@
                   </widget>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="position">5</property>
+                    <property name="position">7</property>
                   </packing>
                 </child>
                 <child>
@@ -881,7 +1016,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">6</property>
+                    <property name="position">8</property>
                   </packing>
                 </child>
                 <child>
@@ -890,7 +1025,7 @@
                   </widget>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="position">7</property>
+                    <property name="position">9</property>
                   </packing>
                 </child>
                 <child>
@@ -918,7 +1053,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">8</property>
+                    <property name="position">10</property>
                   </packing>
                 </child>
                 <child>
@@ -927,7 +1062,7 @@
                   </widget>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="position">9</property>
+                    <property name="position">11</property>
                   </packing>
                 </child>
                 <child>
@@ -1004,7 +1139,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">10</property>
+                    <property name="position">12</property>
                   </packing>
                 </child>
                 <child>
@@ -1040,7 +1175,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">11</property>
+                    <property name="position">13</property>
                   </packing>
                 </child>
                 <child>
@@ -1049,7 +1184,7 @@
                   </widget>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="position">12</property>
+                    <property name="position">14</property>
                   </packing>
                 </child>
               </widget>
