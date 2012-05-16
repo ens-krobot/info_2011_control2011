@@ -299,14 +299,14 @@ let draw viewer =
 
   (* Draw the robot and the ghost *)
   List.iter
-    (fun (state, alpha) ->
+    (fun (state, (r,g,b,alpha)) ->
        Cairo.save ctx;
 
        (* Draw the robot *)
        Cairo.translate ctx state.pos.x state.pos.y;
        Cairo.rotate ctx state.theta;
        Cairo.rectangle ctx (-. wheels_position) (-. robot_size /. 2.) robot_size robot_size;
-       Cairo.set_source_rgba ctx 1. 1. 1. alpha;
+       Cairo.set_source_rgba ctx r g b alpha;
        Cairo.fill ctx;
 
        (* Draw an arrow on the robot *)
@@ -320,8 +320,9 @@ let draw viewer =
        Cairo.stroke ctx;
 
        Cairo.restore ctx)
-    [(viewer.ghost, 0.5);
-     (viewer.state, 1.0)];
+    [(viewer.ghost, (1., 1., 1., 0.5));
+     (viewer.state_indep, (0.8, 0.8, 1., 0.8));
+     (viewer.state, (1., 1., 1., 1.5));];
 
   (* Draw the beacon *)
   begin
