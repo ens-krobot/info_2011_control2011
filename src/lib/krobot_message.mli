@@ -93,12 +93,20 @@ type t =
           table.
           - [x, y] in m
           - [theta] in rad *)
+  | Odometry_indep of float * float * float
+      (** [Odometry_ident(x, y, theta)] the position of the robot on the
+          table, obtained from independent encoder wheels.
+          - [x, y] in m
+          - [theta] in rad *)
   | Odometry_ghost of float * float * float * int * bool
       (** [Odometry_ghost(x, y, theta, following)]. [following] is
           [true] iff the robot is following the ghost. *)
   | Set_odometry of float * float * float
       (** [set_odometry(x, y, theta)] sets the parameters of the
           odometry to the given ones. *)
+  | Set_odometry_indep of float * float * float
+      (** [set_odometry_ident(x, y, theta)] sets the parameters of the
+          independant odometry to the given ones. *)
   | Set_controller_mode of bool
       (** Put the card into simulation mode or not. *)
   | Elevator of float * float

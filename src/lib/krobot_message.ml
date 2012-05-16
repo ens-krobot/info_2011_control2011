@@ -45,8 +45,10 @@ type t =
   | Motor_stop of float * float
   | Motor_bezier_limits of float * float * float
   | Odometry of float * float * float
+  | Odometry_indep of float * float * float
   | Odometry_ghost of float * float * float * int * bool
   | Set_odometry of float * float * float
+  | Set_odometry_indep of float * float * float
   | Set_controller_mode of bool
   | Elevator of float * float
   | Req_motor_status
@@ -182,9 +184,17 @@ let to_string = function
       sprintf
         "Odometry_ghost(%f, %f, %f, %d, %B)"
         x y theta u following
+  | Odometry_indep(x, y, theta) ->
+      sprintf
+        "Odometry_indep(%f, %f, %f)"
+        x y theta
   | Set_odometry(x, y, theta) ->
       sprintf
         "Set_odometry(%f, %f, %f)"
+        x y theta
+  | Set_odometry_indep(x, y, theta) ->
+      sprintf
+        "Set_odometry_indep(%f, %f, %f)"
         x y theta
   | Set_controller_mode b ->
       sprintf
@@ -300,6 +310,17 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Odometry_indep(x, y, theta) ->
+      let data = String.create 6 in
+      put_sint16 data 0 (truncate (x *. 1000.));
+      put_sint16 data 2 (truncate (y *. 1000.));
+      put_sint16 data 4 (truncate (theta *. 10000.));
+      frame
+        ~identifier:107
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Motor_move(dist, speed, acc) ->
       let data = String.create 8 in
       put_sint32 data 0 (truncate (dist *. 1000.));
@@ -352,6 +373,17 @@ let encode = function
       put_sint16 data 4 (truncate (theta *. 10000.));
       frame
         ~identifier:203
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Set_odometry_indep(x, y, theta) ->
+      let data = String.create 6 in
+      put_sint16 data 0 (truncate (x *. 1000.));
+      put_sint16 data 2 (truncate (y *. 1000.));
+      put_sint16 data 4 (truncate (theta *. 10000.));
+      frame
+        ~identifier:209
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -629,6 +661,11 @@ let decode frame =
             Control_error
               (get_uint8 frame.data 0,
                get_uint8 frame.data 1)
+        | 107 ->
+            Odometry_indep
+              (float (get_sint16 frame.data 0) /. 1000.,
+               float (get_sint16 frame.data 2) /. 1000.,
+               float (get_sint16 frame.data 4) /. 10000.)
         | 201 ->
             Motor_move
               (float (get_sint32 frame.data 0) /. 1000.,
@@ -668,6 +705,11 @@ let decode frame =
             Motor_command
               (get_uint8 frame.data 0,
                get_sint32 frame.data 1)
+        | 209 ->
+            Set_odometry_indep
+              (float (get_sint16 frame.data 0) /. 1000.,
+               float (get_sint16 frame.data 2) /. 1000.,
+               float (get_sint16 frame.data 4) /. 10000.)
         | 231 ->
             Elevator(get_float32 frame.data 0,
                      get_float32 frame.data 4)
