@@ -37,6 +37,7 @@ type message =
   | Strategy_stop
   | Strategy_set of Krobot_action.t list
   | Strategy_path of Bezier.curve list option
+  | Set_fake_beacons of vertice option * vertice option
   | Coins of vertice list
 
 type t = {
@@ -55,6 +56,13 @@ let string_of_vertice v =
 
 let string_of_vector v =
   sprintf "{ vx = %f; vy = %f }" v.vx v.vy
+
+let string_of_option f v =
+  match v with
+    | Some x ->
+      "Some " ^ (f x)
+    | None ->
+      "None"
 
 let string_of_message = function
   | CAN(source, frame) ->
@@ -112,6 +120,11 @@ let string_of_message = function
       sprintf
         "Strategy_path(Some [%s])"
         (String.concat "; " (List.map Bezier.string_of_curve curves))
+  | Set_fake_beacons (b1, b2) ->
+      sprintf
+        "Set_fake_beacons (%s, %s)"
+        (string_of_option string_of_vertice b1)
+        (string_of_option string_of_vertice b2)
   | Coins coins ->
       sprintf
         "Coins [%s]"

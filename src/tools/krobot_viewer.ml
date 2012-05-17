@@ -44,8 +44,8 @@ type viewer = {
   mutable ghost : state;
   (* The state of the ghost. *)
 
-  mutable beacon : vertice option;
-  (* The position of the beacon, if any. *)
+  mutable beacons : vertice option * vertice option;
+  (* The position of the beacons. *)
 
   mutable planner_path : Bezier.curve list;
   (* The path of the planner. *)
@@ -325,18 +325,20 @@ let draw viewer =
      (viewer.state, (1., 1., 1., 1.5));];
 
   (* Draw the beacon *)
-  begin
-    match viewer.beacon with
+    let draw_beacon = function
       | Some v ->
-          Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
-          set_color ctx Purple;
-          Cairo.fill ctx;
-          Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
-          set_color ctx Black;
-          Cairo.stroke ctx
+        Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
+        set_color ctx Purple;
+        Cairo.fill ctx;
+        Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
+        set_color ctx Black;
+        Cairo.stroke ctx
       | None ->
-          ()
-  end;
+        ()
+    in
+    let b1, b2 = viewer.beacons in
+    draw_beacon b1;
+    draw_beacon b2;
 
   (* Draw the path of the VM if any or the path of the planner if the
      VM is not following a trajectory. *)
@@ -380,13 +382,17 @@ let draw viewer =
 let queue_draw viewer =
   GtkBase.Widget.queue_draw viewer.ui#scene#as_widget
 
-let add_point viewer x y =
+let translate_coords viewer x y =
   let { Gtk.width; Gtk.height } = viewer.ui#scene#misc#allocation in
   let width = float width and height = float height in
   let dw, dh = optimal_size width height in
   let scale = dw /. (world_width +. 0.204) in
   let x0 = (width -. dw) /. 2. and y0 = (height -. dh) /. 2. in
   let x = (x -. x0) /. scale -. 0.102 and y = world_height -. ((y -. y0) /. scale -. 0.102) in
+  (x, y)
+
+let add_point viewer x y =
+  let x, y = translate_coords viewer x y in
   if x >= 0. && x < world_width && y >= 0. && y < world_height then
     ignore (Krobot_bus.send viewer.bus (Unix.gettimeofday (), Trajectory_add_vertice { x; y }))
 
@@ -401,6 +407,26 @@ let rec last = function
 let simplify viewer =
   let tolerance = viewer.ui#tolerance#adjustment#value in
   ignore (Krobot_bus.send viewer.bus (Unix.gettimeofday (), Trajectory_simplify tolerance))
+
+(* +-----------------------------------------------------------------+
+   | Beacon handling                                                 |
+   +-----------------------------------------------------------------+ *)
+
+let set_beacons viewer x y =
+  let x, y = translate_coords viewer x y in
+  let b2 = Some { x; y } in
+  let b1 =
+    match viewer.beacons with
+      | None, None ->
+        None
+      | _, (Some _ as b) ->
+        b
+      | b, None ->
+        b
+  in
+  ignore (Krobot_bus.send viewer.bus
+            (Unix.gettimeofday (),
+             Krobot_bus.Set_fake_beacons (b1, b2)))
 
 (* +-----------------------------------------------------------------+
    | Message handling                                                |
@@ -473,10 +499,12 @@ let handle_message viewer (timestamp, message) =
                 end else
                   None
               in
-              let beacon1 = compute_beacon angle1 distance1 in
+              let beacon1 = compute_beacon angle1 distance1
+              and beacon2 = compute_beacon angle2 distance2 in
+              let beacons = (beacon1, beacon2) in
               (*let beacon2 = compute_beacon angle2 distance2 in*)
-              if beacon1 <> viewer.beacon then begin
-                viewer.beacon <- beacon1;
+              if beacons <> viewer.beacons then begin
+                viewer.beacons <- beacons;
                 viewer.ui#beacon_status#set_text (if beacon1 = None then "-" else "valid");
                 viewer.ui#beacon_distance#set_text (string_of_float distance1);
                 viewer.ui#beacon_angle#set_text (string_of_float angle1);
@@ -588,7 +616,7 @@ lwt () =
     state = init;
     state_indep = init;
     ghost = init;
-    beacon = None;
+    beacons = (None, None);
     planner_path = [];
     vm_path = None;
     statusbar_context = ui#statusbar#new_context "";
@@ -610,13 +638,24 @@ lwt () =
   ignore
     (ui#scene#event#connect#button_press
        (fun ev ->
-          add_point viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev);
+          if ui#beacon_mode#active then
+            set_beacons viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev)
+          else
+            add_point viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev);
           true));
   ignore
     (ui#scene#event#connect#motion_notify
        (fun ev ->
-          add_point viewer (GdkEvent.Motion.x ev) (GdkEvent.Motion.y ev);
+          if not ui#beacon_mode#active then
+            add_point viewer (GdkEvent.Motion.x ev) (GdkEvent.Motion.y ev);
           true));
+
+  ignore
+    (ui#button_clear_beacon#connect#clicked
+       (fun ev ->
+         ignore (Krobot_bus.send viewer.bus
+                   (Unix.gettimeofday (),
+                    Set_fake_beacons (None, None)))));
 
   ignore
     (ui#button_clear#event#connect#button_release

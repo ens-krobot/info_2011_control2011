@@ -69,6 +69,11 @@ type message =
       (** Message emitted when the robot starts or stops a
           trajectory. *)
 
+  (** Fake beacons *)
+
+  | Set_fake_beacons of vertice option * vertice option
+      (** Sets the positions of the fake  beacons. *)
+
   (** Vision *)
   | Coins of vertice list
 

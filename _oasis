@@ -163,6 +163,13 @@ Executable "krobot-planner"
   MainIs: krobot_planner.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-fake-beacons"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_fake_beacons.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-objects"
   Path: src/tools
   Install: true

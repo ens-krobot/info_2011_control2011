@@ -1,7 +1,7 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: c92c9c69bf7f8edb52ac75c708eee793) *)
+(* DO NOT EDIT (digest: 48d2c88a98b9f36a38156fe1665df27e) *)
 module OASISGettext = struct
-# 21 "/media/data/ocaml/oasis/src/oasis/OASISGettext.ml"
+# 21 "/home/dim/sources/oasis/src/oasis/OASISGettext.ml"
   
   let ns_ str =
     str
@@ -24,7 +24,7 @@ module OASISGettext = struct
 end
 
 module OASISExpr = struct
-# 21 "/media/data/ocaml/oasis/src/oasis/OASISExpr.ml"
+# 21 "/home/dim/sources/oasis/src/oasis/OASISExpr.ml"
   
   
   
@@ -114,8 +114,9 @@ module OASISExpr = struct
 end
 
 
+# 117 "myocamlbuild.ml"
 module BaseEnvLight = struct
-# 21 "/media/data/ocaml/oasis/src/base/BaseEnvLight.ml"
+# 21 "/home/dim/sources/oasis/src/base/BaseEnvLight.ml"
   
   module MapString = Map.Make(String)
   
@@ -211,8 +212,9 @@ module BaseEnvLight = struct
 end
 
 
+# 215 "myocamlbuild.ml"
 module MyOCamlbuildFindlib = struct
-# 21 "/media/data/ocaml/oasis/src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml"
+# 21 "/home/dim/sources/oasis/src/plugins/ocamlbuild/MyOCamlbuildFindlib.ml"
   
   (** OCamlbuild extension, copied from 
     * http://brion.inria.fr/gallium/index.php/Using_ocamlfind_with_ocamlbuild
@@ -321,7 +323,7 @@ module MyOCamlbuildFindlib = struct
 end
 
 module MyOCamlbuildBase = struct
-# 21 "/media/data/ocaml/oasis/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
+# 21 "/home/dim/sources/oasis/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
   
   (** Base functions for writing myocamlbuild.ml
       @author Sylvain Le Gall
@@ -337,7 +339,7 @@ module MyOCamlbuildBase = struct
   type name = string 
   type tag = string 
   
-# 56 "/media/data/ocaml/oasis/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
+# 56 "/home/dim/sources/oasis/src/plugins/ocamlbuild/MyOCamlbuildBase.ml"
   
   type t =
       {
@@ -543,6 +545,7 @@ module MyOCamlbuildBase = struct
 end
 
 
+# 548 "myocamlbuild.ml"
 open Ocamlbuild_plugin;;
 let package_default =
   {
@@ -562,7 +565,7 @@ let package_default =
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 566 "myocamlbuild.ml"
+# 569 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 open Ocamlbuild_plugin
