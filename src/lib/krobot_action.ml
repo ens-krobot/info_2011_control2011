@@ -11,17 +11,19 @@ open Printf
 open Krobot_geom
 
 type t =
-  | Node of t list
+  | Node of t option * t list
   | Stop
   | Think
-  | Goto of vertice
-  | Follow_path of vertice list
+  | Goto of bool * vertice * vector option
+  | Set_limits of (float * float * float)
+  | Follow_path of bool * vertice list * vector option
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
   | Wait_for_jack of bool
   | Wait_for_moving of bool
   | Reset_odometry of [ `Red | `Blue | `Auto ]
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
+  | Wait_for_odometry_reset of [ `Red | `Blue | `Auto ]
   | Load of [ `Front | `Back ]
   | Lift_down of [ `Front | `Back ]
   | Lift_up of [ `Front | `Back ]
@@ -35,22 +37,31 @@ type t =
   | Wait_for_grip_close_low of [ `Front | `Back ]
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
+let string_of_vector { vx; vy } = sprintf "{ vx = %f; vy = %f }" vx vy
+
+let string_of_option f = function
+  | None -> "None"
+  | Some v -> Printf.sprintf "Some (%s)" (f v)
 
 let string_of_face = function
   | `Front -> "`Front"
   | `Back -> "`Back"
 
 let rec to_string = function
-  | Node l ->
-      sprintf "Node [%s]" (String.concat "; " (List.map to_string l))
+  | Node (t,l) ->
+      sprintf "Node [%s, %s]" (string_of_option to_string t) (String.concat "; " (List.map to_string l))
   | Stop ->
       "Stop"
   | Think ->
       "Think"
-  | Goto v ->
-      sprintf "Goto %s" (string_of_vertice v)
-  | Follow_path l ->
-      sprintf "Follow_path [%s]" (String.concat "; " (List.map string_of_vertice l))
+  | Goto (reverted,v,vect) ->
+      sprintf "Goto %b %s %s" reverted (string_of_vertice v) (string_of_option string_of_vector vect)
+  | Set_limits (vmax,atan_max, arad_max) ->
+      sprintf "Set_limits(%f, %f, %f)" vmax atan_max arad_max
+  | Follow_path (reverted,l,vect) ->
+      sprintf "Follow_path [%b, %s, %s]" reverted
+        (String.concat "; " (List.map string_of_vertice l))
+        (string_of_option string_of_vector vect)
   | Bezier(sign, p, q, r, s, end_velocity) ->
       sprintf
         "Bezier(%f, %s, %s, %s, %s, %f)"
@@ -84,6 +95,12 @@ let rec to_string = function
            | `Lt -> "Lt"
            | `Le -> "Le")
         value
+  | Wait_for_odometry_reset `Red ->
+    "Wait_for_odometry_reset `Red"
+  | Wait_for_odometry_reset `Blue ->
+    "Wait_for_odometry_reset `Blue"
+  | Wait_for_odometry_reset `Auto ->
+    "Wait_for_odometry_reset `Auto"
   | Load face ->
       sprintf "Load %s" (string_of_face face)
   | Lift_down face ->

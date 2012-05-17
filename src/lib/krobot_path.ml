@@ -23,7 +23,11 @@ let find ~src ~dst ~objects ~beacon =
   let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) objects in
   (* Remove objects that are near the curent position. *)
   let objects = List.filter (fun obj -> distance src obj >= object_safety_distance +. 0.01) objects in
+  let fixed_objects = List.map (fun { pos; size } -> pos,
+    size +. Krobot_config.robot_width /. 2. +. 0.01)
+    Krobot_config.fixed_obstacles in
   let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
+  let l = l @ fixed_objects in
   let l =
     match beacon with
       | (Some v, None)

@@ -151,7 +151,7 @@ let handle_message planner (timestamp, message) =
 
     | Trajectory_go ->
         let path = planner.vertices in
-        ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Follow_path path]));
+        ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Follow_path (false,path,None)]));
         set_vertices planner []
 
     | Trajectory_find_path -> begin

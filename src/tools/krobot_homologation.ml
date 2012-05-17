@@ -17,19 +17,29 @@ let init_pos, init_angle = Krobot_config.red_initial_position
 
 let path =
   [
-    { x = 0.7; y = init_pos.y };
-    { x = 0.8; y = 1.5 };
-    { x = 0.7; y = 1.15 };
-    { x = 0.5; y = 1.15 };
+    { x = 0.7; y = init_pos.y -. 0.1};
+    { x = 0.85; y = 1.5 };
+    { x = 0.75; y = 1.20 };
+    { x = 0.55; y = 1.15 };
     { x = 0.4; y = 1.15 };
   ]
+
+let path =
+  [
+    { x = 1.8; y = init_pos.y -. 0.1};
+  ]
+
 
 lwt () =
   lwt bus = Krobot_bus.get () in
   Krobot_bus.send bus
     (Unix.gettimeofday (),
      Strategy_set [
-       Reset_odometry `Red;
+       Wait_for_jack true;
        Wait_for_jack false;
-       Follow_path path;
+       Reset_odometry `Auto;
+       Wait_for_odometry_reset `Auto;
+       Set_limits (0.2,1.0,1.0);
+       Goto (true, { x = 0.55; y = 1.15 }, Some { vx = 1. ; vy = 0. });
+       Follow_path (true, [{ x = 0.4; y = 1.15 }], None);
      ])

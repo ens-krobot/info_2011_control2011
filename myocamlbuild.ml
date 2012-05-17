@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 5747542e19b7f9cfea0dfefe92aa4aee) *)
+(* DO NOT EDIT (digest: c92c9c69bf7f8edb52ac75c708eee793) *)
 module OASISGettext = struct
 # 21 "/media/data/ocaml/oasis/src/oasis/OASISGettext.ml"
   
@@ -553,7 +553,7 @@ let package_default =
      includes =
        [
           ("src/tools", ["src/can"; "src/lib"]);
-          ("src/driver", ["src/can"]);
+          ("src/driver", ["src/can"; "src/lib"]);
           ("src/can", ["src/lib"]);
           ("examples", ["src/can"])
        ];

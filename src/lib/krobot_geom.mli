@@ -93,8 +93,38 @@ module Bezier : sig
         passing through the given list of vertices. [vector] is the
         initial direction vector. *)
 
-  val fold_vertices : (float -> vertice -> vertice -> vertice -> vertice -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
+  val fold_vertices : ?last:vector ->
+    (float -> vertice -> vertice -> vertice -> vertice -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
     (** [fold_vertices f vector vertices acc] same as {!fold_curves}
         but pass parameters instead of curves to [f]. The first
         parameter passed to [f] is the sign of [d1]. *)
+
+  val dt : curve -> float -> vertice
+  (** [dt curve t] is the value of the dérivée de curve en t *)
+  val ddt : curve -> float -> vertice
+  (** [ddt curve t] is the value of the dérivée seconde de curve en t *)
+
+  type robot_info =
+    { r_width : float; (* distance between wheels: m *)
+      r_max_wheel_speed : float; (* m / s *)
+      r_max_a : float; } (* m / s^2 *)
+
+  val wheel_speed_rapport : robot_info -> curve -> float -> float
+  (** [wheel_speed_rapport width curve t] is the rapport between the
+      speed of both wheels at the point t of the curve if the 2 wheels
+      have same size and are separated by width *)
+
+  val time : int -> curve -> robot_info -> float
+  (** time to travel the curve
+      [time n curve r]
+      n is the number of integration points *)
+  val length : int -> curve -> float
+  (** length of the curve
+      [length n curve]
+      n is the number of integration points  *)
+
+(*
+  val trajectory : int -> curve -> robot_info -> (float * vertice) list
+*)
+
 end

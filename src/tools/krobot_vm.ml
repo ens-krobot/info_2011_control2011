@@ -103,9 +103,9 @@ type robot = {
 let update_team_led robot =
   let m1,m2 =
     if robot.team = `Red then
-      Switch_request(6,true), Switch_request(7,false)
+      Switch_request(7,true), Switch_request(6,false)
     else
-      Switch_request(6,false), Switch_request(7,true)
+      Switch_request(7,false), Switch_request(6,true)
   in
   lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (),m1) in
   Krobot_message.send robot.bus (Unix.gettimeofday (), m2)
@@ -222,12 +222,21 @@ let reset robot =
 
 (* Remove the leftest node from a tree of actions. *)
 let rec remove_leftest_node = function
-  | Node(Node _ :: _ as l) :: rest ->
-      Node(remove_leftest_node l) :: rest
+  | Node(t, (Node _ :: _ as l)) :: rest ->
+      Node(t, remove_leftest_node l) :: rest
   | Node _ :: rest ->
       rest
   | l ->
       l
+
+let rec cancel_node = function
+  | (Node(Some t, l)) :: rest ->
+    (match cancel_node l with
+      | None -> Some (t::rest)
+      | Some rep -> Some (Node(Some t,rep)::rest))
+  | (Node (None, l)) :: rest ->
+      cancel_node l
+  | _ -> None
 
 (* The effect triggered by the execution of the first action of a tree
    of action. *)
@@ -244,20 +253,28 @@ let string_of_test = function
   | `Lt -> "Lt"
   | `Le -> "Le"
 
+let revert_vertice v = { v with x = Krobot_config.world_width -. v.x }
+let revert_vector_opt v =
+  match v with
+    | None -> None
+    | Some v -> Some { v with vx = -. v.vx }
+
 (* [exec robot actions] searches for the first action to execute in a
    tree of actions and returns a new tree of actions and an effect. *)
 let rec exec robot actions =
   match actions with
     | [] ->
         ([], Wait)
-    | Node [] :: rest ->
+    | Node (_,[]) :: rest ->
+        ignore (Lwt_log.info_f "Exit node");
         exec robot rest
-    | Node actions :: rest ->
-        let actions, effect = exec robot actions in
-        (Node actions :: rest, effect)
+    | Node (t,actions) :: rest ->
+      let actions, effect = exec robot actions in
+      (Node (t,actions) :: rest, effect)
     | Wait_for_jack state :: rest ->
         if robot.jack = state then
-          exec robot rest
+          (ignore (Lwt_log.info_f "Wait_for_jack finished");
+           exec robot rest)
         else
           (actions, Wait)
     | Wait_for_moving state :: rest ->
@@ -278,11 +295,25 @@ let rec exec robot actions =
            exec robot rest)
         else
           (actions, Wait)
+    | Wait_for_odometry_reset which :: rest ->
+      let init_pos, init_theta = match which, robot.team with
+        | `Red, _ | `Auto, `Red ->
+          Krobot_config.red_initial_position
+        | `Blue, _ | `Auto, `Blue ->
+          Krobot_config.blue_initial_position
+      in
+      if distance robot.position init_pos < 0.01 &&
+        ( abs_float (robot.orientation -. init_theta) < 0.01 ||
+          abs_float (abs_float (robot.orientation -. init_theta) -. (2. *. pi)) < 0.01 )
+      then exec robot rest
+      else (actions, Wait)
     | Wait_for t :: rest ->
+        ignore (Lwt_log.info_f "Wait_for %f" t);
         exec robot (Wait_until (Unix.gettimeofday () +. t) :: rest)
     | Wait_until t :: rest ->
         if Unix.gettimeofday () >= t then
-          exec robot rest
+          (ignore (Lwt_log.info_f "Wait finish");
+           exec robot rest)
         else
           (actions, Wait)
     | Set_curve None :: rest ->
@@ -291,20 +322,34 @@ let rec exec robot actions =
     | Set_curve(Some curve) :: rest ->
         robot.curve <- Some curve;
         exec robot rest
-    | Goto v :: rest -> begin
+    | Goto (revert,v,last_vector) :: rest -> begin
+        let v,last_vector = if revert && robot.team = `Blue
+          then revert_vertice v, revert_vector_opt last_vector
+          else v, last_vector
+        in
         (* Try to find a path to the destination. *)
         match Krobot_path.find ~src:robot.position ~dst:v ~objects:robot.objects ~beacon:robot.beacon with
           | Some vertices ->
-              exec robot (Follow_path vertices :: rest)
+              exec robot
+                (Node (Some (Goto (revert,v,last_vector)),
+                       [Follow_path (false,vertices,last_vector)]) :: rest)
           | None ->
+              (* cancel is probably a better idea ? *)
               (* If not found, skip the command. *)
               exec robot rest
       end
-    | Follow_path vertices :: rest -> begin
+    | Set_limits(vmax,atan_max,arad_max) :: rest ->
+        ignore (Lwt_log.info_f "Set_limit");
+        (rest, Send[Motor_bezier_limits(vmax,atan_max,arad_max)])
+    | Follow_path (revert,vertices,last_vector) :: rest -> begin
+        let vertices,vector = if revert && robot.team = `Blue
+          then List.map revert_vertice vertices, revert_vector_opt last_vector
+          else vertices, last_vector
+        in
         ignore (Lwt_log.info_f "Follow_path %i vertices" (List.length vertices));
         (* Compute bezier curves. *)
         let vector = { vx = cos robot.orientation; vy = sin robot.orientation } in
-        let curves = List.rev (Bezier.fold_vertices (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) vector (robot.position :: vertices) []) in
+        let curves = List.rev (Bezier.fold_vertices ?last:last_vector (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) vector (robot.position :: vertices) []) in
         (* Set the path. *)
         set_path robot (Some (List.map (fun (sign, p, q, r, s) -> Bezier.of_vertices p q r s) curves));
         (* Compute orders. *)
@@ -340,16 +385,16 @@ let rec exec robot actions =
           | [] ->
               exec robot rest
           | [(sign, p, q, r, s)] ->
-              exec robot (Node [
+              exec robot (Node (None,[
                             Set_curve(Some(Bezier.of_vertices p q r s));
                             Bezier(sign, p, q, r, s, 0.01);
                             Wait_for_odometry(`Le, 128);
                             Wait_for_odometry(`Ge, 128);
                             Wait_for_moving false;
                             Set_curve None;
-                          ] :: rest)
+                          ]) :: rest)
           | (sign, p, q, r, s) :: curves ->
-              exec robot (Node(Set_curve(Some(Bezier.of_vertices p q r s))
+              exec robot (Node(None,Set_curve(Some(Bezier.of_vertices p q r s))
                                :: Bezier(sign, p, q, r, s, 0.5)
                                :: Wait_for_odometry(`Le, 128)
                                :: loop curves) :: rest)
@@ -369,6 +414,7 @@ let rec exec robot actions =
           let theta_end = atan2 v.vy v.vx in
           (rest, Send[Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)])
     | Stop :: rest ->
+        ignore (Lwt_log.info_f "Stop");
         reset robot;
         (rest, Send[Motor_stop(1.0, 0.0)])
     | Reset_odometry which :: rest ->
@@ -384,7 +430,7 @@ let rec exec robot actions =
                 [Set_odometry( x, y, pi);
                  Set_odometry( x, y, pi )]))
     | Load face :: rest ->
-        exec robot (Node [
+        exec robot (Node (None,[
                       Lift_down face;
                       Open_grip_low face;
                       Wait_for_grip_open_low face;
@@ -394,7 +440,7 @@ let rec exec robot actions =
                       Lift_up face;
                       Wait_for_grip_close_low face;
                       Wait_for 0.5;
-                    ] :: rest)
+                    ]) :: rest)
     | Lift_down `Front :: rest ->
         (rest, Send[Elevator(0., -1.)])
     | Lift_up `Front :: rest ->
@@ -454,7 +500,10 @@ let run robot =
                 let v = Bezier.vertice curve (float i /. 255.) in
                 if (List.exists (fun obj -> distance v obj < object_safety_distance) robot.objects
                     || robot.date_seen_beacon +. 5. > timestamp) then begin
-                  robot.strategy <- Stop :: remove_leftest_node robot.strategy;
+                  let replacer = match cancel_node robot.strategy with
+                    | None -> []
+                    | Some r -> r in
+                  robot.strategy <- replacer;
                   reset robot;
                   raise Exit
                 end

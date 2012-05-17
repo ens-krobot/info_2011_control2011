@@ -70,7 +70,7 @@ Executable "krobot-driver"
   Install: true
   CompiledObject: best
   MainIs: krobot_driver.ml
-  BuildDepends: krobot.can, lwt.syntax
+  BuildDepends: krobot, krobot.can, lwt.syntax
 
 # +-------------------------------------------------------------------+
 # | Tools                                                             |

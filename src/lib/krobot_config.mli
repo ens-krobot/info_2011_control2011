@@ -16,7 +16,10 @@ val world_height : float
   (** THe height of the board. *)
 
 val robot_size : float
-  (** The size of the robot, which is a square. *)
+  (** The size of the robot, which is a square.
+      heuu plus maintenant... *)
+
+val robot_width : float
 
 val wheels_diameter : float
   (** The diameter of the wheels. *)

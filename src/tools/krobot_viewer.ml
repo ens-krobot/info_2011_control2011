@@ -652,7 +652,7 @@ lwt () =
           if GdkEvent.Button.button ev = 1 then begin
             match viewer.planner_path with
               | curve :: _ ->
-                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Goto(Bezier.dst curve)]))
+                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Goto(false,Bezier.dst curve,None)]))
               | _ ->
                   ()
           end;

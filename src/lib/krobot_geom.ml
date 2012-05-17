@@ -169,7 +169,67 @@ module Bezier = struct
     let t3 = t2 *. t in
     translate origin ((b.a *| t3) +| (b.b *| t2) +| (b.c *| t1) +| b.p)
 
-  let fold_vertices f initial vertices acc =
+  let dt b t =
+    let t1 = t in
+    let t2 = t1 *. t in
+    translate origin ((b.a *| (3. *. t2)) +| (b.b *| (2. *. t1)) +| b.c)
+
+  let ddt b t =
+    translate origin ((b.a *| (6. *. t)) +| (b.b *| 2.))
+
+  type robot_info =
+    { r_width : float; (* distance between wheels: m *)
+      r_max_wheel_speed : float; (* m / s *)
+      r_max_a : float; } (* m / s^2 *)
+
+  let wheel_speed_rapport r b t =
+    let s' = norm (vector origin (dt b t)) in
+    let { x = x'; y = y' } = dt b t in
+    let { x = x'';y = y''} = ddt b t in
+    let theta' = ( y'' *. x' -. x'' *. y' ) /. ( x' *. x' +. y' *. y' ) in
+    let rapport = ( r.r_width *. theta' *. 0.5 +. s' )
+      /. ( -. r.r_width *. theta' *. 0.5 +. s' ) in
+    rapport
+
+  let max_wheel_speed r b t =
+    let rapport = wheel_speed_rapport r b t in
+    let rapport' = abs_float rapport in
+    let rapport = ( min rapport' (1. /. rapport') )
+      *. (if rapport >= 0. then 1. else -.1.) in
+    ( 1. +. rapport ) *. 0.5 *. r.r_max_wheel_speed
+
+(*
+  let trajectory n r b =
+    let du = 1. /. (float n) in
+    let rec aux i =
+      if i > n
+      then []
+      else
+        let u = du *. (float i) in
+        let p = point ~u b in
+        (u,p)::(aux (i+1))
+    in
+    aux 0
+*)
+
+  let integrate n f ui uf =
+    let du = ( uf -. ui ) /. (float n) in
+    let acc = ref 0. in
+    for i = 0 to (n-1) do
+      acc := !acc +. (f ~du ~u:( ui +. ( (float i) *. du ) ) ) *. du ;
+    done;
+    !acc
+
+  let time n b r =
+    integrate n (fun ~du ~u ->
+      let len = abs_float (norm (vector origin (dt b u))) in
+      len /. (max_wheel_speed r b u) ) 0. 1.
+
+  let length n b =
+    integrate n (fun ~du ~u ->
+      abs_float (norm (vector origin (dt b u))) ) 0. 1.
+
+  let fold_vertices ?last f initial vertices acc =
     let add_vertices sign q r v1 v2 acc = f sign q (translate q v1) (translate r v2) r acc in
 
     (* Compute cubic bezier curves. *)
@@ -185,6 +245,9 @@ module Bezier = struct
           let _, v1 = tangents p q r and v2 = vector r q /| distance q r in
           let v1 = v1 *| (min (distance p q) (distance q r) /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
+          let v2 = match last with
+            | None -> v2
+            | Some v -> v *| (distance q r /. 2.) in
           add_vertices sign q r v1 v2 acc
       | _ ->
           acc
@@ -203,6 +266,9 @@ module Bezier = struct
           and v2 = vector r q /| distance q r  in
           let v1 = v1 *| (distance q r /. 2.)
           and v2 = v2 *| (distance q r /. 2.) in
+          let v2 = match last with
+            | None -> v2
+            | Some v -> v *| (distance q r /. 2.) in
           add_vertices sign q r v1 v2 acc
       | [_] | [] ->
           acc
@@ -210,3 +276,4 @@ module Bezier = struct
   let fold_curves f initial vertices acc =
     fold_vertices (fun sign p q r s acc -> f (of_vertices p q r s) acc) initial vertices acc
 end
+

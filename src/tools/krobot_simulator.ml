@@ -40,6 +40,11 @@ type command =
       (* [Turn(t_acc, velocity)] *)
   | Move of float * float
       (* [Move(t_acc, velocity)] *)
+  | Bezier of
+      ( float * float * float * float * float * float ) *
+      ( float * float * float )
+      (** [Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end)]
+          [Motor_bezier_limits(v_max, a_tan_max, a_rad_max)] *)
 
 (* Type of simulators. *)
 type simulator = {
@@ -55,6 +60,7 @@ type simulator = {
   (* The end time of the current command. *)
   mutable time : float;
   (* The current time. *)
+  mutable bezier_limits : float * float * float;
 }
 
 (* +-----------------------------------------------------------------+
@@ -83,6 +89,16 @@ let velocities sim =
           (vel, 0.)
         else
           (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
+    | Bezier(_,_) -> failwith "todo"
+
+let bezier sim (x_end, y_end, d1, d2, theta_end, v_end) =
+  assert false
+(*
+  sim.command <- Bezier((x_end, y_end, d1, d2, theta_end, v_end),
+                        sim.bezier_limits);
+  sim.command_start <- sim.time;
+  sim.command_end <- sim.time +. t_end
+*)
 
 let move sim distance velocity acceleration =
   if distance <> 0. && velocity > 0. && acceleration > 0. then begin
@@ -183,7 +199,10 @@ command:
        | Move(t, a) ->
            Printf.sprintf "Move(%f, %f)" t a
        | Turn(t, a) ->
-           Printf.sprintf "Turn(%f, %f)" t a)
+           Printf.sprintf "Turn(%f, %f)" t a
+       | Bezier((x_end, y_end, d1, d2, theta_end, v_end), (v_max, a_tan_max, a_rad_max)) ->
+           Printf.sprintf "Bezier((%f, %f, %f, %f, %f, %f),(%f, %f, %f))"
+             x_end y_end d1 d2 theta_end v_end v_max a_tan_max a_rad_max)
 
 lwt () =
   lwt bus = Krobot_bus.get () in
@@ -195,6 +214,7 @@ lwt () =
     command_start = 0.;
     command_end = 0.;
     time = Unix.gettimeofday ();
+    bezier_limits = 1., 1., 1.;
   } in
 
   (* Handle commands. *)
@@ -226,6 +246,14 @@ lwt () =
             | Set_odometry(x, y, theta) ->
                 sim.state <- { x; y; theta };
                 return ()
+            | Set_odometry_indep(x, y, theta) ->
+                sim.state <- { x; y; theta };
+                return ()
+            | Motor_bezier_limits(v_max, a_tan_max, a_rad_max) ->
+                sim.bezier_limits <- (v_max, a_tan_max, a_rad_max);
+                return ()
+            | Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end) ->
+                bezier sim (x_end, y_end, d1, d2, theta_end, v_end)
             | _ ->
                 return ())
        (Krobot_message.recv bus));
@@ -240,6 +268,7 @@ lwt () =
 
     (* Sends the state of the robot. *)
     lwt () = Krobot_message.send bus (sim.time, Odometry(sim.state.x, sim.state.y, sim.state.theta)) in
+    lwt () = Krobot_message.send bus (sim.time, Odometry_indep(sim.state.x, sim.state.y, sim.state.theta)) in
 
     (* Sends the state of the motors. *)
     lwt () =
