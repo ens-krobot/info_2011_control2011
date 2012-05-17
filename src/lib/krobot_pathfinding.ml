@@ -37,7 +37,9 @@ module Vect = struct
   let norm2 { vx; vy } = vx*.vx +. vy*.vy
   let norm v = sqrt (norm2 v)
   let unitaire v = ( 1. /. (norm v) ) *@ v
+  (** unitary vector colinear to v *)
   let turn_trigo { vx; vy } = { vx = -. vy; vy = vx }
+  (** [turn_trigo] rotation of pi/4 in trigonometric direction *)
   let turn_antitrigo { vx; vy } = { vx = vy; vy = -. vx }
   let line s = { p = s.p1; v = vect s.p1 s.p2 }
   let scal v1 v2 = v1.vx *. v2.vx +. v1.vy *. v2.vy
@@ -149,11 +151,10 @@ type result =
 
 let check_point b p =
   List.for_all (fun c -> norm (vect c.c p) >= c.r) b.obstacles
-
+(*
 let filter_far_objects b p =
-  { b with obstacles =
-      List.filter (fun c -> norm (vect c.c p) >= c.r) b.obstacles }
-
+  { b with obstacles = List.filter (fun c -> norm (vect c.c p) >= c.r) b.obstacles }
+*)
 let middle s p =
   ( scal
       (vect s.p1 s.p2)
@@ -169,6 +170,7 @@ let distance' s nv p =
     abs_float (scal (turn_trigo nv) (vect s.p1 p))
   else
     sqrt ((min (norm2 (vect s.p1 p)) (norm2 (vect s.p2 p))))
+(* distance from segment s to point p using colinear vector nv as information *)
 
 let check_segment b s =
   let l = line s in
@@ -181,6 +183,7 @@ let check_segment b s =
       else check q
   in
   check b.obstacles
+(** check if a segment intersect any cirlce *)
 
 let check_segment_1circle b c1 s =
   let rec check = function
@@ -194,6 +197,7 @@ let check_segment_1circle b c1 s =
 	else check q
   in
   check b.obstacles
+(** same, but does not check for circle c1 *)
 
 let check_segment_circle b (c1,c2) s =
   let rec check = function
@@ -207,6 +211,7 @@ let check_segment_circle b (c1,c2) s =
 	else check q
   in
   check b.obstacles
+(** same, but does not check for circles c1 and c2 *)
 
 let start_list b =
   let aux c {p1;p2} =
@@ -224,7 +229,7 @@ let start_list b =
   else
     (None,
      List.flatten
-       (List.map 
+       (List.map
 	  (fun c ->
 	    let (s1,s2) = tangentes_point_circle b.src c in
 	    List.map (aux c)
@@ -294,7 +299,8 @@ let reach_tangente' b t =
     match intersect tan_line (line s) with
       | None -> None
       | Some inter ->
-	if (check_segment_1circle b t.circle { p1 = t.contact; p2 = inter })
+	if (in_box b.box inter)
+          && (check_segment_1circle b t.circle { p1 = t.contact; p2 = inter })
 	  && (check_segment_1circle b t.circle { p1 = b.dst; p2 = inter })
 	then Some (make_result b inter t)
 	else None
@@ -357,13 +363,13 @@ let find_path ~src ~dst (box_min,box_max) objects =
 	    dst = v_of_vertice dst;
 	    obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects;
 	    box = (v_of_vertice box_min, v_of_vertice box_max)} in
-  let b = filter_far_objects b b.src in
+  (* let b = filter_far_objects b b.src in *)
   if not ( (in_box b.box b.dst) && (check_point b b.dst) && (check_point b b.src) )
   then
     (if not (in_box b.box b.dst)
      then ignore (Lwt_log.info ~section "destination too close from the border");
      if not (check_point b b.dst)
-     then ignore (Lwt_log.info ~section "destionation too close from an object");
+     then ignore (Lwt_log.info ~section "destination too close from an object");
      if not (check_point b b.src)
      then ignore (Lwt_log.info_f ~section "origin too close from an object");
      None)

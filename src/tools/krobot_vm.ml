@@ -324,11 +324,12 @@ let rec exec robot actions =
           | Some vertices ->
 
               exec robot
-                (Node
-                   (Some
-                      (Node (None, [Wait_for 5.;
-                                    Goto (revert,v,last_vector)])),
-                    [Follow_path (false,vertices,last_vector)]) :: rest)
+                (Node (
+                  Some
+                    (Node (None, [Stop; Wait_for 0.05;
+                                  Goto (revert,v,last_vector)])),
+                   (* None, *)
+                  [Follow_path (false,vertices,last_vector)]) :: rest)
 
 
 (*
