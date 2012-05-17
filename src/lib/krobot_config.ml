@@ -20,7 +20,7 @@ let rotary_beacon_index_pos = 0.
 let object_radius = 0.1
 let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
 let object_safety_distance = object_radius +. robot_size /. 2.
-let beacon_safety_distance = 0.7
+let beacon_safety_distance = 0.4
 
 let coin_radius = 0.12
 

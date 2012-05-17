@@ -327,12 +327,16 @@ let draw viewer =
   (* Draw the beacon *)
     let draw_beacon = function
       | Some v ->
+        Cairo.arc ctx v.x v.y Krobot_config.beacon_safety_distance 0. (2. *. pi);
+        Cairo.set_source_rgba ctx 255. 255. 255. 0.5;
+        Cairo.fill ctx;
         Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
         set_color ctx Purple;
         Cairo.fill ctx;
         Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
         set_color ctx Black;
-        Cairo.stroke ctx
+        Cairo.stroke ctx;
+
       | None ->
         ()
     in

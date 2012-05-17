@@ -78,6 +78,8 @@ type t =
   | Wait_for_grip_close_low of [ `Front | `Back ]
       (** Wait for the given low grip to be opened. *)
 
+  | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
+
 val to_string : t -> string
   (** [to_string action] returns the string representation of the
       given string. *)

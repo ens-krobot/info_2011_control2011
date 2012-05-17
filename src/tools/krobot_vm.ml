@@ -314,6 +314,7 @@ let rec exec robot actions =
         robot.curve <- Some curve;
         exec robot rest
     | Goto (revert,v,last_vector) :: rest -> begin
+      ignore (Lwt_log.info_f "Goto");
         let v,last_vector = if revert && robot.team = `Blue
           then revert_vertice v, revert_vector_opt last_vector
           else v, last_vector
@@ -322,16 +323,15 @@ let rec exec robot actions =
         match Krobot_path.find ~src:robot.position ~dst:v ~objects:robot.objects ~beacon:robot.beacon with
           | Some vertices ->
 
-(*
-  le bon truc
-
               exec robot
                 (Node
                    (Some
-                      (Node (None, [Wait_for 1.; Goto (revert,v,last_vector)])),
+                      (Node (None, [Wait_for 5.;
+                                    Goto (revert,v,last_vector)])),
                     [Follow_path (false,vertices,last_vector)]) :: rest)
-*)
 
+
+(*
             let rec aux = function
               | [] -> []
               | [v] ->
@@ -347,6 +347,7 @@ let rec exec robot actions =
                   (aux q) in
 
               exec robot ((Node (None,(aux vertices))) :: rest)
+*)
 
           | None ->
               (* cancel is probably a better idea ? *)
@@ -356,6 +357,13 @@ let rec exec robot actions =
     | Set_limits(vmax,atan_max,arad_max) :: rest ->
         ignore (Lwt_log.info_f "Set_limit");
         (rest, Send[Motor_bezier_limits(vmax,atan_max,arad_max)])
+    | Set_led(led,value) :: rest ->
+        ignore (Lwt_log.info_f "Set_led");
+        let led = match led with
+          | `Red -> 7
+          | `Green -> 6
+          | `Yellow -> 5 in
+        (rest, Send[Switch_request(led,value)])
     | Follow_path (revert,vertices,last_vector) :: rest -> begin
         let vertices,vector = if revert && robot.team = `Blue
           then List.map revert_vertice vertices, revert_vector_opt last_vector
@@ -484,7 +492,7 @@ let run robot =
             ()
     end;
 
-    (* Check if a program added for adding actions to the current strategy. *)
+    (* Check if a program asked for adding actions to the current strategy. *)
     begin
       match robot.append_strategy with
         | Some l ->
@@ -506,26 +514,32 @@ let run robot =
                  TODO do something interesting after the stop: retry what we were doing *)
               if distance robot.ghost_position robot.position > 0.1 then begin
                 ignore (Lwt_log.info_f "Robot too far from the ghost");
-                robot.strategy <- [Stop];
-                reset robot;
                 raise Exit
               end;
               (* Check that there is no colision between the current
                  position and the end of the current curve. *)
               for i = robot.curve_parameter to 255 do
                 let v = Bezier.vertice curve (float i /. 255.) in
-                if (List.exists (fun obj -> distance v obj < object_safety_distance) robot.objects
-                    || robot.date_seen_beacon +. 5. > timestamp) then begin
-                  let replacer = match cancel_node robot.strategy with
-                    | None -> []
-                    | Some r -> r in
-                  robot.strategy <- replacer;
-                  reset robot;
+                let b1,b2 = robot.beacon in
+                let c1 = match b1 with
+                  | None -> false
+                  | Some b1 -> distance b1 v < beacon_safety_distance in
+                let c2 = match b2 with
+                  | None -> false
+                  | Some b2 -> distance b2 v < beacon_safety_distance in
+                if (List.exists (fun obj -> distance v obj < object_safety_distance)
+                      robot.objects
+                    || c1 || c2) then begin
+                  ignore (Lwt_log.info_f "Obstacle in the trajectory");
                   raise Exit
                 end
               done
             with Exit ->
-              ()
+              let replacer = match cancel_node robot.strategy with
+                | None -> [Stop]
+                | Some r -> r in
+              robot.strategy <- replacer;
+              reset robot
     end;
 
     let actions, effect = exec robot robot.strategy in

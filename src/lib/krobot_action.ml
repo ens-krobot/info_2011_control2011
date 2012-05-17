@@ -35,6 +35,7 @@ type t =
   | Wait_until of float
   | Wait_for_grip_open_low of [ `Front | `Back ]
   | Wait_for_grip_close_low of [ `Front | `Back ]
+  | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
 let string_of_vector { vx; vy } = sprintf "{ vx = %f; vy = %f }" vx vy
@@ -58,6 +59,7 @@ let rec to_string = function
       sprintf "Goto %b %s %s" reverted (string_of_vertice v) (string_of_option string_of_vector vect)
   | Set_limits (vmax,atan_max, arad_max) ->
       sprintf "Set_limits(%f, %f, %f)" vmax atan_max arad_max
+  | Set_led (_,_) -> "Set_led"
   | Follow_path (reverted,l,vect) ->
       sprintf "Follow_path [%b, %s, %s]" reverted
         (String.concat "; " (List.map string_of_vertice l))

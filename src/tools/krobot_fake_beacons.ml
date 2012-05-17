@@ -35,7 +35,9 @@ let send_beacons beacons =
   let make_angle_distance = function
     | Some v ->
       let v = vector beacons.position v in
-      (atan2 v.vy v.vx -. rotary_beacon_index_pos -. beacons.orientation, norm v)
+      let angle = mod_float (atan2 v.vy v.vx -. rotary_beacon_index_pos -. beacons.orientation) (2. *. pi) in
+      let angle = if angle < 0. then angle +. 2. *. pi else angle in
+      (angle, norm v)
     | None ->
       (0., 0.)
   in
