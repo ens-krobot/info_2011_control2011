@@ -328,32 +328,11 @@ let rec exec robot actions =
                   Some
                     (Node (None, [Stop; Wait_for 0.05;
                                   Goto (revert,v,last_vector)])),
-                   (* None, *)
                   [Follow_path (false,vertices,last_vector)]) :: rest)
 
-
-(*
-            let rec aux = function
-              | [] -> []
-              | [v] ->
-                [Node
-                   (Some
-                      (Node (None, [Follow_path (false,[v],last_vector)])),
-                    [Follow_path (false,[v],last_vector)])]
-              | v::q ->
-                (Node
-                   (Some
-                      (Node (None, [Follow_path (false,[v],last_vector)])),
-                    [Follow_path (false,[v],last_vector)]))::
-                  (aux q) in
-
-              exec robot ((Node (None,(aux vertices))) :: rest)
-*)
-
           | None ->
-              (* cancel is probably a better idea ? *)
-              (* If not found, skip the command. *)
-              exec robot rest
+              ([Stop; Wait_for 0.05; Goto (revert,v,last_vector)] @ rest,
+               Wait)
       end
     | Set_limits(vmax,atan_max,arad_max) :: rest ->
         ignore (Lwt_log.info_f "Set_limit");
