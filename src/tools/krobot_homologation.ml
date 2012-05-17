@@ -36,6 +36,7 @@ lwt () =
     (Unix.gettimeofday (),
      Strategy_set [
        Wait_for_jack true;
+       Wait_for 1.;
        Wait_for_jack false;
        Reset_odometry `Auto;
        Wait_for_odometry_reset `Auto;
