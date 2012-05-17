@@ -29,12 +29,12 @@ open Krobot_geom
 let pi = 4. *. atan 1.
 
 let red_initial_position =
-  { x = 0.25;
+  { x = 0.10;
     y = world_height -. 0.25; },
   0.
 
 let blue_initial_position =
-  { x = world_width -. 0.25;
+  { x = world_width -. 0.10;
     y = world_height -. 0.25; },
   pi
 

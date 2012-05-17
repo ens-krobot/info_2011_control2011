@@ -111,6 +111,7 @@ let update_team_led robot =
   Krobot_message.send robot.bus (Unix.gettimeofday (), m2)
 
 let clear_team_led robot =
+  lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(5,false)) in
   lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(6,false)) in
   Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(7,false))
 
@@ -331,8 +332,10 @@ let rec exec robot actions =
         match Krobot_path.find ~src:robot.position ~dst:v ~objects:robot.objects ~beacon:robot.beacon with
           | Some vertices ->
               exec robot
-                (Node (Some (Goto (revert,v,last_vector)),
-                       [Follow_path (false,vertices,last_vector)]) :: rest)
+                (Node
+                   (Some
+                      (Node (None, [Wait_for 1.; Goto (revert,v,last_vector)])),
+                    [Follow_path (false,vertices,last_vector)]) :: rest)
           | None ->
               (* cancel is probably a better idea ? *)
               (* If not found, skip the command. *)
@@ -412,11 +415,12 @@ let rec exec robot actions =
         else
           let v = vector r s in
           let theta_end = atan2 v.vy v.vx in
-          (rest, Send[Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)])
+          (rest, Send[Switch_request(5,false);
+                      Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)])
     | Stop :: rest ->
         ignore (Lwt_log.info_f "Stop");
         reset robot;
-        (rest, Send[Motor_stop(1.0, 0.0)])
+        (rest, Send[Switch_request(5,true); Motor_stop(1.0, 0.0)])
     | Reset_odometry which :: rest ->
         (rest,
          Send
@@ -597,6 +601,10 @@ lwt () =
 
   (* Ask for parameters. *)
   lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Send) in
+
+  ignore (
+    lwt () = Lwt_unix.sleep 2. in
+    Krobot_message.send bus (Unix.gettimeofday (),Motor_command (2,1000)));
 
   (* Run forever. *)
   run robot
