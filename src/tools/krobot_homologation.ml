@@ -9,6 +9,9 @@
 
 (* The simple ai for homologation. *)
 
+open Lwt
+open Lwt_react
+open Krobot_message
 open Krobot_bus
 open Krobot_action
 open Krobot_geom
@@ -24,7 +27,7 @@ let path =
     { x = 0.4; y = 1.15 };
   ]
 
-lwt () =
+let launch () =
   lwt bus = Krobot_bus.get () in
   Krobot_bus.send bus
     (Unix.gettimeofday (),
@@ -41,3 +44,87 @@ lwt () =
        Follow_path (true, [{ x = 0.4; y = 1.15 }], None);
 *)
      ])
+
+type status = {
+  bus : Krobot_bus.t;
+  (* The bus used to communicate with the robot. *)
+  mutable team : [ `Red | `Blue ];
+  (* The state of the team selector. *)
+}
+
+let update_team_led status =
+  let m1,m2 =
+    if status.team = `Red then
+      Switch_request(7,true), Switch_request(6,false)
+    else
+      Switch_request(7,false), Switch_request(6,true)
+  in
+  lwt () = Krobot_message.send status.bus (Unix.gettimeofday (),m1) in
+  Krobot_message.send status.bus (Unix.gettimeofday (), m2)
+
+let handle_message status (timestamp, message) =
+  match message with
+    | CAN(_, frame) -> begin
+        match decode frame with
+          | Switch1_status(jack, team, emergency, _, _, _, _, _) ->
+            let team = if team then `Red else `Blue in
+            if team <> status.team
+            then
+              begin
+                status.team <- team;
+                ignore (update_team_led status);
+                ignore (launch ())
+              end
+          | _ ->
+              ()
+      end
+
+    | Kill "homologation" ->
+        exit 0
+
+    | _ ->
+        ()
+
+(* +-----------------------------------------------------------------+
+   | Command-line arguments                                          |
+   +-----------------------------------------------------------------+ *)
+
+let fork = ref true
+
+let options = Arg.align [
+  "-no-fork", Arg.Clear fork, " Run in foreground";
+]
+
+let usage = "\
+Usage: krobot-homologation [options]
+options are:"
+
+lwt () =
+  Arg.parse options ignore usage;
+
+  (* Display all informative messages. *)
+  Lwt_log.append_rule "*" Lwt_log.Info;
+
+  Lwt_log.default :=
+    Lwt_log.channel ~template:"$(name): $(section): $(message) $(date) $(milliseconds)"
+    ~close_mode:`Keep ~channel:Lwt_io.stderr ();
+
+  (* Open the krobot bus. *)
+  lwt bus = Krobot_bus.get () in
+
+  (* Fork if not prevented. *)
+  if !fork then Lwt_daemon.daemonize ();
+
+  (* Kill any running homologation. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "homologation") in
+
+  let status = {
+    bus;
+    team = `Red;
+  } in
+
+  (* Handle krobot message. *)
+  E.keep (E.map (handle_message status) (Krobot_bus.recv bus));
+
+  (* Wait forever. *)
+  fst (wait ())

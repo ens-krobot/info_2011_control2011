@@ -100,20 +100,11 @@ type robot = {
    | Message handling                                                |
    +-----------------------------------------------------------------+ *)
 
-let update_team_led robot =
-  let m1,m2 =
-    if robot.team = `Red then
-      Switch_request(7,true), Switch_request(6,false)
-    else
-      Switch_request(7,false), Switch_request(6,true)
-  in
-  lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (),m1) in
-  Krobot_message.send robot.bus (Unix.gettimeofday (), m2)
-
-let clear_team_led robot =
-  lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(5,false)) in
-  lwt () = Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(6,false)) in
-  Krobot_message.send robot.bus (Unix.gettimeofday (), Switch_request(7,false))
+let rec blink bus f =
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (),
+                                    Switch_request(5,f)) in
+  lwt () = Lwt_unix.sleep 0.5 in
+  blink bus (not f)
 
 let handle_message robot (timestamp, message) =
   match message with
@@ -146,8 +137,7 @@ let handle_message robot (timestamp, message) =
           | Switch1_status(jack, team, emergency, _, _, _, _, _) ->
               robot.jack <- not jack;
               robot.team <- if team then `Red else `Blue;
-              robot.emergency_stop <- emergency;
-              ignore (update_team_led robot)
+              robot.emergency_stop <- emergency
 
           | Ax12_State(id, position, speed, torque) -> begin
               let set ax12 =
@@ -331,11 +321,33 @@ let rec exec robot actions =
         (* Try to find a path to the destination. *)
         match Krobot_path.find ~src:robot.position ~dst:v ~objects:robot.objects ~beacon:robot.beacon with
           | Some vertices ->
+
+(*
+  le bon truc
+
               exec robot
                 (Node
                    (Some
                       (Node (None, [Wait_for 1.; Goto (revert,v,last_vector)])),
                     [Follow_path (false,vertices,last_vector)]) :: rest)
+*)
+
+            let rec aux = function
+              | [] -> []
+              | [v] ->
+                [Node
+                   (Some
+                      (Node (None, [Follow_path (false,[v],last_vector)])),
+                    [Follow_path (false,[v],last_vector)])]
+              | v::q ->
+                (Node
+                   (Some
+                      (Node (None, [Follow_path (false,[v],last_vector)])),
+                    [Follow_path (false,[v],last_vector)]))::
+                  (aux q) in
+
+              exec robot ((Node (None,(aux vertices))) :: rest)
+
           | None ->
               (* cancel is probably a better idea ? *)
               (* If not found, skip the command. *)
@@ -594,8 +606,6 @@ lwt () =
     ax12_back_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
   } in
 
-  lwt () = clear_team_led robot in
-
   (* Handle krobot message. *)
   E.keep (E.map (handle_message robot) (Krobot_bus.recv bus));
 
@@ -605,6 +615,8 @@ lwt () =
   ignore (
     lwt () = Lwt_unix.sleep 2. in
     Krobot_message.send bus (Unix.gettimeofday (),Motor_command (2,1000)));
+
+  ignore(blink bus false);
 
   (* Run forever. *)
   run robot
