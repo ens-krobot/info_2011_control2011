@@ -21,7 +21,7 @@ type direction = Forward | Backward
 type t =
   | Battery1_voltages of float * float * float * float
   | Battery2_voltages of float * float * float * float
-  | Beacon_position of float * float * float
+  | Beacon_position of float * float * float * float
   | Beacon_lowlevel_position of float * float * int
   | Switch1_status of bool * bool * bool * bool * bool * bool * bool * bool
   | Switch2_status of bool * bool * bool * bool * bool * bool * bool * bool
@@ -77,12 +77,13 @@ let to_string = function
         elem2
         elem3
         elem4
-  | Beacon_position(angle, distance, period) ->
+  | Beacon_position(angle1, angle2, distance1, distance2) ->
       sprintf
-        "Beacon_position(%f, %f, %f)"
-        angle
-        distance
-        period
+        "Beacon_position(%f, %f, %f, %f)"
+        angle1
+        angle2
+        distance1
+        distance2
   | Beacon_lowlevel_position(angle, width, period) ->
       sprintf
         "Beacon_lowlevel_position(%f, %f, %d)"
@@ -388,11 +389,12 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Beacon_position(angle, length, period) ->
-      let data = String.create 6 in
-      put_uint16 data 0 (truncate (angle *. 10000.));
-      put_uint16 data 2 (truncate (length *. 1000.));
-      put_uint16 data 4 (truncate (period *. 10000.));
+  | Beacon_position(angle1, angle2, distance1, distance2) ->
+      let data = String.create 8 in
+      put_uint16 data 0 (truncate (angle1 *. 10000.));
+      put_uint16 data 2 (truncate (angle2 *. 10000.));
+      put_uint16 data 4 (truncate (distance1 *. 1000.));
+      put_uint16 data 6 (truncate (distance2 *. 1000.));
       frame
         ~identifier:301
         ~kind:Data
@@ -716,8 +718,9 @@ let decode frame =
         | 301 ->
             Beacon_position
               (float (get_uint16 frame.data 0) /. 10000.,
-               float (get_uint16 frame.data 2) /. 1000.,
-               float (get_uint16 frame.data 4) /. 10000.)
+               float (get_uint16 frame.data 2) /. 10000.,
+               float (get_uint16 frame.data 4) /. 1000.,
+               float (get_uint16 frame.data 6) /. 1000.)
         | 302 ->
             Beacon_lowlevel_position
               (float (get_uint16 frame.data 0),

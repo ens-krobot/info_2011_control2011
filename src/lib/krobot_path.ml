@@ -26,9 +26,14 @@ let find ~src ~dst ~objects ~beacon =
   let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
   let l =
     match beacon with
-      | Some v ->
+      | (Some v, None)
+      | (None, Some v) ->
           (v, beacon_safety_distance +. 0.01) :: l
-      | None ->
+      | (Some v1, Some v2) ->
+          (v1, beacon_safety_distance +. 0.01)
+        :: (v2, beacon_safety_distance +. 0.01)
+        :: l
+      | (None, None) ->
           l
   in
   Krobot_pathfinding.find_path ~src ~dst

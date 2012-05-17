@@ -462,8 +462,8 @@ let handle_message viewer (timestamp, message) =
                 viewer.ui#entry_moving4#set_text (if m4 then "yes" else "no")
               end
 
-          | Beacon_position(angle, distance, period) ->
-              let beacon =
+          | Beacon_position(angle1, angle2, distance1, distance2) ->
+              let compute_beacon angle distance =
                 if distance <> 0. then begin
                   let angle = math_mod_float (viewer.state.theta +. rotary_beacon_index_pos +. angle) (2. *. pi) in
                   Some {
@@ -473,14 +473,20 @@ let handle_message viewer (timestamp, message) =
                 end else
                   None
               in
-              if beacon <> viewer.beacon then begin
-                viewer.beacon <- beacon;
-                viewer.ui#beacon_status#set_text (if beacon = None then "-" else "valid");
-                viewer.ui#beacon_distance#set_text (string_of_float distance);
-                viewer.ui#beacon_angle#set_text (string_of_float angle);
-                viewer.ui#beacon_period#set_text (string_of_float period);
+              let beacon1 = compute_beacon angle1 distance1 in
+              (*let beacon2 = compute_beacon angle2 distance2 in*)
+              if beacon1 <> viewer.beacon then begin
+                viewer.beacon <- beacon1;
+                viewer.ui#beacon_status#set_text (if beacon1 = None then "-" else "valid");
+                viewer.ui#beacon_distance#set_text (string_of_float distance1);
+                viewer.ui#beacon_angle#set_text (string_of_float angle1);
+                viewer.ui#beacon_period#set_text "-";
                 queue_draw viewer
               end
+
+          | Beacon_lowlevel_position(_, _, period) ->
+            viewer.ui#beacon_period#set_text (string_of_int period);
+            queue_draw viewer
 
           | Set_controller_mode hil ->
               if hil then

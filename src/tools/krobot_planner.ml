@@ -44,7 +44,7 @@ type planner = {
   mutable objects : vertice list;
   (* The list of objects on the board. *)
 
-  mutable beacon : vertice option;
+  mutable beacon : vertice option * vertice option;
   (* Position of the beacon. *)
 }
 
@@ -117,16 +117,19 @@ let handle_message planner (timestamp, message) =
               planner.position <- { x; y };
               planner.orientation <- math_mod_float theta (2. *. pi)
 
-          | Beacon_position(angle, distance, period) ->
-              if distance <> 0. then
-                let angle = math_mod_float (planner.orientation +. Krobot_config.rotary_beacon_index_pos +. angle) (2. *. pi) in
-                planner.beacon <- Some{
-                  x = planner.position.x +. distance *. cos angle;
-                  y = planner.position.y +. distance *. sin angle;
-                }
-              else
-                planner.beacon <- None
-
+          | Beacon_position(angle1, angle2, distance1, distance2) ->
+              let compute_beacon angle distance =
+                if distance <> 0. then begin
+                  let angle = math_mod_float (planner.orientation +. rotary_beacon_index_pos +. angle) (2. *. pi) in
+                  Some{
+                    x = planner.position.x +. distance *. cos angle;
+                    y = planner.position.y +. distance *. sin angle;
+                  }
+                end else
+                  None
+              in
+              planner.beacon <- (compute_beacon angle1 distance1,
+                                 compute_beacon angle2 distance2)
           | _ ->
               ()
       end
@@ -207,7 +210,7 @@ lwt () =
     position = { x = 0.; y = 0. };
     orientation = 0.;
     objects = [];
-    beacon = None;
+    beacon = None, None;
   } in
 
   (* Handle krobot message. *)

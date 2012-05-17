@@ -73,7 +73,7 @@ type robot = {
   mutable jack : bool;
   (* Status of the jack. *)
 
-  mutable beacon : vertice option;
+  mutable beacon : vertice option * vertice option;
   (* The detected position of the beacon, if any. *)
 
   mutable date_seen_beacon : float;
@@ -127,16 +127,20 @@ let handle_message robot (timestamp, message) =
               robot.curve_parameter <- u;
               robot.moving <- following
 
-          | Beacon_position(angle, distance, period) ->
-              if distance <> 0. then begin
-                robot.date_seen_beacon <- Unix.gettimeofday ();
-                let angle = math_mod_float (robot.orientation +. rotary_beacon_index_pos +. angle) (2. *. pi) in
-                robot.beacon <- Some{
-                  x = robot.position.x +. distance *. cos angle;
-                  y = robot.position.y +. distance *. sin angle;
-                }
-              end else
-                robot.beacon <- None
+          | Beacon_position(angle1, angle2, distance1, distance2) ->
+              let compute_beacon angle distance =
+                if distance <> 0. then begin
+                  robot.date_seen_beacon <- Unix.gettimeofday ();
+                  let angle = math_mod_float (robot.orientation +. rotary_beacon_index_pos +. angle) (2. *. pi) in
+                  Some{
+                    x = robot.position.x +. distance *. cos angle;
+                    y = robot.position.y +. distance *. sin angle;
+                  }
+                end else
+                  None
+              in
+              robot.beacon <- (compute_beacon angle1 distance1,
+                               compute_beacon angle2 distance2)
 
           | Switch1_status(jack, team, emergency, _, _, _, _, _) ->
               robot.jack <- not jack;
@@ -523,7 +527,7 @@ lwt () =
     curve = None;
     curve_parameter = 0;
     jack = false;
-    beacon = None;
+    beacon = None, None;
     date_seen_beacon = 0.;
     team = `Red;
     emergency_stop = false;
