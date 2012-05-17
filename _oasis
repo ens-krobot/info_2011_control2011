@@ -261,6 +261,13 @@ Executable "krobot-see-coin"
   MainIs: krobot_see_coin.ml
   BuildDepends: krobot, cv, lwt.syntax
 
+Executable "krobot-stop-beacon"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_stop_beacon.ml
+  BuildDepends: krobot, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+

@@ -35,6 +35,8 @@ let launch () =
        Wait_for_jack true;
        Wait_for 1.;
        Wait_for_jack false;
+       Set_led(`Red,false);
+       Set_led(`Green,false);
        Reset_odometry `Auto;
        Wait_for_odometry_reset `Auto;
        Set_limits (0.2,1.0,1.0);
