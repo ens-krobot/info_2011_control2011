@@ -36,6 +36,10 @@ type t =
   | Encoder_position_direction_3_4 of int * direction * int * direction
   | Encoder_position_speed_3 of float * float
   | Encoder_position_speed_4 of float * float
+  | Controller_activation of int * bool
+  | Drive_activation of bool
+  | Torque_limit of int * int
+  | Drive_torque_limit of int
   | Control_error of int * int
   | Motor_status of bool * bool * bool * bool
   | Motor_move of float * float * float
@@ -149,6 +153,22 @@ let to_string = function
       sprintf
         "Motor_status(%B, %B, %B, %B)"
         m1 m2 m3 m4
+  | Controller_activation(motor, activate) ->
+      sprintf
+        "Controller_activation(%d, %B)"
+        motor activate
+  | Drive_activation(activation) ->
+      sprintf
+        "Drive_activation(%B)"
+        activation
+  | Torque_limit(motor, value) ->
+      sprintf
+        "Torque_Limit(%d,%d)"
+        motor value
+  | Drive_torque_limit(value) ->
+      sprintf
+        "Drive_torque_limit(%d)"
+        value
   | Control_error(e1, e2) ->
       sprintf
         "Control_error(%d, %d)"
@@ -273,6 +293,44 @@ let encode = function
       put_uint8 data 0 x;
       frame
         ~identifier:103
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Controller_activation(motor, activation) ->
+      let data = String.create 2 in
+      put_uint8 data 0 motor;
+      put_uint8 data 1 (if activation then 1 else 0);
+      frame
+        ~identifier:210
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Drive_activation(activation) ->
+      let data = String.create 1 in
+      put_uint8 data 0 (if activation then 1 else 0);
+      frame
+        ~identifier:211
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Torque_limit(motor, value) ->
+      let data = String.create 3 in
+      put_uint8 data 0 motor;
+      put_uint16 data 1 value;
+      frame
+        ~identifier:212
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Drive_torque_limit(value) ->
+      let data = String.create 2 in
+      put_uint16 data 0 value;
+      frame
+        ~identifier:213
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -712,6 +770,20 @@ let decode frame =
               (float (get_sint16 frame.data 0) /. 1000.,
                float (get_sint16 frame.data 2) /. 1000.,
                float (get_sint16 frame.data 4) /. 10000.)
+        | 210 ->
+            Controller_activation
+              (get_uint8 frame.data 0,
+               get_uint8 frame.data 1 <> 0)
+        | 211 ->
+            Drive_activation
+              (get_uint8 frame.data 0 <> 0)
+        | 212 ->
+            Torque_limit
+              (get_uint8 frame.data 0,
+               get_uint16 frame.data 1)
+        | 213 ->
+            Drive_torque_limit
+              (get_uint16 frame.data 0)
         | 231 ->
             Elevator(get_float32 frame.data 0,
                      get_float32 frame.data 4)
