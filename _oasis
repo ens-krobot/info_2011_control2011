@@ -22,6 +22,10 @@ Flag gtk
   Description: Enable GTK programs
   Default: true
 
+Flag cv
+  Description: enable opencv
+  Default: true
+
 # +-------------------------------------------------------------------+
 # | Libraries                                                         |
 # +-------------------------------------------------------------------+
@@ -263,7 +267,8 @@ Executable "krobot-ax12-clean"
 
 Executable "krobot-see-coin"
   Path: src/tools
-  Install: true
+  Build$: flag(cv)
+  Install$: flag(cv)
   CompiledObject: best
   MainIs: krobot_see_coin.ml
   BuildDepends: krobot, cv, lwt.syntax
