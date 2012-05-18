@@ -26,29 +26,41 @@ let mutex = Mutex.create ()
    disk IO are blocking and we do not want to block the whole system
    because of it. Also it is faster than using unix jobs. *)
 let writer () =
+  let tmp = Queue.create () in
   while true do
     Mutex.lock mutex;
     if Queue.is_empty queue then Condition.wait cond mutex;
     (* Take everything from the queue. *)
-    let l = List.rev (Queue.fold (fun l x -> x :: l) [] queue) in
-    Queue.clear queue;
+    Queue.transfer queue tmp;
     Mutex.unlock mutex;
     (* Write values to the log file. *)
-    List.iter (output_value stdout) l
+    Queue.iter (output_value stdout) tmp;
+    Queue.clear tmp
   done
 
 lwt () =
   ignore (Thread.create writer ());
   lwt bus = Krobot_bus.get () in
 
-  (* Add all messages to the queue. *)
+  (* Messages to send to the writer thread. *)
+  let to_send = Queue.create () in
+
   E.keep
     (E.map
        (fun x ->
-         Mutex.lock mutex;
-         Queue.add x queue;
-         Condition.signal cond;
-         Mutex.unlock mutex)
+         (* Do not send the message immediatly but wait a bit before
+            so if other messages are available they are all sent in
+            one batch. *)
+         if Queue.is_empty to_send then
+           ignore (
+             Lwt.on_success (Lwt.pause ())
+               (fun () ->
+                 Mutex.lock mutex;
+                 Queue.transfer to_send queue;
+                 Condition.signal cond;
+                 Mutex.unlock mutex)
+           );
+         Queue.add x to_send)
        (Krobot_bus.recv bus));
 
   fst (wait ())
