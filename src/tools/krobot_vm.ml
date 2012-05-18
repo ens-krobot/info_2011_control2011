@@ -54,9 +54,6 @@ type robot = {
   mutable orientation : float;
   (* The orientation of the robot. *)
 
-  mutable objects : vertice list;
-  (* Position of objects on the table. *)
-
   mutable coins : vertice list;
   (* Position of coins on the table *)
 
@@ -171,9 +168,6 @@ let handle_message robot (timestamp, message) =
           Krobot_bus.send robot.bus (timestamp, Strategy_path robot.path)
         )
 
-    | Objects l ->
-        robot.objects <- l
-
     | Coins l ->
         robot.coins <-
           List.map
@@ -266,40 +260,64 @@ let revert_vector_opt v =
     | None -> None
     | Some v -> Some { v with vx = -. v.vx }
 
-let out_board v =
-  v.x < border_safety_distance ||
-  v.y < border_safety_distance ||
-  v.x > world_width -. border_safety_distance ||
-  v.y > world_height -. border_safety_distance
-
-let bezier_collide objects curve c1 c2 =
+let bezier_collide objects curve c1 c2 shift_vector curve_parameter =
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
-  let points = Bezier.curve_vertices curve 255 in
-  let collisions =
-    List.map
-      (fun (u,vert) ->
-        List.map (fun c -> u,
-          distance vert c.pos <= c.size || out_board vert
-        ) objects) points in
-  let collisions = List.flatten collisions in
-  let col_1, col_2 = ref [], ref [] in
-  List.iter (fun (u,b) ->
-    if b then
-      (if u <= 0.5
-       then col_1 := u :: !col_1
-       else col_2 := u :: !col_2)) collisions;
-  !col_1, !col_2
+  let collisions = ref [] in
+  for u = curve_parameter to 255 do
+    let u = float u /. 255. in
+    let vert = translate (Bezier.vertice curve u) shift_vector in
+    let tangent = Bezier.dt curve u in
+    let angle = atan2 tangent.vy tangent.vx in
+    collisions :=
+      List.fold_left
+      (fun acc c ->
+        if not (Krobot_collision.robot_in_world vert angle)
+          || Krobot_collision.collision_robot_circle vert angle c.pos c.size then
+          u :: acc
+        else
+          acc)
+      !collisions
+      objects
+  done;
+  !collisions
+
+let build_objects robot =
+  let fixed_objects = Krobot_config.fixed_obstacles in
+
+    (* do that in a better way when we have time... *)
+  let init_coins = List.map (fun pos ->
+    { pos;
+      size = Krobot_config.coin_radius })
+    Krobot_config.initial_coins in
+
+  let l = fixed_objects @ init_coins in
+
+  let l =
+    match robot.beacon with
+      | (Some v, None)
+      | (None, Some v) ->
+        { pos = v; size = beacon_radius } :: l
+      | (Some v1, Some v2) ->
+        { pos = v1; size = beacon_radius }
+        :: { pos = v2; size = beacon_radius }
+        :: l
+      | (None, None) ->
+        l
+  in
+  l
+
 
 (* TODO: check if the original line is admissible (no collision)
    if it is not the case, it will loop infinitely *)
-let correct_bezier objects curve =
+let correct_bezier objects curve shift_vector =
   let rec aux c1 c2 =
     if c1 <= 0.2 || c2 <= 0.2
     then 0.2,0.2 (* not the good solution: improve later: do straight lines *)
     else
       begin
-        let col_1, col_2 = bezier_collide objects curve c1 c2 in
+        let collisions = bezier_collide objects curve c1 c2 shift_vector 0 in
+        let col_1, col_2 = List.partition (fun u -> u <= 0.5) collisions in
         match col_1, col_2 with
           | [], [] -> c1, c2
           | _, [] -> aux (c1/.2.) c2
@@ -307,7 +325,7 @@ let correct_bezier objects curve =
           | _, _  -> aux (c1/.2.) (c2/.2.)
       end
   in
-  let c1,c2 = aux 1. 1. in
+  let c1, c2 = aux 1. 1. in
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
   curve
@@ -382,7 +400,7 @@ let rec exec robot actions =
           else v, last_vector
         in
         (* Try to find a path to the destination. *)
-        match Krobot_path.find ~src:robot.position ~dst:v ~objects:robot.objects ~beacon:robot.beacon with
+        match Krobot_path.find ~src:robot.position ~dst:v ~beacon:robot.beacon with
           | Some vertices ->
 
               exec robot
@@ -420,40 +438,14 @@ let rec exec robot actions =
 (*
         let curves = List.rev (Bezier.fold_vertices ?last:last_vector (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) vector (robot.position :: vertices) []) in
 *)
-        let objects =
-          let fixed_objects = List.map (fun { pos; size } ->
-            { pos;
-              size = size +. Krobot_config.robot_width /. 2. +. 0.01 })
-            Krobot_config.fixed_obstacles in
-
-          (* do that in a better way when we have time... *)
-          let init_coins = List.map (fun pos ->
-            { pos;
-              size = Krobot_config.coin_radius +. Krobot_config.robot_width /. 2. +. 0.01 })
-            Krobot_config.initial_coins in
-
-          let l = fixed_objects @ init_coins in
-
-          let l =
-            match robot.beacon with
-              | (Some v, None)
-              | (None, Some v) ->
-                { pos = v; size = beacon_safety_distance } :: l
-              | (Some v1, Some v2) ->
-                { pos = v1; size = beacon_safety_distance }
-                :: { pos = v2; size = beacon_safety_distance }
-                :: l
-              | (None, None) ->
-                l
-          in
-          l
-        in
+        let objects = build_objects robot in
 
         let curves = List.rev (Bezier.fold_curves ?last:last_vector
           (fun sign curve acc ->
+            let shift_vector = null in
             let c =
               if correct_curve
-              then (correct_bezier objects curve)
+              then (correct_bezier objects curve shift_vector)
               else curve in
             (sign,c) :: acc) vector
           (robot.position :: vertices) []) in
@@ -606,33 +598,25 @@ let run robot =
         | None ->
             ()
         | Some curve ->
-            try
+          let problem =
               (* Check that the robot is not too far from the ghost.
                  if it is then stop brutaly:
                  TODO do something interesting after the stop: retry what we were doing *)
-              if distance robot.ghost_position robot.position > 0.05 then begin
-                ignore (Lwt_log.info_f "Robot too far from the ghost");
-                raise Exit
-              end;
-              (* Check that there is no colision between the current
-                 position and the end of the current curve. *)
-              for i = robot.curve_parameter to 255 do
-                let v = Bezier.vertice curve (float i /. 255.) in
-                let b1,b2 = robot.beacon in
-                let c1 = match b1 with
-                  | None -> false
-                  | Some b1 -> distance b1 v < beacon_safety_distance in
-                let c2 = match b2 with
-                  | None -> false
-                  | Some b2 -> distance b2 v < beacon_safety_distance in
-                if (List.exists (fun obj -> distance v obj < object_safety_distance)
-                      robot.objects
-                    || c1 || c2) then begin
-                  ignore (Lwt_log.info_f "Obstacle in the trajectory");
-                  raise Exit
-                end
-              done
-            with Exit -> replace robot
+            if distance robot.ghost_position robot.position > 0.05 then begin
+              ignore (Lwt_log.info_f "Robot too far from the ghost");
+              true
+            end else
+              let shift_vector = vector robot.ghost_position robot.position in
+                (* Check that there is no colision between the current
+                   position and the end of the current curve. *)
+              if bezier_collide (build_objects robot) curve 1. 1. shift_vector robot.curve_parameter <> [] then begin
+                ignore (Lwt_log.info_f "Obstacle in the trajectory");
+                true
+              end else
+                false
+          in
+          if problem then
+            replace robot
     end;
 
     let actions, effect = exec robot robot.strategy in
@@ -692,7 +676,6 @@ lwt () =
     position = { x = 0.; y = 0. };
     ghost_position = { x = 0.; y = 0. };
     orientation = 0.;
-    objects = [];
     coins = [];
     moving = false;
     path = None;

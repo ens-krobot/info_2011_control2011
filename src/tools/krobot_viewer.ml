@@ -302,20 +302,42 @@ let draw viewer =
     (fun (state, (r,g,b,alpha)) ->
        Cairo.save ctx;
 
+      if state == viewer.state then begin
+      let sqr x = x *. x in
+      let pos = state.pos and angle = state.theta in
+      let norm_front = sqrt (sqr (robot_width /. 2.) +. sqr (robot_length -. wheels_position)) in
+      let norm_back = sqrt (sqr (robot_width /. 2.) +. sqr wheels_position) in
+      let a_front = atan2 (robot_width /. 2.) (robot_length -. wheels_position) in
+      let a_back = atan2 (robot_width /. 2.) wheels_position in
+      let v1 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle -. a_front)) in
+      let v2 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle +. a_front)) in
+      let v3 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle -. (pi -. a_back))) in
+      let v4 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle +. (pi -. a_back))) in
+      let point v =
+        set_color ctx Yellow;
+        Cairo.arc ctx v.x v.y safety_margin 0. (2. *. pi);
+        Cairo.fill ctx
+      in
+      point v1;
+      point v2;
+      point v3;
+      point v4
+      end;
+
        (* Draw the robot *)
        Cairo.translate ctx state.pos.x state.pos.y;
        Cairo.rotate ctx state.theta;
-       Cairo.rectangle ctx (-. wheels_position) (-. robot_size /. 2.) robot_size robot_size;
+       Cairo.rectangle ctx (-. wheels_position) (-. robot_width /. 2.) robot_length robot_width;
        Cairo.set_source_rgba ctx r g b alpha;
        Cairo.fill ctx;
 
        (* Draw an arrow on the robot *)
-       let d = robot_size /. 2. -. wheels_position in
+       let d = robot_length /. 2. -. wheels_position in
        Cairo.move_to ctx 0. 0.;
-       Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
-       Cairo.line_to ctx d (-. robot_size /. 4.);
-       Cairo.line_to ctx d (robot_size /. 4.);
-       Cairo.line_to ctx (d +. robot_size /. 4.) 0.;
+       Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
+       Cairo.line_to ctx d (-. robot_length /. 4.);
+       Cairo.line_to ctx d (robot_length /. 4.);
+       Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
        Cairo.set_source_rgba ctx 0. 0. 0. 0.5;
        Cairo.stroke ctx;
 
@@ -327,7 +349,7 @@ let draw viewer =
   (* Draw the beacon *)
     let draw_beacon = function
       | Some v ->
-        Cairo.arc ctx v.x v.y Krobot_config.beacon_safety_distance 0. (2. *. pi);
+        Cairo.arc ctx v.x v.y Krobot_config.beacon_radius 0. (2. *. pi);
         Cairo.set_source_rgba ctx 255. 255. 255. 0.5;
         Cairo.fill ctx;
         Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
@@ -602,11 +624,7 @@ lwt () =
     ];
 
   (* Create the viewer. *)
-  let init = {
-    pos = { x = 0.2;
-            y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position };
-    theta = -0.5 *. pi
-  } in
+  let init = { pos = origin; theta = 0.0 } in
   let viewer ={
     bus;
     ui;

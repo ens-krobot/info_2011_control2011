@@ -18,7 +18,7 @@ let rec prev_last = function
   | _ :: l ->
       prev_last l
 
-let find ~src ~dst ~objects ~beacon =
+let find ~src ~dst ~beacon =
 
   let fixed_objects = List.map (fun { pos; size } -> pos,
     size +. Krobot_config.robot_width /. 2. +. 0.01)
@@ -29,18 +29,17 @@ let find ~src ~dst ~objects ~beacon =
     Krobot_config.coin_radius +. Krobot_config.robot_width /. 2. +. 0.01)
     Krobot_config.initial_coins in
 
-  let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
-  let l = l @ fixed_objects @ init_coins in
+  let l = fixed_objects @ init_coins in
   let l =
     match beacon with
       | (Some v, None)
       | (None, Some v) ->
           ignore (Lwt_log.info_f "One beacon %f %f" v.x v.y);
-          (v, beacon_safety_distance +. 0.01) :: l
+          (v, beacon_radius +. safety_margin) :: l
       | (Some v1, Some v2) ->
           ignore (Lwt_log.info_f "Two beacons (%f,%f) (%f,%f)" v1.x v1.y v2.x v2.y);
-          (v1, beacon_safety_distance +. 0.01)
-        :: (v2, beacon_safety_distance +. 0.01)
+          (v1, beacon_radius +. safety_margin)
+        :: (v2, beacon_radius +. safety_margin)
         :: l
       | (None, None) ->
           ignore (Lwt_log.info_f "no beacon");
@@ -48,17 +47,18 @@ let find ~src ~dst ~objects ~beacon =
   in
   let l = List.map (fun (v,s) -> (v, min s (distance v src -. 0.1))) l in
   Krobot_pathfinding.find_path ~src ~dst
-    ({ x = border_safety_distance;
-       y = border_safety_distance},
-     { x = world_width -. border_safety_distance;
-       y = world_height -. border_safety_distance})
+    ({ x = safety_margin;
+       y = safety_margin},
+     { x = world_width -. safety_margin;
+       y = world_height -. safety_margin})
     l
-
-let goto_object ~src ~dst ~objects ~beacon =
-  match find ~src ~dst ~objects ~beacon with
+(*
+let goto_object ~src ~dst ~beacon =
+  match find ~src ~dst ~beacon with
     | Some p ->
         let v = vector dst (prev_last (src :: p)) in
         let v = v /| norm v in
         Some(translate dst (v *| object_safety_distance))
     | None ->
         None
+*)

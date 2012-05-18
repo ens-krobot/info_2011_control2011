@@ -83,6 +83,11 @@ let vector a b = {
   vy = b.y -. a.y;
 }
 
+let vector_of_polar ~norm ~angle = {
+  vx = norm *. cos angle;
+  vy = norm *. sin angle;
+}
+
 let distance a b =
   sqrt (sqr (a.x -. b.x) +. sqr (a.y -. b.y))
 
@@ -100,6 +105,8 @@ let mult m v =
   Array.init (Array.length m)
     (fun k -> Array.fold_left (+.) 0.
       (Array.mapi (fun i n -> v.(i) *. n) m.(k)))
+
+let normalize v = mul v (1. /. norm v)
 
 type obj = { pos : vertice; size : float }
 
@@ -210,10 +217,10 @@ module Bezier = struct
   let dt b t =
     let t1 = t in
     let t2 = t1 *. t in
-    translate origin ((b.a *| (3. *. t2)) +| (b.b *| (2. *. t1)) +| b.c)
+    (b.a *| (3. *. t2)) +| (b.b *| (2. *. t1)) +| b.c
 
   let ddt b t =
-    translate origin ((b.a *| (6. *. t)) +| (b.b *| 2.))
+    (b.a *| (6. *. t)) +| (b.b *| 2.)
 
   type robot_info =
     { r_width : float; (* distance between wheels: m *)
@@ -221,9 +228,9 @@ module Bezier = struct
       r_max_a : float; } (* m / s^2 *)
 
   let wheel_speed_rapport r b t =
-    let s' = norm (vector origin (dt b t)) in
-    let { x = x'; y = y' } = dt b t in
-    let { x = x'';y = y''} = ddt b t in
+    let s' = norm (dt b t) in
+    let { vx = x'; vy = y' } = dt b t in
+    let { vx = x'';vy = y''} = ddt b t in
     let theta' = ( y'' *. x' -. x'' *. y' ) /. ( x' *. x' +. y' *. y' ) in
     let rapport = ( r.r_width *. theta' *. 0.5 +. s' )
       /. ( -. r.r_width *. theta' *. 0.5 +. s' ) in
@@ -260,12 +267,12 @@ module Bezier = struct
 
   let time n b r =
     integrate n (fun ~du ~u ->
-      let len = abs_float (norm (vector origin (dt b u))) in
+      let len = abs_float (norm (dt b u)) in
       len /. (max_wheel_speed r b u) ) 0. 1.
 
   let length n b =
     integrate n (fun ~du ~u ->
-      abs_float (norm (vector origin (dt b u))) ) 0. 1.
+      abs_float (norm (dt b u)) ) 0. 1.
 
   let fold_vertices ?last f initial vertices acc =
     let add_vertices sign q r v1 v2 acc = f sign q (translate q v1) (translate r v2) r acc in

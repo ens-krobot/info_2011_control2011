@@ -41,8 +41,12 @@ val ( /| ) : vector -> float -> vector
 val translate : vertice -> vector -> vertice
 val vector : vertice -> vertice -> vector
 
+val vector_of_polar : norm : float -> angle : float -> vector
+(** [vector_of_polar norm angle] *)
+
 val norm : vector -> float
 val distance : vertice -> vertice -> float
+val normalize : vector -> vector
 
 val tangents : vertice -> vertice -> vertice -> vector * vector
   (** [tangents a b c] returns the two unitary vectors tangent to the
@@ -107,9 +111,9 @@ module Bezier : sig
   val mul_d1 : curve -> float -> curve
   val mul_d2 : curve -> float -> curve
 
-  val dt : curve -> float -> vertice
+  val dt : curve -> float -> vector
   (** [dt curve t] is the value of the dérivée de curve en t *)
-  val ddt : curve -> float -> vertice
+  val ddt : curve -> float -> vector
   (** [ddt curve t] is the value of the dérivée seconde de curve en t *)
 
   type robot_info =

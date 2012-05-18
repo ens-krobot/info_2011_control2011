@@ -41,9 +41,6 @@ type planner = {
   mutable orientation : float;
   (* The orientation of the robot. *)
 
-  mutable objects : vertice list;
-  (* The list of objects on the board. *)
-
   mutable beacon : vertice option * vertice option;
   (* Position of the beacon. *)
 }
@@ -53,7 +50,7 @@ type planner = {
    +-----------------------------------------------------------------+ *)
 
 let find_path planner src dst =
-  Krobot_path.find ~src ~dst ~objects:planner.objects ~beacon:planner.beacon
+  Krobot_path.find ~src ~dst ~beacon:planner.beacon
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
@@ -162,9 +159,6 @@ let handle_message planner (timestamp, message) =
               ()
       end
 
-    | Objects l ->
-        planner.objects <- l
-
     | _ ->
         ()
 
@@ -209,7 +203,6 @@ lwt () =
     following_path = false;
     position = { x = 0.; y = 0. };
     orientation = 0.;
-    objects = [];
     beacon = None, None;
   } in
 

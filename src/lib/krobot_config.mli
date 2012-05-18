@@ -15,14 +15,15 @@ val world_width : float
 val world_height : float
   (** THe height of the board. *)
 
-val robot_size : float
-  (** The size of the robot, which is a square.
-      heuu plus maintenant... *)
-
+val robot_length : float
 val robot_width : float
 
+val safety_margin : float
+(** The distance between the robot and the border/an object must
+    always be greater than this vlaue. *)
+
 val wheels_diameter : float
-  (** The diameter of the wheels. *)
+(** The diameter of the wheels. *)
 
 val wheels_distance : float
   (** The distance between the two wheels. *)
@@ -35,17 +36,8 @@ val rotary_beacon_index_pos : float
   (** The angle of the rotary beacon index angle with respect to the
       robot's front *)
 
-val object_radius : float
-  (** Radius of objects. *)
-
-val border_safety_distance : float
-  (** Minimum distance between borders and the robot. *)
-
-val object_safety_distance : float
-  (** Minimum distance from the center of objects to the center robot. *)
-
-val beacon_safety_distance : float
-  (** Minimum distance between the center of the robot and the beacon. *)
+val beacon_radius : float
+  (** Radius of the ennemy. *)
 
 val coin_radius : float
   (** Radius of coins. *)

@@ -11,18 +11,16 @@ let sqr x = x *. x
 
 let world_height = 2.
 let world_width = 3.
-let robot_size = 0.30
-let robot_width = 0.32
+let robot_length = 0.39
+let robot_width = 0.33
 let wheels_diameter = 0.098
 let wheels_distance = 0.224
-let wheels_position = robot_size *. 0.2
+let wheels_position = 0.04
 let rotary_beacon_index_pos = 0.
-let object_radius = 0.1
-let border_safety_distance =
-  sqrt (sqr robot_size /. 2.) +. 0.05
-  (* find a correct one *)
-let object_safety_distance = object_radius +. robot_size /. 2.
-let beacon_safety_distance = 0.4
+
+let safety_margin = 0.05
+
+let beacon_radius = 0.4
 
 let coin_radius = 0.06
 
@@ -73,23 +71,23 @@ let left_obstacles =
     { pos =
         { x = 0.;
           y = 1.5 };
-      size = 0.05; };
+      size = 0.02; };
     { pos =
         { x = 0.1;
           y = 1.5 };
-      size = 0.05; };
+      size = 0.02; };
     { pos =
         { x = 0.2;
           y = 1.5 };
-      size = 0.05; };
+      size = 0.02; };
     { pos =
         { x = 0.3;
           y = 1.5 };
-      size = 0.05; };
+      size = 0.02; };
     { pos =
         { x = 0.4;
           y = 1.5 };
-      size = 0.05; };
+      size = 0.02; };
 
     (* coins at the bottom *)
 

@@ -114,9 +114,8 @@ lwt () =
   (* Create a new fake-beacons. *)
   let beacons = {
     bus;
-    position = { x = 0.2;
-                 y = 1.9 +. Krobot_config.robot_size /. 2. -. Krobot_config.wheels_position };
-    orientation = -0.5 *. pi;
+    position = origin;
+    orientation = 0.;
     beacons = (None, None);
   } in
 
