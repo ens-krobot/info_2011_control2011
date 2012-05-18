@@ -26,6 +26,10 @@ Flag cv
   Description: enable opencv
   Default: true
 
+Flag sdl
+  Description: enable sdl
+  Default: true
+
 # +-------------------------------------------------------------------+
 # | Libraries                                                         |
 # +-------------------------------------------------------------------+
@@ -280,6 +284,13 @@ Executable "krobot-stop-beacon"
   CompiledObject: best
   MainIs: krobot_stop_beacon.ml
   BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-joystick"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_joystick.ml
+  BuildDepends: krobot, lwt.syntax, sdl
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
