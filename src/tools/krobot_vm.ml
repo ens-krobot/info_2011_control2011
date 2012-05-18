@@ -87,6 +87,8 @@ type robot = {
 
   mutable replace : bool;
 
+  mutable init_time : float option;
+
   ax12_front_low_left : ax12;
   ax12_front_low_right : ax12;
   ax12_front_high_left : ax12;
@@ -233,6 +235,7 @@ let rec cancel_node = function
   | _ -> None
 
 let replace robot =
+  ignore (Lwt_log.info "replace");
   let replacer = match cancel_node robot.strategy with
     | None -> [Stop]
     | Some r -> r in
@@ -701,6 +704,7 @@ lwt () =
     ax12_back_high_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     ax12_back_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     replace = false;
+    init_time = None;
   } in
 
   (* Handle krobot message. *)

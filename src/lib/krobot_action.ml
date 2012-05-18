@@ -36,6 +36,7 @@ type t =
   | Wait_for_grip_open_low of [ `Front | `Back ]
   | Wait_for_grip_close_low of [ `Front | `Back ]
   | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
+  | Start_timer
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
 let string_of_vector { vx; vy } = sprintf "{ vx = %f; vy = %f }" vx vy
@@ -126,3 +127,4 @@ let rec to_string = function
       sprintf "Wait_for_grip_open_low %S" (string_of_face face)
   | Wait_for_grip_close_low face ->
       sprintf "Wait_for_grip_close_low %S" (string_of_face face)
+  | Start_timer -> "Start_timer"

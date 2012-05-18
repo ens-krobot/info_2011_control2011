@@ -35,20 +35,21 @@ let launch () =
        Wait_for_jack true;
        Wait_for 1.;
        Wait_for_jack false;
+       Start_timer;
        Set_led(`Red,false);
        Set_led(`Green,false);
        Reset_odometry `Auto;
        Wait_for_odometry_reset `Auto;
-       Set_limits (1.,1.0,1.0);
+       Set_limits (0.3,1.0,1.0);
 (*       Follow_path (true, path, None, false); *)
 
-       Goto (true, { x = 0.55; y = 1.15 }, Some { vx = 0.8 ; vy = 0.2 });
-       Goto (true, { x = 0.4; y = 1.15 }, None);
+       Goto (true, { x = 0.55; y = 1.20 }, Some { vx = 0.8 ; vy = 0.2 });
+       Goto (true, { x = 0.4; y = 1.20 }, None);
        Goto (true, { x = 1.5; y = 1.7 }, None);
-       Goto (true, { x = 2.5; y = 1. }, None);
+       Goto (true, { x = 2.4; y = 1. }, None);
        Goto (true, { x = 1.5; y = 0.647 }, None);
        Goto (true, { x = 0.620; y = 1. }, Some { vx = 0.8 ; vy = -.0.2 });
-       Goto (true, { x = 0.4; y = 1. }, None);
+       Goto (true, { x = 0.2; y = 1. }, None);
 
      ])
 

@@ -83,6 +83,8 @@ type t =
 
   | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
 
+  | Start_timer
+
 val to_string : t -> string
   (** [to_string action] returns the string representation of the
       given string. *)

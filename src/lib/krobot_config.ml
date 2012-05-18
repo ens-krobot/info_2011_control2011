@@ -11,7 +11,7 @@ let sqr x = x *. x
 
 let world_height = 2.
 let world_width = 3.
-let robot_size = 0.26
+let robot_size = 0.30
 let robot_width = 0.32
 let wheels_diameter = 0.098
 let wheels_distance = 0.224
@@ -67,7 +67,7 @@ let left_obstacles =
     { pos =
         { x = 0.64 +. 0.477;
           y = 1. };
-      size = sqrt (2. *. 0.125 *. 0.125); };
+      size = sqrt (2. *. 0.125 *. 0.125) +. 0.12; };
 
     (* entry position *)
     { pos =
@@ -113,6 +113,6 @@ let initial_coins =
   List.map (fun (x, y) -> {x;y})
   [ 2., 1.5;
     1., 1.5;
-    0.45, 0.3;
-    2.55, 0.3; ]
+    (* 0.45, 0.3; *)
+    (* 2.55, 0.3; *) ]
 
