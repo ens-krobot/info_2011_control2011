@@ -251,6 +251,45 @@ let revert_vector_opt v =
     | None -> None
     | Some v -> Some { v with vx = -. v.vx }
 
+let out_board v =
+  v.x < border_safety_distance ||
+  v.y < border_safety_distance ||
+  v.x > world_width -. border_safety_distance ||
+  v.y > world_height -. border_safety_distance
+
+let bezier_collide objects curve c1 c2 =
+  let curve = Bezier.mul_d1 curve c1 in
+  let curve = Bezier.mul_d2 curve c2 in
+  let points = Bezier.curve_vertices curve 255 in
+  let collisions =
+    List.map
+      (fun (u,vert) ->
+        List.map (fun c -> u,
+          distance vert c.pos <= c.size || out_board c.pos
+        ) objects) points in
+  let collisions = List.flatten collisions in
+  let col_1, col_2 = ref [], ref [] in
+  List.iter (fun (u,b) ->
+    if b then
+      if u <= 0.5
+      then col_1 := u :: !col_1
+      else col_2 := u :: !col_2) collisions;
+  !col_1, !col_2
+
+let correct_bezier objects curve =
+  let rec aux c1 c2 =
+    let col_1, col_2 = bezier_collide objects curve c1 c2 in
+    match col_1, col_2 with
+      | [], [] -> c1, c2
+      | _, [] -> aux (c1/.2.) c2
+      | [], _ -> aux c1 (c2/.2.)
+      | _, _  -> aux (c1/.2.) (c2/.2.)
+  in
+  let c1,c2 = aux 1. 1. in
+  let curve = Bezier.mul_d1 curve c1 in
+  let curve = Bezier.mul_d2 curve c2 in
+  curve
+
 (* [exec robot actions] searches for the first action to execute in a
    tree of actions and returns a new tree of actions and an effect. *)
 let rec exec robot actions =
@@ -353,9 +392,58 @@ let rec exec robot actions =
         ignore (Lwt_log.info_f "Follow_path %i vertices" (List.length vertices));
         (* Compute bezier curves. *)
         let vector = { vx = cos robot.orientation; vy = sin robot.orientation } in
+(*
         let curves = List.rev (Bezier.fold_vertices ?last:last_vector (fun sign p q r s acc -> (sign, p, q, r, s) :: acc) vector (robot.position :: vertices) []) in
+*)
+        let objects =
+          let fixed_objects = List.map (fun { pos; size } ->
+            { pos;
+              size = size +. Krobot_config.robot_width /. 2. +. 0.01 })
+            Krobot_config.fixed_obstacles in
+
+          (* do that in a better way when we have time... *)
+          let init_coins = List.map (fun pos ->
+            { pos;
+              size = Krobot_config.coin_radius +. Krobot_config.robot_width /. 2. +. 0.01 })
+            Krobot_config.initial_coins in
+
+          let l = fixed_objects @ init_coins in
+
+          let l =
+            match robot.beacon with
+              | (Some v, None)
+              | (None, Some v) ->
+                { pos = v; size = beacon_safety_distance } :: l
+              | (Some v1, Some v2) ->
+                { pos = v1; size = beacon_safety_distance }
+                :: { pos = v2; size = beacon_safety_distance }
+                :: l
+              | (None, None) ->
+                l
+          in
+          l
+        in
+
+        let curves = List.rev (Bezier.fold_curves ?last:last_vector
+          (fun curve acc -> (correct_bezier objects curve) :: acc) vector
+          (robot.position :: vertices) []) in
+
+        set_path robot (Some curves);
+
+        let curves = match curves with
+          | [] -> []
+          | t::c_rest ->
+            let sign,p,q,r,s = Bezier.pqrs_sign t vector in
+            let rest = List.map (fun c ->
+              let p,q,r,s = Bezier.pqrs c in
+              sign,p,q,r,s) c_rest in
+            (sign,p,q,r,s)::rest in
+
+(*
         (* Set the path. *)
         set_path robot (Some (List.map (fun (sign, p, q, r, s) -> Bezier.of_vertices p q r s) curves));
+*)
+
         (* Compute orders. *)
         let rec loop = function
           | [] ->

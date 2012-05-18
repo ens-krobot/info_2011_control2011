@@ -88,9 +88,13 @@ module Bezier : sig
     (** [vertice curve u] returns the vertice on the given curve for
         the given paramter [u] which must be in the range [0..1]. *)
 
+  val pqrs : curve -> (vertice*vertice*vertice*vertice)
+
+  val pqrs_sign : curve -> vector -> (float*vertice*vertice*vertice*vertice)
+
   val curve_vertices : curve -> int -> (float*vertice) list
 
-  val fold_curves : (curve -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
+  val fold_curves : ?last:vector -> (curve -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
     (** [fold_curves f vector vertices acc] folds [f] over the curve
         passing through the given list of vertices. [vector] is the
         initial direction vector. *)
@@ -100,6 +104,9 @@ module Bezier : sig
     (** [fold_vertices f vector vertices acc] same as {!fold_curves}
         but pass parameters instead of curves to [f]. The first
         parameter passed to [f] is the sign of [d1]. *)
+
+  val mul_d1 : curve -> float -> curve
+  val mul_d2 : curve -> float -> curve
 
   val dt : curve -> float -> vertice
   (** [dt curve t] is the value of the dérivée de curve en t *)
