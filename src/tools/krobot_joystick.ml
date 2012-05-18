@@ -134,6 +134,9 @@ let child_loop pipe joy =
    | Handling events (in the parent process)                         |
    +-----------------------------------------------------------------+ *)
 
+let motor_l = 4
+let motor_r = 8
+
 let axis_coef = 6.0
 let axis_coef_turn = 4.0
 let duration = 0.2
@@ -152,8 +155,8 @@ let send_speeds bus =
   let vr = map_vel !velocity_r in
   lwt () = Lwt_log.notice_f "speeds = %d, %d" vl vr in
   let ts = Unix.gettimeofday () in
-  lwt () = Krobot_message.send bus (ts, Motor_command (1, vl))
-  and () = Krobot_message.send bus (ts, Motor_command (8, vr)) in
+  lwt () = Krobot_message.send bus (ts, Motor_command (motor_l, vl))
+  and () = Krobot_message.send bus (ts, Motor_command (motor_r, vr)) in
   return ()
 
 let rec loop_speeds bus =
@@ -163,6 +166,8 @@ let rec loop_speeds bus =
 
 let parent_loop bus pipe =
   lwt () = Krobot_message.send bus (Unix.gettimeofday (), Drive_activation false) in
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Motor_activation (motor_l, true)) in
+  lwt () = Krobot_message.send bus (Unix.gettimeofday (), Motor_activation (motor_r, true)) in
   let raxis_h = ref 0.0
   and raxis_v = ref 0.0
   and laxis_h = ref 0.0

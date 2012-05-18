@@ -46,6 +46,7 @@ type t =
   | Motor_turn of float * float * float
   | Motor_bezier of float * float * float * float * float * float
   | Motor_command of int * int
+  | Motor_activation of int * bool
   | Motor_stop of float * float
   | Motor_bezier_limits of float * float * float
   | Odometry of float * float * float
@@ -197,6 +198,10 @@ let to_string = function
       sprintf
         "Motor_command(%d, %d)"
         motor_id speed
+  | Motor_activation (motor_id, active) ->
+      sprintf
+        "Motor_command (%d, %B)"
+        motor_id active
   | Odometry(x, y, theta) ->
       sprintf
         "Odometry(%f, %f, %f)"
@@ -421,6 +426,16 @@ let encode = function
       put_sint32 data 1 speed;
       frame
         ~identifier:208
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Motor_activation (motor_id, active) ->
+      let data = String.create 2 in
+      put_uint8 data 0 motor_id;
+      put_uint8 data 1 (if active then 1 else 0);
+      frame
+        ~identifier:214
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -765,6 +780,10 @@ let decode frame =
             Motor_command
               (get_uint8 frame.data 0,
                get_sint32 frame.data 1)
+        | 214 ->
+            Motor_activation
+              (get_uint8 frame.data 0,
+               get_sint8 frame.data 1 <> 0)
         | 209 ->
             Set_odometry_indep
               (float (get_sint16 frame.data 0) /. 1000.,

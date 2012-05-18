@@ -85,6 +85,8 @@ type t =
       (** [Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end)] *)
   | Motor_command of int * int
       (** [Motor_command(motor_id, PWM_value)] *)
+  | Motor_activation of int * bool
+      (** [Motor_activation (id, enabled)] *)
   | Motor_stop of float * float
       (** [Motor_stop(lin_acc, rot_acc)] command to stop following the
           current Bezier Spline and the queued ones.
