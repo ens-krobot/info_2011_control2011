@@ -77,6 +77,11 @@ type message =
   | Set_fake_beacons of vertice option * vertice option
       (** Sets the positions of the fake  beacons. *)
 
+  (** Collisions *)
+
+  | Collisions of Krobot_geom.Bezier.curve * (float * (Krobot_geom.vertice * float) option) list
+      (** A curve and a list of collision. *)
+
   (** Vision *)
   | Coins of vertice list
 

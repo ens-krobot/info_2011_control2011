@@ -38,6 +38,7 @@ type message =
   | Strategy_set of Krobot_action.t list
   | Strategy_path of Bezier.curve list option
   | Set_fake_beacons of vertice option * vertice option
+  | Collisions of Bezier.curve * (float * (vertice * float) option) list
   | Coins of vertice list
 
 type t = {
@@ -129,6 +130,20 @@ let string_of_message = function
       sprintf
         "Coins [%s]"
         (String.concat "; " (List.map string_of_vertice coins))
+  | Collisions (curve, l) ->
+      sprintf
+        "Collisions (<curve>, [%s])"
+        (String.concat "; "
+           (List.map
+              (fun (u, opt) ->
+                sprintf "(%f, %s)"
+                  u
+                  (match opt with
+                    | None ->
+                      "None"
+                    | Some (v, r) ->
+                      sprintf "Some (%s, %f)" (string_of_vertice v) r))
+              l))
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |

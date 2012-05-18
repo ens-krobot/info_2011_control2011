@@ -269,18 +269,15 @@ let bezier_collide objects curve c1 c2 shift_vector curve_parameter =
     let vert = translate (Bezier.vertice curve u) shift_vector in
     let tangent = Bezier.dt curve u in
     let angle = atan2 tangent.vy tangent.vx in
-    collisions :=
-      List.fold_left
-      (fun acc c ->
-        if not (Krobot_collision.robot_in_world vert angle)
-          || Krobot_collision.collision_robot_circle vert angle c.pos c.size then
-          u :: acc
-        else
-          acc)
-      !collisions
+    if not (Krobot_collision.robot_in_world vert angle) then
+      collisions := (u, None) :: !collisions;
+    List.iter
+      (fun c ->
+        if Krobot_collision.collision_robot_circle vert angle c.pos c.size then
+          collisions := (u, Some (c.pos, c.size)) :: !collisions)
       objects
   done;
-  !collisions
+  (curve, !collisions)
 
 let build_objects robot =
   let fixed_objects = Krobot_config.fixed_obstacles in
@@ -316,7 +313,8 @@ let correct_bezier objects curve shift_vector =
     then 0.2,0.2 (* not the good solution: improve later: do straight lines *)
     else
       begin
-        let collisions = bezier_collide objects curve c1 c2 shift_vector 0 in
+        let _, collisions = bezier_collide objects curve c1 c2 shift_vector 0 in
+        let collisions = List.map fst collisions in
         let col_1, col_2 = List.partition (fun u -> u <= 0.5) collisions in
         match col_1, col_2 with
           | [], [] -> c1, c2
@@ -609,11 +607,14 @@ let run robot =
               let shift_vector = vector robot.ghost_position robot.position in
                 (* Check that there is no colision between the current
                    position and the end of the current curve. *)
-              if bezier_collide (build_objects robot) curve 1. 1. shift_vector robot.curve_parameter <> [] then begin
-                ignore (Lwt_log.info_f "Obstacle in the trajectory");
-                true
-              end else
-                false
+              let curve, collisions = bezier_collide (build_objects robot) curve 1. 1. shift_vector robot.curve_parameter in
+              match collisions with
+                | [] ->
+                  false
+                | _ ->
+                  ignore (Lwt_log.info_f "Obstacle in the trajectory");
+                  ignore (Krobot_bus.send robot.bus (Unix.gettimeofday (), Collisions (curve, collisions)));
+                  true
           in
           if problem then
             replace robot

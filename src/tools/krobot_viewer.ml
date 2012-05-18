@@ -56,11 +56,11 @@ type viewer = {
   mutable motor_status : bool * bool * bool *bool;
   (* Status of the four motor controller. *)
 
-  mutable objects : vertice list;
-  (* The objects on the table. *)
-
   mutable coins : vertice list;
   (* The coins on the table *)
+
+  mutable collisions : (Bezier.curve * (float * (vertice * float) option) list) option;
+  (* A curve and a list of: [(curve_parameter, (center, radius))] *)
 }
 
 (* +-----------------------------------------------------------------+
@@ -164,11 +164,11 @@ let draw viewer =
   Cairo.fill ctx;
 
   (* draw black lines *)
-(*
-  Cairo.move_to ctx  0.5;
-  Cairo.line_to ctx (world_height -. 0.45) (0.5 +. 0.15);
-  Cairo.line_to ctx 0. (0.5 +. 0.15);
-*)
+  (*
+    Cairo.move_to ctx  0.5;
+    Cairo.line_to ctx (world_height -. 0.45) (0.5 +. 0.15);
+    Cairo.line_to ctx 0. (0.5 +. 0.15);
+  *)
   Cairo.move_to ctx 0.5 (world_height -. 0.45);
   Cairo.line_to ctx (0.5 +. 0.15) (world_height -. 0.45);
   Cairo.line_to ctx (0.5 +. 0.15) 0.;
@@ -262,36 +262,23 @@ let draw viewer =
   set_color ctx Purple;
   Cairo.fill ctx;
 
-  (* Draw objects *)
-  List.iter
-    (fun { x; y } ->
-       set_color ctx Yellow;
-       Cairo.arc ctx x y 0.1 0. (2. *. pi);
-       Cairo.fill ctx;
-
-       set_color ctx Black;
-       Cairo.arc ctx x y 0.1 0. (2. *. pi);
-       Cairo.stroke ctx)
-    viewer.objects;
-
   (* Draw coins *)
   List.iter
     (fun { x; y } ->
-       set_color ctx White;
-       Cairo.arc ctx x y Krobot_config.coin_radius 0. (2. *. pi);
-       Cairo.fill ctx;
+      set_color ctx White;
+      Cairo.arc ctx x y Krobot_config.coin_radius 0. (2. *. pi);
+      Cairo.fill ctx;
 
-       set_color ctx Black;
-       Cairo.arc ctx x y Krobot_config.coin_radius 0. (2. *. pi);
-       Cairo.stroke ctx)
+      set_color ctx Black;
+      Cairo.arc ctx x y Krobot_config.coin_radius 0. (2. *. pi);
+      Cairo.stroke ctx)
     viewer.coins;
 
   (* Draw obstacles *)
-  Cairo.set_source_rgba ctx 255. 255. 255. 0.5;
+  Cairo.set_source_rgba ctx 1. 1. 1. 0.5;
   let () =
-    let open Krobot_geom in
     List.iter
-      (fun { pos = { x; y }; size } ->
+      (fun { Krobot_geom.pos = { x; y }; Krobot_geom.size } ->
         Cairo.arc ctx x y size 0. (2. *. pi);
         Cairo.fill ctx)
       Krobot_config.fixed_obstacles
@@ -300,71 +287,71 @@ let draw viewer =
   (* Draw the robot and the ghost *)
   List.iter
     (fun (state, (r,g,b,alpha)) ->
-       Cairo.save ctx;
+      Cairo.save ctx;
 
       if state == viewer.state then begin
-      let sqr x = x *. x in
-      let pos = state.pos and angle = state.theta in
-      let norm_front = sqrt (sqr (robot_width /. 2.) +. sqr (robot_length -. wheels_position)) in
-      let norm_back = sqrt (sqr (robot_width /. 2.) +. sqr wheels_position) in
-      let a_front = atan2 (robot_width /. 2.) (robot_length -. wheels_position) in
-      let a_back = atan2 (robot_width /. 2.) wheels_position in
-      let v1 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle -. a_front)) in
-      let v2 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle +. a_front)) in
-      let v3 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle -. (pi -. a_back))) in
-      let v4 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle +. (pi -. a_back))) in
-      let point v =
-        set_color ctx Yellow;
-        Cairo.arc ctx v.x v.y safety_margin 0. (2. *. pi);
-        Cairo.fill ctx
-      in
-      point v1;
-      point v2;
-      point v3;
-      point v4
+        let sqr x = x *. x in
+        let pos = state.pos and angle = state.theta in
+        let norm_front = sqrt (sqr (robot_width /. 2.) +. sqr (robot_length -. wheels_position)) in
+        let norm_back = sqrt (sqr (robot_width /. 2.) +. sqr wheels_position) in
+        let a_front = atan2 (robot_width /. 2.) (robot_length -. wheels_position) in
+        let a_back = atan2 (robot_width /. 2.) wheels_position in
+        let v1 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle -. a_front)) in
+        let v2 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle +. a_front)) in
+        let v3 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle -. (pi -. a_back))) in
+        let v4 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle +. (pi -. a_back))) in
+        let point v =
+          set_color ctx Yellow;
+          Cairo.arc ctx v.x v.y safety_margin 0. (2. *. pi);
+          Cairo.fill ctx
+        in
+        point v1;
+        point v2;
+        point v3;
+        point v4
       end;
 
-       (* Draw the robot *)
-       Cairo.translate ctx state.pos.x state.pos.y;
-       Cairo.rotate ctx state.theta;
-       Cairo.rectangle ctx (-. wheels_position) (-. robot_width /. 2.) robot_length robot_width;
-       Cairo.set_source_rgba ctx r g b alpha;
-       Cairo.fill ctx;
+      (* Draw the robot *)
+      Cairo.translate ctx state.pos.x state.pos.y;
+      Cairo.rotate ctx state.theta;
+      Cairo.rectangle ctx (-. wheels_position) (-. robot_width /. 2.) robot_length robot_width;
+      Cairo.set_source_rgba ctx r g b alpha;
+      Cairo.fill ctx;
 
-       (* Draw an arrow on the robot *)
-       let d = robot_length /. 2. -. wheels_position in
-       Cairo.move_to ctx 0. 0.;
-       Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
-       Cairo.line_to ctx d (-. robot_length /. 4.);
-       Cairo.line_to ctx d (robot_length /. 4.);
-       Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
-       Cairo.set_source_rgba ctx 0. 0. 0. 0.5;
-       Cairo.stroke ctx;
+      (* Draw an arrow on the robot *)
+      let d = robot_length /. 2. -. wheels_position in
+      Cairo.move_to ctx 0. 0.;
+      Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
+      Cairo.line_to ctx d (-. robot_length /. 4.);
+      Cairo.line_to ctx d (robot_length /. 4.);
+      Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
+      Cairo.set_source_rgba ctx 0. 0. 0. 0.5;
+      Cairo.stroke ctx;
 
-       Cairo.restore ctx)
+      Cairo.restore ctx)
     [(viewer.ghost, (1., 1., 1., 0.5));
      (viewer.state_indep, (0.8, 0.8, 1., 0.8));
      (viewer.state, (1., 1., 1., 1.5));];
 
   (* Draw the beacon *)
-    let draw_beacon = function
-      | Some v ->
-        Cairo.arc ctx v.x v.y Krobot_config.beacon_radius 0. (2. *. pi);
-        Cairo.set_source_rgba ctx 255. 255. 255. 0.5;
-        Cairo.fill ctx;
-        Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
-        set_color ctx Purple;
-        Cairo.fill ctx;
-        Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
-        set_color ctx Black;
-        Cairo.stroke ctx;
+  let draw_beacon = function
+    | Some v ->
+      Cairo.arc ctx v.x v.y Krobot_config.beacon_radius 0. (2. *. pi);
+      Cairo.set_source_rgba ctx 1. 1. 1. 0.5;
+      Cairo.fill ctx;
+      Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
+      set_color ctx Purple;
+      Cairo.fill ctx;
+      Cairo.arc ctx v.x v.y 0.04 0. (2. *. pi);
+      set_color ctx Black;
+      Cairo.stroke ctx;
 
-      | None ->
-        ()
-    in
-    let b1, b2 = viewer.beacons in
-    draw_beacon b1;
-    draw_beacon b2;
+    | None ->
+      ()
+  in
+  let b1, b2 = viewer.beacons in
+  draw_beacon b1;
+  draw_beacon b2;
 
   (* Draw the path of the VM if any or the path of the planner if the
      VM is not following a trajectory. *)
@@ -375,29 +362,61 @@ let draw viewer =
   in
 
   (* Draw points. *)
-  Cairo.set_source_rgb ctx 255. 255. 0.;
+  Cairo.set_source_rgb ctx 1. 1. 0.;
   (match path with
-     | [] ->
-         ()
-     | curve :: curves ->
-         let src = Bezier.src curve and dst = Bezier.dst curve in
-         Cairo.move_to ctx src.x src.y;
-         Cairo.line_to ctx dst.x dst.y;
-         List.iter (fun curve -> let v = Bezier.dst curve in Cairo.line_to ctx v.x v.y) curves;
-         Cairo.stroke ctx);
+    | [] ->
+      ()
+    | curve :: curves ->
+      let src = Bezier.src curve and dst = Bezier.dst curve in
+      Cairo.move_to ctx src.x src.y;
+      Cairo.line_to ctx dst.x dst.y;
+      List.iter (fun curve -> let v = Bezier.dst curve in Cairo.line_to ctx v.x v.y) curves;
+      Cairo.stroke ctx);
+
+  let draw_bezier curve =
+    let { x; y } = Bezier.vertice curve 0. in
+    Cairo.move_to ctx x y;
+    for i = 1 to 100 do
+      let { x; y } = Bezier.vertice curve (float i /. 100.) in
+      Cairo.line_to ctx x y
+    done;
+    Cairo.stroke ctx
+  in
 
   (* Draw bezier curves. *)
-  Cairo.set_source_rgb ctx 255. 0. 255.;
-  List.iter
-    (fun curve ->
-       let { x; y } = Bezier.vertice curve 0. in
-       Cairo.move_to ctx x y;
-       for i = 1 to 100 do
-         let { x; y } = Bezier.vertice curve (float i /. 100.) in
-         Cairo.line_to ctx x y
-       done;
-       Cairo.stroke ctx)
-    path;
+  Cairo.set_source_rgb ctx 1. 0. 1.;
+  List.iter draw_bezier path;
+
+  (* Draw collisions. *)
+  (match viewer.collisions with
+    | None ->
+      ()
+    | Some (curve, l) ->
+      Cairo.set_source_rgba ctx 1. 0. 0. 0.5;
+      draw_bezier curve;
+      List.iter
+        (fun (u, opt) ->
+          let p = Bezier.vertice curve u in
+          match opt with
+            | None ->
+              Cairo.set_source_rgba ctx 1. 0. 0. 0.5;
+              Cairo.arc ctx p.x p.y 0.05 0. (2. *. pi);
+              Cairo.fill ctx
+            | Some _ ->
+              Cairo.set_source_rgba ctx 1. 0. 1. 0.5;
+              Cairo.arc ctx p.x p.y 0.05 0. (2. *. pi);
+              Cairo.fill ctx)
+        l;
+      List.iter
+        (fun (u, opt) ->
+          match opt with
+            | None ->
+              ()
+            | Some (v, r) ->
+              Cairo.set_source_rgba ctx 1. 0. 1. 127.;
+              Cairo.arc ctx v.x v.y r 0. (2. *. pi);
+              Cairo.fill ctx)
+        l);
 
   let ctx = Cairo_lablgtk.create viewer.ui#scene#misc#window in
   Cairo.set_source_surface ctx surface 0. 0.;
@@ -573,10 +592,6 @@ let handle_message viewer (timestamp, message) =
         viewer.ui#logs#buffer#insert (line ^ "\n");
         viewer.ui#scrolled_logs#vadjustment#set_value viewer.ui#scrolled_logs#vadjustment#upper
 
-    | Objects l ->
-        viewer.objects <- l;
-        queue_draw viewer
-
     | Coins l ->
         viewer.coins <-
           List.map
@@ -585,6 +600,10 @@ let handle_message viewer (timestamp, message) =
               let v = mult (rot_mat viewer.state.theta) v in
               Krobot_geom.translate viewer.state.pos { vx = v.(0); vy = v.(1) }) l;
         queue_draw viewer
+
+    | Collisions (curve, l) ->
+      viewer.collisions <- Some (curve, l);
+      queue_draw viewer
 
     | _ ->
         ()
@@ -636,8 +655,8 @@ lwt () =
     vm_path = None;
     statusbar_context = ui#statusbar#new_context "";
     motor_status = (false, false, false, false);
-    objects = [];
     coins = Krobot_config.initial_coins;
+    collisions = None;
   } in
 
   (* Handle messages. *)
@@ -653,17 +672,21 @@ lwt () =
   ignore
     (ui#scene#event#connect#button_press
        (fun ev ->
-          if ui#beacon_mode#active then
-            set_beacons viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev)
-          else
-            add_point viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev);
-          true));
+         match GdkEvent.Button.button ev with
+           | 1 ->
+             add_point viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev);
+             true
+           | 3 ->
+             set_beacons viewer (GdkEvent.Button.x ev) (GdkEvent.Button.y ev);
+             true
+           | _ ->
+             false));
+
   ignore
     (ui#scene#event#connect#motion_notify
        (fun ev ->
-          if not ui#beacon_mode#active then
-            add_point viewer (GdkEvent.Motion.x ev) (GdkEvent.Motion.y ev);
-          true));
+         add_point viewer (GdkEvent.Motion.x ev) (GdkEvent.Motion.y ev);
+         true));
 
   ignore
     (ui#button_clear_beacon#connect#clicked
@@ -671,6 +694,12 @@ lwt () =
          ignore (Krobot_bus.send viewer.bus
                    (Unix.gettimeofday (),
                     Set_fake_beacons (None, None)))));
+
+  ignore
+    (ui#button_clear_collisions#connect#clicked
+       (fun ev ->
+         viewer.collisions <- None;
+         queue_draw viewer));
 
   ignore
     (ui#button_clear#event#connect#button_release

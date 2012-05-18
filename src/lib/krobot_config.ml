@@ -18,7 +18,7 @@ let wheels_distance = 0.224
 let wheels_position = 0.04
 let rotary_beacon_index_pos = 0.
 
-let safety_margin = 0.05
+let safety_margin = 0.01
 
 let beacon_radius = 0.4
 

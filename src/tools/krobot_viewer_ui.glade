@@ -340,12 +340,11 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkCheckButton" id="beacon_mode">
-                        <property name="label" translatable="yes">Put beacons</property>
+                      <widget class="GtkButton" id="button_clear_collisions">
+                        <property name="label" translatable="yes">Clear collisions</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
-                        <property name="receives_default">False</property>
-                        <property name="draw_indicator">True</property>
+                        <property name="receives_default">True</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
