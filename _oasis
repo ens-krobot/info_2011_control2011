@@ -40,6 +40,7 @@ Library krobot
   Modules:
     Krobot_can,
     Krobot_bus,
+    Krobot_daemon,
     Krobot_message,
     Krobot_geom,
     Krobot_solve,

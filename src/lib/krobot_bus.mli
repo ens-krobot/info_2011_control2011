@@ -18,6 +18,9 @@ val get : unit -> t Lwt.t
   (** [get ()] returns the krobot bus. It exits the program on
       error. *)
 
+val logger : t -> Lwt_log.logger
+  (** [logger bus] creates a logger which sends log over [bus]. *)
+
 type frame_source = Elec | Info
     (** The source of CAN frames. *)
 

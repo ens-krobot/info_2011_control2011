@@ -209,7 +209,7 @@ lwt () =
   lwt bus = Krobot_bus.get () in
 
   (* Fork if not prevented. *)
-  if !fork then Lwt_daemon.daemonize ();
+  if !fork then Krobot_daemon.daemonize bus;
 
   let looker = () in
 

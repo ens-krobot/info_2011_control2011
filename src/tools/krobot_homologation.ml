@@ -107,15 +107,11 @@ lwt () =
   (* Display all informative messages. *)
   Lwt_log.append_rule "*" Lwt_log.Info;
 
-  Lwt_log.default :=
-    Lwt_log.channel ~template:"$(name): $(section): $(message) $(date) $(milliseconds)"
-    ~close_mode:`Keep ~channel:Lwt_io.stderr ();
-
   (* Open the krobot bus. *)
   lwt bus = Krobot_bus.get () in
 
   (* Fork if not prevented. *)
-  if !fork then Lwt_daemon.daemonize ();
+  if !fork then Krobot_daemon.daemonize bus;
 
   (* Kill any running homologation. *)
   lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "homologation") in

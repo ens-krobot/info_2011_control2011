@@ -572,13 +572,6 @@ let handle_message viewer (timestamp, message) =
    +-----------------------------------------------------------------+ *)
 
 lwt () =
-  Lwt_log.default :=
-    Lwt_log.channel
-      ~template:"$(date).$(milliseconds) $(name): $(section): $(message)"
-      ~close_mode:`Keep
-      ~channel:Lwt_io.stderr
-      ();
-
   (* Display all informative messages. *)
   Lwt_log.append_rule "*" Lwt_log.Info;
 

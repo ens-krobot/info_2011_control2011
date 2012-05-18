@@ -162,6 +162,23 @@ let dispatch ic emit =
     exit 1
 
 (* +-----------------------------------------------------------------+
+   | Logger                                                          |
+   +-----------------------------------------------------------------+ *)
+
+let logger bus =
+  Lwt_log.make
+    (fun section level lines ->
+      let buf = Buffer.create 42 in
+      List.iter
+        (fun line ->
+          Buffer.clear buf;
+          Lwt_log.render ~buffer:buf ~template:"$(name)[$(section)]: $(message)" ~section ~level ~message:line;
+          ignore (send bus (Unix.gettimeofday (), Log(Buffer.contents buf))))
+        lines;
+      return ())
+    return
+
+(* +-----------------------------------------------------------------+
    | Creation                                                        |
    +-----------------------------------------------------------------+ *)
 
@@ -180,21 +197,7 @@ let bus = lazy(
     let bus = { oc; recv } in
 
     (* Send logs over the bus. *)
-    let logger =
-      Lwt_log.make
-        (fun section level lines ->
-           let buf = Buffer.create 42 in
-           List.iter
-             (fun line ->
-                Buffer.clear buf;
-                Lwt_log.render ~buffer:buf ~template:"$(name)[$(section)]: $(message)" ~section ~level ~message:line;
-                ignore (send bus (Unix.gettimeofday (), Log(Buffer.contents buf))))
-             lines;
-           return ())
-        return
-    in
-
-    Lwt_log.default := Lwt_log.broadcast [!Lwt_log.default; logger];
+    Lwt_log.default := Lwt_log.broadcast [!Lwt_log.default; logger bus];
 
     return bus
   with exn ->

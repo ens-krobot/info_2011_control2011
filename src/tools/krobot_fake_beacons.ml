@@ -106,7 +106,7 @@ lwt () =
   lwt bus = Krobot_bus.get () in
 
   (* Fork if not prevented. *)
-  if !fork then Lwt_daemon.daemonize ();
+  if !fork then Krobot_daemon.daemonize bus;
 
   (* Kill any running fake-beacons. *)
   lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "fake-beacons") in
