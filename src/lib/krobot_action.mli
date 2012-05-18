@@ -84,6 +84,7 @@ type t =
   | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
 
   | Start_timer
+  | Can of Krobot_can.frame
 
 val to_string : t -> string
   (** [to_string action] returns the string representation of the

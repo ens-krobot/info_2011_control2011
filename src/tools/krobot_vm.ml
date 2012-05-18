@@ -251,6 +251,7 @@ type effect =
       (* Wait a bit. *)
   | Send of Krobot_message.t list
       (* Send messages. *)
+  | Send_frame of Krobot_can.frame list
 
 let string_of_test = function
   | `Eq -> "Eq"
@@ -394,7 +395,10 @@ let rec exec robot actions =
           | None ->
               ([Stop; Wait_for 0.05; Goto (revert,v,last_vector)] @ rest,
                Wait)
-      end
+    end
+    | Can c ::rest ->
+        ignore (Lwt_log.info_f "Can");
+        (rest, Send_frame[c])
     | Set_limits(vmax,atan_max,arad_max) :: rest ->
         ignore (Lwt_log.info_f "Set_limit");
         (rest, Send[Motor_bezier_limits(vmax,atan_max,arad_max)])
@@ -639,6 +643,10 @@ let run robot =
       | Send msgs ->
         Lwt_list.iter_s
           (fun m -> Krobot_message.send robot.bus (timestamp, m))
+          msgs
+      | Send_frame msgs ->
+        Lwt_list.iter_s
+          (fun m -> Krobot_bus.send robot.bus (timestamp, (CAN (Info,m))))
           msgs
   done
 
