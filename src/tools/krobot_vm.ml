@@ -119,7 +119,8 @@ let handle_message robot (timestamp, message) =
               robot.curve_parameter <- u;
               robot.moving <- following
 
-          | Beacon_position(angle1, angle2, distance1, distance2) ->
+          | Beacon_position(angle1, angle2, distance1, distance2)
+            when from = Info ->
               let compute_beacon angle distance =
                 if distance <> 0. then begin
                   robot.date_seen_beacon <- Unix.gettimeofday ();

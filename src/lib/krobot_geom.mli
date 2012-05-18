@@ -88,6 +88,8 @@ module Bezier : sig
     (** [vertice curve u] returns the vertice on the given curve for
         the given paramter [u] which must be in the range [0..1]. *)
 
+  val curve_vertices : curve -> int -> (float*vertice) list
+
   val fold_curves : (curve -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
     (** [fold_curves f vector vertices acc] folds [f] over the curve
         passing through the given list of vertices. [vector] is the

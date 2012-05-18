@@ -169,6 +169,16 @@ module Bezier = struct
     let t3 = t2 *. t in
     translate origin ((b.a *| t3) +| (b.b *| t2) +| (b.c *| t1) +| b.p)
 
+  let curve_vertices b n =
+    let rec aux i =
+      if i < 0
+      then []
+      else
+        let t = ((float i) /. (float n)) in
+        (t, vertice b t)::(aux (i-1))
+    in
+    aux n
+
   let dt b t =
     let t1 = t in
     let t2 = t1 *. t in

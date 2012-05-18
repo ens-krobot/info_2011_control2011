@@ -22,7 +22,7 @@ let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
 let object_safety_distance = object_radius +. robot_size /. 2.
 let beacon_safety_distance = 0.4
 
-let coin_radius = 0.12
+let coin_radius = 0.06
 
 open Krobot_geom
 
@@ -89,6 +89,13 @@ let left_obstacles =
           y = 1.5 };
       size = 0.05; };
 
+    (* coins at the bottom *)
+
+    { pos =
+        { x = 1.5;
+          y = 0.3; };
+      size = 0.15 };
+
   ] @ (line_obs { x = 0.325; y = 0. } { x = 0.325 +. (0.075 /. 2.); y = 0.75 } )
 
 let fixed_obstacles =
@@ -98,3 +105,12 @@ let fixed_obstacles =
           y = 1. };
       size = 0.1; };
   ] @ (List.map symetrical left_obstacles) @ left_obstacles
+
+
+let initial_coins =
+  List.map (fun (x, y) -> {x;y})
+  [ 2., 1.5;
+    1., 1.5;
+    0.45, 0.3;
+    2.55, 0.3; ]
+

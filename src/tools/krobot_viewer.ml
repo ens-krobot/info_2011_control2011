@@ -626,7 +626,7 @@ lwt () =
     statusbar_context = ui#statusbar#new_context "";
     motor_status = (false, false, false, false);
     objects = [];
-    coins = [];
+    coins = Krobot_config.initial_coins;
   } in
 
   (* Handle messages. *)

@@ -19,27 +19,34 @@ let rec prev_last = function
       prev_last l
 
 let find ~src ~dst ~objects ~beacon =
-  (* Remove objects that are near the destination. *)
-  let objects = List.filter (fun obj -> distance dst obj >= object_safety_distance) objects in
-  (* Remove objects that are near the curent position. *)
-  let objects = List.filter (fun obj -> distance src obj >= object_safety_distance +. 0.01) objects in
+
   let fixed_objects = List.map (fun { pos; size } -> pos,
     size +. Krobot_config.robot_width /. 2. +. 0.01)
     Krobot_config.fixed_obstacles in
+
+  (* do that in a better way when we have time... *)
+  let init_coins = List.map (fun pos -> pos,
+    Krobot_config.coin_radius +. Krobot_config.robot_width /. 2. +. 0.01)
+    Krobot_config.initial_coins in
+
   let l = List.map (fun v -> (v, object_safety_distance +. 0.01)) objects in
-  let l = l @ fixed_objects in
+  let l = l @ fixed_objects @ init_coins in
   let l =
     match beacon with
       | (Some v, None)
       | (None, Some v) ->
+          ignore (Lwt_log.info_f "One beacon %f %f" v.x v.y);
           (v, beacon_safety_distance +. 0.01) :: l
       | (Some v1, Some v2) ->
+          ignore (Lwt_log.info_f "Two beacons (%f,%f) (%f,%f)" v1.x v1.y v2.x v2.y);
           (v1, beacon_safety_distance +. 0.01)
         :: (v2, beacon_safety_distance +. 0.01)
         :: l
       | (None, None) ->
+          ignore (Lwt_log.info_f "no beacon");
           l
   in
+  let l = List.map (fun (v,s) -> (v, min s (distance v src -. 0.1))) l in
   Krobot_pathfinding.find_path ~src ~dst
     ({ x = border_safety_distance;
        y = border_safety_distance},
