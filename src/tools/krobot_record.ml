@@ -13,25 +13,42 @@ open Lwt
 open Lwt_react
 open Krobot_bus
 
+(* Queue of messages to write. *)
+let queue = Queue.create ()
+
+(* Condition used to signal the writer thread. *)
+let cond = Condition.create ()
+
+(* Mutex used to protect [queue] and [cond]. *)
+let mutex = Mutex.create ()
+
+(* We use another system thread to dump things to the log file because
+   disk IO are blocking and we do not want to block the whole system
+   because of it. Also it is faster than using unix jobs. *)
+let writer () =
+  while true do
+    Mutex.lock mutex;
+    if Queue.is_empty queue then Condition.wait cond mutex;
+    (* Take everything from the queue. *)
+    let l = List.rev (Queue.fold (fun l x -> x :: l) [] queue) in
+    Queue.clear queue;
+    Mutex.unlock mutex;
+    (* Write values to the log file. *)
+    List.iter (output_value stdout) l
+  done
+
 lwt () =
-  if Array.length Sys.argv <> 2 then begin
-    prerr_endline "Usage: krobot-record <file>";
-    exit 2
-  end;
-
+  ignore (Thread.create writer ());
   lwt bus = Krobot_bus.get () in
-  lwt oc = Lwt_io.open_file ~mode:Lwt_io.output Sys.argv.(1) in
 
-  (* Write all frames comming from the electronic to the output
-     file. *)
+  (* Add all messages to the queue. *)
   E.keep
-    (E.map_s
-       (fun (timestamp, message) ->
-          match message with
-            | CAN(Elec, frame) ->
-                Lwt_io.write_value oc (timestamp, frame)
-            | _ ->
-                return ())
+    (E.map
+       (fun x ->
+         Mutex.lock mutex;
+         Queue.add x queue;
+         Condition.signal cond;
+         Mutex.unlock mutex)
        (Krobot_bus.recv bus));
 
   fst (wait ())

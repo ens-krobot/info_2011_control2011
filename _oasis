@@ -109,13 +109,20 @@ Executable "krobot-record"
   Install: true
   CompiledObject: best
   MainIs: krobot_record.ml
-  BuildDepends: krobot, lwt.syntax
+  BuildDepends: krobot, lwt.syntax, threads
 
 Executable "krobot-replay"
   Path: src/tools
   Install: true
   CompiledObject: best
   MainIs: krobot_replay.ml
+  BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-read"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_read.ml
   BuildDepends: krobot, lwt.syntax
 
 Executable "krobot-plot"
