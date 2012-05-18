@@ -292,6 +292,13 @@ Executable "krobot-joystick"
   MainIs: krobot_joystick.ml
   BuildDepends: krobot, lwt.syntax, sdl
 
+Executable "krobot-pet"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_pet.ml
+  BuildDepends: krobot, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+
