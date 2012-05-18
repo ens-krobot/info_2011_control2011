@@ -85,6 +85,8 @@ type robot = {
   mutable emergency_stop : bool;
   (* The state of the emergency button. *)
 
+  mutable replace : bool;
+
   ax12_front_low_left : ax12;
   ax12_front_low_right : ax12;
   ax12_front_high_left : ax12;
@@ -99,6 +101,7 @@ type robot = {
 (* +-----------------------------------------------------------------+
    | Message handling                                                |
    +-----------------------------------------------------------------+ *)
+
 
 let rec blink bus f =
   lwt () = Krobot_message.send bus (Unix.gettimeofday (),
@@ -229,6 +232,15 @@ let rec cancel_node = function
       cancel_node l
   | _ -> None
 
+let replace robot =
+  let replacer = match cancel_node robot.strategy with
+    | None -> [Stop]
+    | Some r -> r in
+  robot.strategy <- replacer;
+  robot.replace <- false;
+  reset robot
+
+
 (* The effect triggered by the execution of the first action of a tree
    of action. *)
 type effect =
@@ -279,8 +291,8 @@ let bezier_collide objects curve c1 c2 =
    if it is not the case, it will loop infinitely *)
 let correct_bezier objects curve =
   let rec aux c1 c2 =
-    if c1 <= 0.1 || c2 <= 0.1
-    then 0.1,0.1 (* not the good solution: improve later: do straight lines *)
+    if c1 <= 0.2 || c2 <= 0.2
+    then 0.2,0.2 (* not the good solution: improve later: do straight lines *)
     else
       begin
         let col_1, col_2 = bezier_collide objects curve c1 c2 in
@@ -373,7 +385,7 @@ let rec exec robot actions =
                 (Node (
                   Some
                     (Node (None, [Stop; Wait_for 0.05;
-                                  Goto (revert,v,last_vector)])),
+                                  Goto (false,v,last_vector)])),
                   [Follow_path (false,vertices,last_vector, true)]) :: rest)
 
           | None ->
@@ -503,13 +515,14 @@ let rec exec robot actions =
         ignore (Lwt_log.info "Bezier");
         (* Compute parameters. *)
         let d1 = sign *. distance p q and d2 = distance r s in
-        if abs_float d1 <= 0.01 || abs_float d2 = 0.01
-        then
-          (* in that case: there is an error somewhere else:
-             search and destroy it ! *)
-          (ignore (Lwt_log.error_f "Error: Bezier with d1 = %f, d2 = %f" d1 d2);
-           ([], Wait))
-        else
+        let d1,d2 =
+          (if abs_float d1 <= 0.01
+          then if d1 < 0. then -.0.1 else 0.1
+          else d1),
+            (if abs_float d2 <= 0.01
+          then if d2 < 0. then -.0.1 else 0.1
+            else d2)
+        in
           let v = vector r s in
           let theta_end = atan2 v.vy v.vx in
           (rest, Send[Switch_request(5,false);
@@ -590,7 +603,7 @@ let run robot =
               (* Check that the robot is not too far from the ghost.
                  if it is then stop brutaly:
                  TODO do something interesting after the stop: retry what we were doing *)
-              if distance robot.ghost_position robot.position > 0.1 then begin
+              if distance robot.ghost_position robot.position > 0.05 then begin
                 ignore (Lwt_log.info_f "Robot too far from the ghost");
                 raise Exit
               end;
@@ -612,12 +625,7 @@ let run robot =
                   raise Exit
                 end
               done
-            with Exit ->
-              let replacer = match cancel_node robot.strategy with
-                | None -> [Stop]
-                | Some r -> r in
-              robot.strategy <- replacer;
-              reset robot
+            with Exit -> replace robot
     end;
 
     let actions, effect = exec robot robot.strategy in
@@ -692,6 +700,7 @@ lwt () =
     ax12_back_low_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     ax12_back_high_left = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     ax12_back_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
+    replace = false;
   } in
 
   (* Handle krobot message. *)
