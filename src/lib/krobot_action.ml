@@ -16,7 +16,7 @@ type t =
   | Think
   | Goto of bool * vertice * vector option
   | Set_limits of (float * float * float)
-  | Follow_path of bool * vertice list * vector option
+  | Follow_path of bool * vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
   | Wait_for_jack of bool
@@ -60,10 +60,11 @@ let rec to_string = function
   | Set_limits (vmax,atan_max, arad_max) ->
       sprintf "Set_limits(%f, %f, %f)" vmax atan_max arad_max
   | Set_led (_,_) -> "Set_led"
-  | Follow_path (reverted,l,vect) ->
-      sprintf "Follow_path [%b, %s, %s]" reverted
+  | Follow_path (reverted,l,vect, correct) ->
+      sprintf "Follow_path [%b, %s, %s, %b]" reverted
         (String.concat "; " (List.map string_of_vertice l))
         (string_of_option string_of_vector vect)
+        correct
   | Bezier(sign, p, q, r, s, end_velocity) ->
       sprintf
         "Bezier(%f, %s, %s, %s, %s, %f)"

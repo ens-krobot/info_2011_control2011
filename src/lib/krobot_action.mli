@@ -31,10 +31,13 @@ type t =
   (* TODO: en faire un node pour pouvoir revenir a des limites normales en sortant
      d'une serie d'actions *)
 
-  | Follow_path of bool * vertice list * vector option
+  | Follow_path of bool * vertice list * vector option * bool
       (** Follow the given path. It does not check for obstacles.
           if the bool parameter is true, the path is inverted according
-          to the robot team *)
+          to the robot team.
+          the last boolean tells to correct the bezier curves
+          to avoid obstacles.
+          Use only if the lines between vertices does not colide obstacles *)
   | Bezier of float * vertice * vertice * vertice * vertice * float
       (** Follow the bezier curve determined by the given four
           vertices. The first float is the sign, the last one is the

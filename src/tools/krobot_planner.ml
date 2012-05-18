@@ -61,7 +61,7 @@ let find_path planner src dst =
 
 let set_vertices planner vertices =
   let v = { vx = cos planner.orientation; vy = sin planner.orientation } in
-  let curves = List.rev (Bezier.fold_curves (fun curve acc -> curve :: acc) v (planner.position :: vertices) []) in
+  let curves = List.rev (Bezier.fold_curves (fun _ curve acc -> curve :: acc) v (planner.position :: vertices) []) in
   planner.vertices <- vertices;
   planner.curves <- curves;
   ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Trajectory_path curves))
@@ -151,7 +151,7 @@ let handle_message planner (timestamp, message) =
 
     | Trajectory_go ->
         let path = planner.vertices in
-        ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Follow_path (false,path,None)]));
+        ignore (Krobot_bus.send planner.bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Follow_path (false,path,None,false)]));
         set_vertices planner []
 
     | Trajectory_find_path -> begin

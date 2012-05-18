@@ -40,7 +40,7 @@ let launch () =
        Reset_odometry `Auto;
        Wait_for_odometry_reset `Auto;
        Set_limits (0.2,1.0,1.0);
-       Follow_path (true, path, None);
+       Follow_path (true, path, None, false);
 (*
        Goto (true, { x = 0.55; y = 1.15 }, Some { vx = 1. ; vy = 0. });
        Follow_path (true, [{ x = 0.4; y = 1.15 }], None);

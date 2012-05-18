@@ -18,7 +18,9 @@ let wheels_distance = 0.224
 let wheels_position = robot_size *. 0.2
 let rotary_beacon_index_pos = 0.
 let object_radius = 0.1
-let border_safety_distance = sqrt (sqr robot_size /. 2.) +. 0.05
+let border_safety_distance =
+  sqrt (sqr robot_size /. 2.) +. 0.05
+  (* find a correct one *)
 let object_safety_distance = object_radius +. robot_size /. 2.
 let beacon_safety_distance = 0.4
 

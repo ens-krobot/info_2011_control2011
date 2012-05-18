@@ -119,6 +119,7 @@ module Bezier = struct
   }
 
   let vert_of_vect p = { x = p.vx; y = p.vy }
+  let vect_of_vert p = { vx = p.x; vy = p.y }
 
   let pqrs' c =
     let p = c.p in
@@ -311,14 +312,7 @@ module Bezier = struct
           acc
 
   let fold_curves ?last f initial vertices acc =
-    fold_vertices ?last (fun sign p q r s acc -> f (of_vertices p q r s) acc) initial vertices acc
-
-  let pqrs_sign curve initial =
-    let p,q,r,s = pqrs curve in
-    let initial, sign =
-      if prod initial (vector q r) < 0. then (minus initial, -1.) else (initial, 1.) in
-    sign, p, q, r, s
-      (* ou sign, p, initial, r, s *)
+    fold_vertices ?last (fun sign p q r s acc -> f sign (of_vertices p q r s) acc) initial vertices acc
 
 end
 

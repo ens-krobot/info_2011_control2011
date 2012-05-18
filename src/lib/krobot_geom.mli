@@ -90,11 +90,10 @@ module Bezier : sig
 
   val pqrs : curve -> (vertice*vertice*vertice*vertice)
 
-  val pqrs_sign : curve -> vector -> (float*vertice*vertice*vertice*vertice)
-
   val curve_vertices : curve -> int -> (float*vertice) list
 
-  val fold_curves : ?last:vector -> (curve -> 'a -> 'a) -> vector -> vertice list -> 'a -> 'a
+  val fold_curves : ?last:vector -> (float -> curve -> 'a -> 'a) -> vector ->
+    vertice list -> 'a -> 'a
     (** [fold_curves f vector vertices acc] folds [f] over the curve
         passing through the given list of vertices. [vector] is the
         initial direction vector. *)

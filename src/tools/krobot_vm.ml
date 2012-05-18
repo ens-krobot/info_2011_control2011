@@ -264,25 +264,32 @@ let bezier_collide objects curve c1 c2 =
     List.map
       (fun (u,vert) ->
         List.map (fun c -> u,
-          distance vert c.pos <= c.size || out_board c.pos
+          distance vert c.pos <= c.size || out_board vert
         ) objects) points in
   let collisions = List.flatten collisions in
   let col_1, col_2 = ref [], ref [] in
   List.iter (fun (u,b) ->
     if b then
-      if u <= 0.5
-      then col_1 := u :: !col_1
-      else col_2 := u :: !col_2) collisions;
+      (if u <= 0.5
+       then col_1 := u :: !col_1
+       else col_2 := u :: !col_2)) collisions;
   !col_1, !col_2
 
+(* TODO: check if the original line is admissible (no collision)
+   if it is not the case, it will loop infinitely *)
 let correct_bezier objects curve =
   let rec aux c1 c2 =
-    let col_1, col_2 = bezier_collide objects curve c1 c2 in
-    match col_1, col_2 with
-      | [], [] -> c1, c2
-      | _, [] -> aux (c1/.2.) c2
-      | [], _ -> aux c1 (c2/.2.)
-      | _, _  -> aux (c1/.2.) (c2/.2.)
+    if c1 <= 0.1 || c2 <= 0.1
+    then 0.1,0.1 (* not the good solution: improve later: do straight lines *)
+    else
+      begin
+        let col_1, col_2 = bezier_collide objects curve c1 c2 in
+        match col_1, col_2 with
+          | [], [] -> c1, c2
+          | _, [] -> aux (c1/.2.) c2
+          | [], _ -> aux c1 (c2/.2.)
+          | _, _  -> aux (c1/.2.) (c2/.2.)
+      end
   in
   let c1,c2 = aux 1. 1. in
   let curve = Bezier.mul_d1 curve c1 in
@@ -367,7 +374,7 @@ let rec exec robot actions =
                   Some
                     (Node (None, [Stop; Wait_for 0.05;
                                   Goto (revert,v,last_vector)])),
-                  [Follow_path (false,vertices,last_vector)]) :: rest)
+                  [Follow_path (false,vertices,last_vector, true)]) :: rest)
 
           | None ->
               ([Stop; Wait_for 0.05; Goto (revert,v,last_vector)] @ rest,
@@ -383,12 +390,12 @@ let rec exec robot actions =
           | `Green -> 6
           | `Yellow -> 5 in
         (rest, Send[Switch_request(led,value)])
-    | Follow_path (revert,vertices,last_vector) :: rest -> begin
+    | Follow_path (revert,vertices,last_vector, correct_curve ) :: rest -> begin
+        ignore (Lwt_log.info_f "Follow_path");
         let vertices,vector = if revert && robot.team = `Blue
           then List.map revert_vertice vertices, revert_vector_opt last_vector
           else vertices, last_vector
         in
-        ignore (Lwt_log.info_f "Follow_path %i vertices" (List.length vertices));
         (* Compute bezier curves. *)
         let vector = { vx = cos robot.orientation; vy = sin robot.orientation } in
 (*
@@ -424,19 +431,21 @@ let rec exec robot actions =
         in
 
         let curves = List.rev (Bezier.fold_curves ?last:last_vector
-          (fun curve acc -> (correct_bezier objects curve) :: acc) vector
+          (fun sign curve acc ->
+            let c =
+              if correct_curve
+              then (correct_bezier objects curve)
+              else curve in
+            (sign,c) :: acc) vector
           (robot.position :: vertices) []) in
 
-        set_path robot (Some curves);
+        set_path robot (Some (List.map snd curves));
 
-        let curves = match curves with
-          | [] -> []
-          | t::c_rest ->
-            let sign,p,q,r,s = Bezier.pqrs_sign t vector in
-            let rest = List.map (fun c ->
-              let p,q,r,s = Bezier.pqrs c in
-              sign,p,q,r,s) c_rest in
-            (sign,p,q,r,s)::rest in
+        let curves =
+          List.map (fun (sign,t) ->
+            let p,q,r,s = Bezier.pqrs t in
+            (sign,p,q,r,s))
+            curves in
 
 (*
         (* Set the path. *)
@@ -510,6 +519,7 @@ let rec exec robot actions =
         reset robot;
         (rest, Send[Switch_request(5,true); Motor_stop(1.0, 0.0)])
     | Reset_odometry which :: rest ->
+        ignore (Lwt_log.info_f "Reset_odometry");
         (rest,
          Send
            (match which, robot.team with
