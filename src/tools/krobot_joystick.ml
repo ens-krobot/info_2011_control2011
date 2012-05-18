@@ -153,7 +153,7 @@ let map_vel v =
 let send_speeds bus =
   let vl = map_vel !velocity_l in
   let vr = map_vel !velocity_r in
-  lwt () = Lwt_log.notice_f "speeds = %d, %d" vl vr in
+  ignore (Lwt_log.notice_f "speeds = %d, %d" vl vr);
   let ts = Unix.gettimeofday () in
   lwt () = Krobot_message.send bus (ts, Motor_command (motor_l, vl))
   and () = Krobot_message.send bus (ts, Motor_command (motor_r, vr)) in
