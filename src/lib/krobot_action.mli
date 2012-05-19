@@ -46,7 +46,9 @@ type t =
       (** Set the curve currently being followed. *)
   | Wait_for_jack of bool
       (** Wait for the jack to be in the given state. *)
-  | Wait_for_moving of bool * float option
+  | Wait_for_bezier_moving of bool * float option
+      (** Wait for the robot to move or not with a limit date. *)
+  | Wait_for_motors_moving of bool * float option
       (** Wait for the robot to move or not with a limit date. *)
   | Reset_odometry of [ `Red | `Blue | `Auto ]
       (** Set the odometry to the initial position according to the

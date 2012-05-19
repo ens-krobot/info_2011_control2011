@@ -20,7 +20,8 @@ type t =
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
   | Wait_for_jack of bool
-  | Wait_for_moving of bool * float option
+  | Wait_for_bezier_moving of bool * float option
+  | Wait_for_motors_moving of bool * float option
   | Reset_odometry of [ `Red | `Blue | `Auto ]
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
   | Try_something of vertice
@@ -84,7 +85,9 @@ let rec to_string = function
       "Set_curve None"
   | Wait_for_jack st ->
       sprintf "Wait_for_jack %B" st
-  | Wait_for_moving (st, opt) ->
+  | Wait_for_bezier_moving (st, opt) ->
+      sprintf "Wait_for_moving (%B, %s)" st (string_of_option string_of_float opt)
+  | Wait_for_motors_moving (st, opt) ->
       sprintf "Wait_for_moving (%B, %s)" st (string_of_option string_of_float opt)
   | Reset_odometry `Red ->
       "Reset_odometry `Red"
