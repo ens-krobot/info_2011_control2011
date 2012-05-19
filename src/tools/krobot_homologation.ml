@@ -27,31 +27,54 @@ let path =
     { x = 0.4; y = 1.15 };
   ]
 
-let launch () =
-  lwt bus = Krobot_bus.get () in
+let strat_loop =
+  [
+    Calibrate  ( { x = 0.64 +. 0.477; y = 1. +. 0.125 +. 0.1; },
+                 pi /. 2.,
+                 0.20,
+                 None,
+                 Some (1. +. 0.125),
+                 Some (pi /. 2.) );
+
+    Calibrate  ( { x = 0.9; y = 1.; },
+                 pi,
+                 0.20,
+                 Some (0.64 +. 0.477 -. 0.125),
+                 None,
+                 Some (pi) );
+
+    Goto (false, { x = 1.5; y = 0.5 }, None);
+    Goto (false, { x = 1.5; y = 1.5 }, None);
+    Goto (false, { x = 1.5; y = 0.5 }, None);
+    Goto (false, { x = 1.5; y = 1.5 }, None);
+    Wait_for 2.;
+    End;
+  ]
+
+let strat_base =
+  [
+    Can (Krobot_message.encode (Drive_activation true));
+    Wait_for_jack true;
+    Wait_for 1.;
+    Wait_for_jack false;
+    Start_timer;
+    Set_led(`Red,false);
+    Set_led(`Green,false);
+    Reset_odometry `Auto;
+    Wait_for_odometry_reset `Auto;
+    Set_limits (0.3,1.0,1.0);
+    End;
+  ]
+
+let launch bus =
   Krobot_bus.send bus
     (Unix.gettimeofday (),
-     Strategy_set [
-       Can (Krobot_message.encode (Drive_activation true));
-       Wait_for_jack true;
-       Wait_for 1.;
-       Wait_for_jack false;
-       Start_timer;
-       Set_led(`Red,false);
-       Set_led(`Green,false);
-       Reset_odometry `Auto;
-       Wait_for_odometry_reset `Auto;
-       Set_limits (0.3,1.0,1.0);
-(*       Follow_path (true, path, None, false); *)
+     Strategy_set strat_base)
 
-       Goto (true, { x = 0.55; y = 1.20 }, Some { vx = 0.8 ; vy = 0.2 });
-       Goto (true, { x = 0.4; y = 1.20 }, None);
-       Goto (true, { x = 0.64; y = 0.4 }, Some { vx = 0. ; vy = 1. });
-       Wait_for 5.;
-       Can (Krobot_message.encode (Motor_move (-.0.7,0.3,1.)));
-       Wait_for 10.;
-       Can (Krobot_message.encode (Drive_activation false));
-     ])
+let loop bus =
+  Krobot_bus.send bus
+    (Unix.gettimeofday (),
+     Strategy_set strat_loop)
 
 type status = {
   bus : Krobot_bus.t;
@@ -70,6 +93,8 @@ let update_team_led status =
   lwt () = Krobot_message.send status.bus (Unix.gettimeofday (),m1) in
   Krobot_message.send status.bus (Unix.gettimeofday (), m2)
 
+lwt bus = Krobot_bus.get ()
+
 let handle_message status (timestamp, message) =
   match message with
     | CAN(_, frame) -> begin
@@ -81,11 +106,14 @@ let handle_message status (timestamp, message) =
               begin
                 status.team <- team;
                 ignore (update_team_led status);
-                ignore (launch ())
+                ignore (launch bus)
               end
           | _ ->
               ()
       end
+
+    | Strategy_finished ->
+      ignore (loop bus)
 
     | Kill "homologation" ->
         exit 0

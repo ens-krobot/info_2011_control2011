@@ -249,6 +249,7 @@ let replace robot =
 type effect =
   | Wait
       (* Wait a bit. *)
+  | Send_bus of Krobot_bus.message list
   | Send of Krobot_message.t list
       (* Send messages. *)
   | Send_frame of Krobot_can.frame list
@@ -597,12 +598,12 @@ let rec exec robot actions =
            (match which, robot.team with
               | `Red, _ | `Auto, `Red ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.red_initial_position in
-                [Set_odometry( x, y, 0. );
+                [Krobot_message.Set_odometry( x, y, 0. );
                  Set_odometry_indep( x, y, 0. ); ]
               | `Blue, _ | `Auto, `Blue ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
-                [Set_odometry( x, y, pi);
-                 Set_odometry( x, y, pi )]))
+                [Krobot_message.Set_odometry( x, y, pi);
+                 Krobot_message.Set_odometry( x, y, pi )]))
     | Load face :: rest ->
         exec robot (Node (None,[
                       Lift_down face;
@@ -624,6 +625,47 @@ let rec exec robot actions =
     | Fail :: rest ->
         ignore (Lwt_log.info_f "failing");
         (rest, Abort)
+    | Set_orientation orientation :: rest ->
+      let n = 20 in
+      let rec aux delta = function -1 -> []
+        | i -> (i,robot.position,(robot.orientation +. delta *. (float i) /. (float n)))
+          ::(aux delta (i - 1)) in
+      let objects = build_objects robot in
+      let delta = math_mod_float (orientation -. robot.orientation) (2.*.pi) in
+      let result_delta = match Krobot_collision.last_possible objects (aux delta n) with
+        | Some n' when n = n' ->
+          Some delta
+        | _ ->
+          let delta = if delta < 0. then pi -. delta else -. pi -. delta in
+          match Krobot_collision.last_possible objects (aux delta n) with
+            | Some n' when n = n' ->
+              Some delta
+            | _ -> None
+      in
+      (match result_delta with
+        | None -> (rest,Abort)
+        | Some delta ->
+          (Wait_for_motors_moving(true,Some(Unix.gettimeofday () +. 2.))::
+             Wait_for_motors_moving(false,None)::rest,
+           Send [Motor_turn (delta,0.5,1.)]))
+    | Calibrate ( approach_position, approach_orientation, distance,
+                  supposed_x, supposed_y, supposed_orientation )::rest ->
+      Node (None,
+            ([ Goto (false,approach_position,
+                     Some { vx = cos approach_orientation;
+                            vy = cos approach_orientation });
+               Set_orientation approach_orientation;
+               Can (Krobot_message.encode (Torque_limit(4,100)));
+               Can (Krobot_message.encode (Torque_limit(8,100)));
+               Can (Krobot_message.encode (Motor_move(distance,0.2,0.5)));
+               Wait_for_motors_moving(true,Some(Unix.gettimeofday () +. 2.));
+               Wait_for_motors_moving(false,None);
+               Set_odometry(supposed_x, supposed_y, supposed_orientation);
+               Can (Krobot_message.encode (Torque_limit(4,3600)));
+               Can (Krobot_message.encode (Torque_limit(8,3600)));]))
+        ::rest,
+      Wait
+
     | Try_something dst :: rest ->
         ignore (Lwt_log.info_f "trying something to reach (%f, %f)" dst.x dst.y);
         let objects = build_objects robot in
@@ -645,6 +687,8 @@ let rec exec robot actions =
           else
             exec robot actions
         end
+    | End :: rest ->
+      ([], Send_bus [Strategy_finished])
     | _ :: rest ->
         exec robot rest
 
@@ -718,6 +762,10 @@ let run robot =
       | Send_frame msgs ->
         Lwt_list.iter_s
           (fun m -> Krobot_bus.send robot.bus (timestamp, (CAN (Info,m))))
+          msgs
+      | Send_bus msgs ->
+        Lwt_list.iter_s
+          (fun m -> Krobot_bus.send robot.bus (timestamp, m))
           msgs
       | Abort ->
           replace robot;

@@ -15,7 +15,7 @@ type t =
   | Stop
   | Think
   | Goto of bool * vertice * vector option
-  | Set_limits of (float * float * float)
+  | Set_limits of float * float * float
   | Follow_path of bool * vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
@@ -38,9 +38,13 @@ type t =
   | Wait_until of float
   | Wait_for_grip_open_low of [ `Front | `Back ]
   | Wait_for_grip_close_low of [ `Front | `Back ]
-  | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
   | Start_timer
   | Can of Krobot_can.frame
+  | Set_led of [ `Red | `Yellow | `Green ] * bool
+  | Set_orientation of float
+  | Set_odometry of float option * float option * float option
+  | Calibrate of vertice * float * float * float option * float option * float option
+  | End
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
 let string_of_vector { vx; vy } = sprintf "{ vx = %f; vy = %f }" vx vy
@@ -139,3 +143,11 @@ let rec to_string = function
       sprintf "Try_something %s" (string_of_vertice v)
   | Fail ->
       "Fail"
+  | Set_orientation (o) -> "Set_orientation"
+  | Set_odometry (x,y,o) ->
+    Printf.sprintf "Set_odometry %s %s %s"
+      (string_of_option string_of_float x)
+      (string_of_option string_of_float y)
+      (string_of_option string_of_float o)
+  | Calibrate (_,_,_,_,_,_) -> "Calibrate"
+  | End -> "End"

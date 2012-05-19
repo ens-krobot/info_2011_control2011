@@ -37,6 +37,7 @@ type message =
   | Strategy_stop
   | Strategy_set of Krobot_action.t list
   | Strategy_path of Bezier.curve list option
+  | Strategy_finished
   | Set_fake_beacons of vertice option * vertice option
   | Collisions of Bezier.curve * (float * (vertice * float) option) list
   | Coins of vertice list
@@ -121,6 +122,7 @@ let string_of_message = function
       sprintf
         "Strategy_path(Some [%s])"
         (String.concat "; " (List.map Bezier.string_of_curve curves))
+  | Strategy_finished -> "Strategy_finished"
   | Set_fake_beacons (b1, b2) ->
       sprintf
         "Set_fake_beacons (%s, %s)"

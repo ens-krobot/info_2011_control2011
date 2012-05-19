@@ -25,7 +25,7 @@ type t =
           if the bool parameter is true, the path is inverted according
           to the robot team *)
 
-  | Set_limits of (float * float * float)
+  | Set_limits of float * float * float
       (** limit the speed *)
 
   (* TODO: en faire un node pour pouvoir revenir a des limites normales en sortant
@@ -90,10 +90,23 @@ type t =
   | Wait_for_grip_close_low of [ `Front | `Back ]
       (** Wait for the given low grip to be opened. *)
 
-  | Set_led of ( [ `Red | `Yellow | `Green ] * bool )
-
   | Start_timer
   | Can of Krobot_can.frame
+  | Set_led of [ `Red | `Yellow | `Green ] * bool
+  | Set_orientation of float
+      (** turn to given orrientation, fail if possible collision *)
+  | Set_odometry of float option * float option * float option
+      (** [Set_odometry (x,y,orientation)] set the provided odometry informations *)
+  | Calibrate of vertice * float * float * float option * float option * float option
+      (** [Calibrate ( approach_position, approach_orientation, distance,
+                       supposed_x, supposed_y, supposed_orientation )
+          Go to approach_position with orientation approach_orientation,
+          move of distance,
+          at the end reset the odometry to given supposed coordinates
+
+          i.e.: calibrate using a border
+      *)
+  | End (** send strategy finished *)
 
 val to_string : t -> string
   (** [to_string action] returns the string representation of the

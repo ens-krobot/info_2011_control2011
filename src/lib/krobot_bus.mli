@@ -71,6 +71,7 @@ type message =
   | Strategy_path of (Bezier.curve list) option
       (** Message emitted when the robot starts or stops a
           trajectory. *)
+  | Strategy_finished
 
   (** Fake beacons *)
 

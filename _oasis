@@ -286,8 +286,9 @@ Executable "krobot-stop-beacon"
   BuildDepends: krobot, lwt.syntax
 
 Executable "krobot-joystick"
+  Build$: flag(sdl)
   Path: src/tools
-  Install: true
+  Install$: flag(sdl)
   CompiledObject: best
   MainIs: krobot_joystick.ml
   BuildDepends: krobot, lwt.syntax, sdl
