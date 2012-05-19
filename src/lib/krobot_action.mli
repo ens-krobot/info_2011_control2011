@@ -46,14 +46,21 @@ type t =
       (** Set the curve currently being followed. *)
   | Wait_for_jack of bool
       (** Wait for the jack to be in the given state. *)
-  | Wait_for_moving of bool
-      (** Wait for the robot to move or not. *)
+  | Wait_for_moving of bool * float option
+      (** Wait for the robot to move or not with a limit date. *)
   | Reset_odometry of [ `Red | `Blue | `Auto ]
       (** Set the odometry to the initial position according to the
           team selector or the given color. *)
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
       (** Wait for the curve parameter of the odometry to reach the
           given state. *)
+
+  | Try_something of vertice
+      (** Try to do something that would bring us clother to the given
+          vertice. *)
+
+  | Fail
+      (** Abort current strategy. *)
 
   | Wait_for_odometry_reset of [ `Red | `Blue | `Auto ]
   (** Wait for the odometry to say it is in red or blue initial position. *)

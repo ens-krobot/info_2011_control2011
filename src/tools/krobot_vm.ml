@@ -246,6 +246,7 @@ type effect =
   | Send of Krobot_message.t list
       (* Send messages. *)
   | Send_frame of Krobot_can.frame list
+  | Abort
 
 let string_of_test = function
   | `Eq -> "Eq"
@@ -304,6 +305,7 @@ let build_objects robot =
   in
   l
 
+let () = Random.self_init ()
 
 (* TODO: check if the original line is admissible (no collision)
    if it is not the case, it will loop infinitely *)
@@ -322,11 +324,39 @@ let correct_bezier objects curve shift_vector =
           | [], _ -> aux c1 (c2/.2.)
           | _, _  -> aux (c1/.2.) (c2/.2.)
       end
-  in
+   in
   let c1, c2 = aux 1. 1. in
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
   curve
+
+let correct_bezier objects curve shift_vector =
+  let rec aux count =
+    if count = 0 then
+      None
+    else
+      let c1 = 0.2 +. Random.float 3.
+      and c2 = 0.2 +. Random.float 3. in
+      let _, collisions = bezier_collide objects curve c1 c2 shift_vector 0 in
+      match collisions with
+        | [] ->
+          Some (c1, c2)
+        | _ ->
+          aux (count - 1)
+  in
+  let _, collisions = bezier_collide objects curve 1. 1. shift_vector 0 in
+  match collisions with
+    | [] ->
+      curve
+    | _ ->
+      match aux 100 with
+        | Some (c1, c2) ->
+          let curve = Bezier.mul_d1 curve c1 in
+          let curve = Bezier.mul_d2 curve c2 in
+          curve
+        | None ->
+          ignore (Lwt_log.info "failed to find a correct curve");
+          curve
 
 (* [exec robot actions] searches for the first action to execute in a
    tree of actions and returns a new tree of actions and an effect. *)
@@ -346,12 +376,21 @@ let rec exec robot actions =
            exec robot rest)
         else
           (actions, Wait)
-    | Wait_for_moving state :: rest ->
+    | Wait_for_moving (state, opt) :: rest ->
         if robot.moving = state then
           (ignore (Lwt_log.info_f "Wait_for_moving %b done" state);
            exec robot rest)
-        else
-          (actions, Wait)
+        else begin
+          match opt with
+            | None ->
+              (actions, Wait)
+            | Some date ->
+              if Unix.gettimeofday () > date then begin
+                ignore (Lwt_log.info_f "Wait_for_moving %b timeouted" state);
+                exec robot rest
+              end else
+                (actions, Wait)
+        end
     | Wait_for_odometry(test, value) :: rest ->
         if (match test with
               | `Eq -> robot.curve_parameter = value
@@ -443,8 +482,9 @@ let rec exec robot actions =
             let shift_vector = null in
             let c =
               if correct_curve
-              then (correct_bezier objects curve shift_vector)
-              else curve in
+              then correct_bezier objects curve shift_vector
+              else curve
+            in
             (sign,c) :: acc) vector
           (robot.position :: vertices) []) in
 
@@ -456,6 +496,34 @@ let rec exec robot actions =
             (sign,p,q,r,s))
             curves in
 
+        let rec check curves =
+          match curves with
+            | (sign, p, q, r, s) as curve :: rest ->
+              (* Check if the curve can be followed. *)
+              let curve', collisions =
+                bezier_collide
+                  (build_objects robot)
+                  (Bezier.of_vertices p q r s)
+                  1. 1.
+                  null
+                  0
+              in
+              if collisions <> [] then begin
+                ignore (Lwt_log.info_f "one of the bezier curve is colliding");
+                ignore (Krobot_bus.send robot.bus (Unix.gettimeofday (), Collisions (curve', collisions)));
+                ([],
+                 [Try_something s;
+                  Fail])
+              end else
+                let curves, post = check rest in
+                (curve :: curves, post)
+            | [] ->
+              ([], [])
+        in
+
+
+        let curves, post = check curves in
+
 (*
         (* Set the path. *)
         set_path robot (Some (List.map (fun (sign, p, q, r, s) -> Bezier.of_vertices p q r s) curves));
@@ -464,7 +532,7 @@ let rec exec robot actions =
         (* Compute orders. *)
         let rec loop = function
           | [] ->
-              [Wait_for_moving false]
+              Wait_for_moving (false, None) :: post
           | [(sign, p, q, r, s)] ->
               ignore (Lwt_log.info_f "add last %f %f" p.x p.y);
               [
@@ -478,10 +546,10 @@ let rec exec robot actions =
                 (* Set the new curve. *)
                 Set_curve(Some(Bezier.of_vertices p q r s));
                 (* Wait for the end of the new curve. *)
-                Wait_for_moving false;
+                Wait_for_moving (false, None);
                 (* Remove the current curve. *)
                 Set_curve None;
-              ]
+              ] @ post
           | (sign, p, q, r, s) :: rest ->
               ignore (Lwt_log.info_f "add middle %f %f" p.x p.y);
               Wait_for_odometry(`Ge, 128)
@@ -492,21 +560,22 @@ let rec exec robot actions =
         in
         match curves with
           | [] ->
-              exec robot rest
+              exec robot (Node (None, post) :: rest)
           | [(sign, p, q, r, s)] ->
-              exec robot (Node (None,[
-                            Set_curve(Some(Bezier.of_vertices p q r s));
-                            Bezier(sign, p, q, r, s, 0.01);
-                            Wait_for_odometry(`Le, 128);
-                            Wait_for_odometry(`Ge, 128);
-                            Wait_for_moving false;
-                            Set_curve None;
-                          ]) :: rest)
+            exec robot (Node (None,[
+              Set_curve(Some(Bezier.of_vertices p q r s));
+              Bezier(sign, p, q, r, s, 0.01);
+              Wait_for_odometry(`Le, 128);
+              Wait_for_odometry(`Ge, 128);
+              Wait_for_moving (false, None);
+              Set_curve None;
+            ] @ post) :: rest)
           | (sign, p, q, r, s) :: curves ->
-              exec robot (Node(None,Set_curve(Some(Bezier.of_vertices p q r s))
-                               :: Bezier(sign, p, q, r, s, 0.5)
-                               :: Wait_for_odometry(`Le, 128)
-                               :: loop curves) :: rest)
+            exec robot (Node(None,
+                             Set_curve(Some(Bezier.of_vertices p q r s))
+                             :: Bezier(sign, p, q, r, s, 0.5)
+                             :: Wait_for_odometry(`Le, 128)
+                             :: loop curves) :: rest)
       end
     | Bezier(sign, p, q, r, s, v_end) :: rest ->
         ignore (Lwt_log.info "Bezier");
@@ -514,16 +583,16 @@ let rec exec robot actions =
         let d1 = sign *. distance p q and d2 = distance r s in
         let d1,d2 =
           (if abs_float d1 <= 0.01
-          then if d1 < 0. then -.0.1 else 0.1
-          else d1),
-            (if abs_float d2 <= 0.01
-          then if d2 < 0. then -.0.1 else 0.1
-            else d2)
+           then if d1 < 0. then -.0.1 else 0.1
+           else d1),
+          (if abs_float d2 <= 0.01
+           then if d2 < 0. then -.0.1 else 0.1
+           else d2)
         in
-          let v = vector r s in
-          let theta_end = atan2 v.vy v.vx in
-          (rest, Send[Switch_request(5,false);
-                      Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)])
+        let v = vector r s in
+        let theta_end = atan2 v.vy v.vx in
+        (rest, Send[Switch_request(5,false);
+                    Motor_bezier(s.x, s.y, d1, d2, theta_end, v_end)])
     | Stop :: rest ->
         ignore (Lwt_log.info_f "Stop");
         reset robot;
@@ -559,6 +628,94 @@ let rec exec robot actions =
         (rest, Send[Elevator(1., -1.)])
     | Think :: rest ->
         exec robot rest
+    | Fail :: rest ->
+        ignore (Lwt_log.info_f "failing");
+        (rest, Abort)
+    | Try_something dst :: rest ->
+        ignore (Lwt_log.info_f "trying something to reach (%f, %f)" dst.x dst.y);
+        let objects = build_objects robot in
+        let direction = vector_of_polar ~norm:0.02 ~angle:robot.orientation in
+        (match Random.int 4 with
+          | 0 ->
+            if Krobot_collision.possible objects (translate robot.position direction) robot.orientation then
+              let _ = Lwt_log.info_f "try move_f" in
+              (Wait_for 1.0 :: rest,
+               Send [Motor_move (0.02, 0.5, 1.)])
+            else
+              exec robot actions
+          | 1 ->
+            if Krobot_collision.possible objects (translate robot.position (direction *| -1.0)) robot.orientation then
+              let _ = Lwt_log.info_f "try move_b" in
+              (Wait_for 1.0 :: rest,
+               Send [Motor_move (-0.02, 0.5, 1.)])
+            else
+              exec robot actions
+          | 2 ->
+            if Krobot_collision.possible objects robot.position (robot.orientation -. pi /. 8.) then
+              let _ = Lwt_log.info_f "try turn_l" in
+              (Wait_for 1.0 :: rest,
+               Send [Motor_turn (-. pi /. 8., 0.5, 1.)])
+            else
+              exec robot actions
+          | 3 ->
+              let _ = Lwt_log.info_f "try turn_r" in
+            if Krobot_collision.possible objects robot.position (robot.orientation +. pi /. 8.) then
+              (Wait_for 1.0 :: rest,
+               Send [Motor_turn (pi /. 8., 0.5, 1.)])
+            else
+              exec robot actions
+          | _ ->
+            assert false)
+(*
+        let ofs = prod v direction in
+        let alpha =
+          if prod { vx = -. v.vy; vy = v.vx } direction > 0. then
+            pi /. 2.
+          else
+            -. pi /. 2.
+        in
+        let rec move_configs ofs n =
+          let norm = float n *. 2. in
+          if norm >= abs_float ofs then
+            []
+          else
+            let angle = if ofs > 0. then robot.orientation else robot.orientation +. pi in
+            (`Move (if ofs > 0. then norm else -. norm),
+             translate robot.position (vector_of_polar ~norm ~angle),
+             robot.orientation) :: move_configs ofs (n +  1)
+        in
+        let count = 20 in
+        let rec turn_configs alpha n =
+          if n = count + 1 then
+            []
+          else
+            let angle = alpha *. float n /. float count in
+            (`Turn angle, robot.position, robot.orientation +. angle) :: move_configs ofs (n +  1)
+        in
+        let tests =
+          [move_configs ofs;
+           move_configs (-. ofs);
+           turn_configs alpha;
+           turn_configs (-. alpha)]
+        in
+        let rec search = function
+          | [] ->
+            (rest, Wait)
+          | f :: tests ->
+            match Krobot_collision.last_possible objects (f 1) with
+              | None ->
+                search tests
+              | Some (`Move x) ->
+                ignore (Lwt_log.info_f "trying move(%f)" x);
+                (Wait_for_moving (true, Some (Unix.gettimeofday () +. 2.0)) :: Wait_for_moving (false, None) :: rest,
+                 Send [Motor_move (x, 0.7, 1.)])
+              | Some (`Turn x) ->
+                ignore (Lwt_log.info_f "trying turn(%f)" x);
+                (Wait_for_moving (true, Some (Unix.gettimeofday () +. 2.0)) :: Wait_for_moving (false, None) :: rest,
+                 Send [Motor_turn (x, 0.7, 1.)])
+        in
+        search tests
+*)
     | _ :: rest ->
         exec robot rest
 
@@ -633,6 +790,9 @@ let run robot =
         Lwt_list.iter_s
           (fun m -> Krobot_bus.send robot.bus (timestamp, (CAN (Info,m))))
           msgs
+      | Abort ->
+          replace robot;
+          return ()
   done
 
 (* +-----------------------------------------------------------------+

@@ -20,9 +20,11 @@ type t =
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
   | Wait_for_jack of bool
-  | Wait_for_moving of bool
+  | Wait_for_moving of bool * float option
   | Reset_odometry of [ `Red | `Blue | `Auto ]
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
+  | Try_something of vertice
+  | Fail
   | Wait_for_odometry_reset of [ `Red | `Blue | `Auto ]
   | Load of [ `Front | `Back ]
   | Lift_down of [ `Front | `Back ]
@@ -82,8 +84,8 @@ let rec to_string = function
       "Set_curve None"
   | Wait_for_jack st ->
       sprintf "Wait_for_jack %B" st
-  | Wait_for_moving st ->
-      sprintf "Wait_for_moving %B" st
+  | Wait_for_moving (st, opt) ->
+      sprintf "Wait_for_moving (%B, %s)" st (string_of_option string_of_float opt)
   | Reset_odometry `Red ->
       "Reset_odometry `Red"
   | Reset_odometry `Blue ->
@@ -130,3 +132,7 @@ let rec to_string = function
       sprintf "Wait_for_grip_close_low %S" (string_of_face face)
   | Start_timer -> "Start_timer"
   | Can c -> "Can"
+  | Try_something v ->
+      sprintf "Try_something %s" (string_of_vertice v)
+  | Fail ->
+      "Fail"
