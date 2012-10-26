@@ -603,7 +603,7 @@ let rec exec robot actions =
               | `Blue, _ | `Auto, `Blue ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
                 [Krobot_message.Set_odometry( x, y, pi);
-                 Krobot_message.Set_odometry( x, y, pi )]))
+                 Set_odometry_indep( x, y, pi )]))
     | Load face :: rest ->
         exec robot (Node (None,[
                       Lift_down face;
