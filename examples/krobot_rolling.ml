@@ -1,4 +1,6 @@
-#use "topfind"
+#use "topfind";;
+#camlp4o;;
+#require "lwt.syntax";;
 #require "krobot";;
 open Krobot_bus;;
 open Krobot_message;;
