@@ -62,10 +62,10 @@ let line_obs p1 p2 =
 let left_obstacles =
   [
     (* the trees *)
-    { pos =
+    (*{ pos =
         { x = 0.64 +. 0.477;
           y = 1. };
-      size = sqrt (2. *. 0.125 *. 0.125) +. 0.12; };
+      size = sqrt (2. *. 0.125 *. 0.125) +. 0.12; };*)
 
     (* entry position *)
     { pos =
@@ -101,10 +101,10 @@ let left_obstacles =
 
 let fixed_obstacles =
   [
-    { pos =
+    (*{ pos =
         { x = 1.5;
           y = 1. };
-      size = 0.1; };
+      size = 0.1; };*)
   ] @ (List.map symetrical left_obstacles) @ left_obstacles
 
 
