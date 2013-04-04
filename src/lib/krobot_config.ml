@@ -68,7 +68,7 @@ let left_obstacles =
       size = sqrt (2. *. 0.125 *. 0.125) +. 0.12; };*)
 
     (* entry position *)
-    { pos =
+    (*{ pos =
         { x = 0.;
           y = 1.5 };
       size = 0.02; };
@@ -87,7 +87,7 @@ let left_obstacles =
     { pos =
         { x = 0.4;
           y = 1.5 };
-      size = 0.02; };
+      size = 0.02; };*)
 
     (* coins at the bottom *)
 (*
@@ -97,14 +97,16 @@ let left_obstacles =
       size = 0.15 };
 *)
 
-  ] @ (line_obs { x = 0.325; y = 0. } { x = 0.325 +. (0.075 /. 2.); y = 0.75 } )
+  (*] @ (line_obs { x = 0.325; y = 0. } { x = 0.325 +. (0.075 /. 2.); y = 0.75 } )*)
+  ]
 
 let fixed_obstacles =
   [
-    (*{ pos =
+    (* Cake *)
+    { pos =
         { x = 1.5;
-          y = 1. };
-      size = 0.1; };*)
+          y = 2. };
+      size = 0.5; };
   ] @ (List.map symetrical left_obstacles) @ left_obstacles
 
 
