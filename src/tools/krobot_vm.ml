@@ -845,7 +845,7 @@ lwt () =
 
   ignore (
     lwt () = Lwt_unix.sleep 2. in
-    Krobot_message.send bus (Unix.gettimeofday (),Motor_command (2,1000)));
+    Krobot_message.send bus (Unix.gettimeofday (),Motor_command (2,500)));
 
   ignore(blink bus false);
 
