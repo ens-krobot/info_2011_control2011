@@ -312,6 +312,13 @@ Executable "krobot-urg"
   MainIs: krobot_urg.ml
   BuildDepends: krobot, urg, lwt.syntax, lwt.preemptive, threads
 
+Executable "krobot-beacon-reader"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_beacon_reader.ml
+  BuildDepends: krobot, lwt.syntax, lwt.unix
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+

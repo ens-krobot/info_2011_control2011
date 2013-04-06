@@ -42,6 +42,8 @@ type message =
   | Collisions of Bezier.curve * (float * (vertice * float) option) list
   | Coins of vertice list
   | Urg of int array
+  | Beacon_raw of (int * int * int * int * int * int
+      * int * int * int * int * int)
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -149,6 +151,8 @@ let string_of_message = function
               l))
   | Urg distances ->
       sprintf "Urg (many_points...)"
+  | Beacon_raw _ ->
+      sprintf "Raw beacon packet"
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |

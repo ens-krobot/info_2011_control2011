@@ -89,6 +89,9 @@ type message =
   (** distances mesured by the URG (in millimeters) *)
   | Urg of int array
 
+  | Beacon_raw of (int * int * int * int * int * int
+      * int * int * int * int * int)
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

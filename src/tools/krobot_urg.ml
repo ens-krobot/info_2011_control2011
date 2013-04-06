@@ -31,8 +31,8 @@ let to_array (b:Urg.point_data) =
 
 let loop bus urg =
   let rec aux () =
-    let time = Unix.gettimeofday () in
     lwt _ = Lwt_preemptive.detach Urg_simple.get urg in
+    let time = Unix.gettimeofday () in
     let msg = Urg (to_array urg.Urg_simple.data) in
     lwt () = Krobot_bus.send bus (time, msg) in
     lwt () = Lwt_log.info_f "send things" in
