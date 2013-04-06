@@ -26,6 +26,10 @@ Flag cv
   Description: enable opencv
   Default: true
 
+Flag urg
+  Description: enable lib urg
+  Default: true
+
 Flag sdl
   Description: enable sdl
   Default: true
@@ -299,6 +303,14 @@ Executable "krobot-pet"
   CompiledObject: best
   MainIs: krobot_pet.ml
   BuildDepends: krobot, lwt.syntax
+
+Executable "krobot-urg"
+  Path: src/tools
+  Build$: flag(urg)
+  Install$: flag(urg)
+  CompiledObject: best
+  MainIs: krobot_urg.ml
+  BuildDepends: krobot, urg, lwt.syntax, lwt.preemptive, threads
 
 # +-------------------------------------------------------------------+
 # | Examples                                                          |

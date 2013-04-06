@@ -86,6 +86,9 @@ type message =
   (** Vision *)
   | Coins of vertice list
 
+  (** distances mesured by the URG (in millimeters) *)
+  | Urg of int array
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

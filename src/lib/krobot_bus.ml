@@ -41,6 +41,7 @@ type message =
   | Set_fake_beacons of vertice option * vertice option
   | Collisions of Bezier.curve * (float * (vertice * float) option) list
   | Coins of vertice list
+  | Urg of int array
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -146,6 +147,8 @@ let string_of_message = function
                     | Some (v, r) ->
                       sprintf "Some (%s, %f)" (string_of_vertice v) r))
               l))
+  | Urg distances ->
+      sprintf "Urg (many_points...)"
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |
