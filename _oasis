@@ -176,6 +176,13 @@ Executable "krobot-hil-simulator"
   MainIs: krobot_hil_simulator.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-mc-simulator"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_mc_simulator.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-planner"
   Path: src/tools
   Install: true
