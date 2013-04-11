@@ -69,15 +69,20 @@ let handle_message (timestamp, message) =
     | _ ->
         ()
 
-let print_pos l =
-  Format.printf "[@[<1>@ ";
-  Array.iter (fun {x;y} -> Format.printf "(%f,%f);@ " x y) l;
-  Format.printf "@]]@."
+(* let print_pos l = *)
+(*   Format.printf "[@[<1>@ "; *)
+(*   Array.iter (fun {x;y} -> Format.printf "(%f,%f);@ " x y) l; *)
+(*   Format.printf "@]]@." *)
+
+let print_pos ts l =
+  Printf.printf "%f " ts;
+  Array.iter (fun {x;y} -> Format.printf "%f %f " x y) l;
+  Printf.printf "\n%!"
 
 let handle_listener (timestamp, message) =
   match message with
     | Urg data ->
-      print_pos data;
+      print_pos timestamp data;
       return ()
     | _ -> Lwt.return ()
 
