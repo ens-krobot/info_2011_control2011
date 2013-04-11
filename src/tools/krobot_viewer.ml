@@ -61,6 +61,9 @@ type viewer = {
 
   mutable collisions : (Bezier.curve * (float * (vertice * float) option) list) option;
   (* A curve and a list of: [(curve_parameter, (center, radius))] *)
+
+  mutable urg : vertice array;
+  mutable urg_lines : (vertice*vertice) array;
 }
 
 (* +-----------------------------------------------------------------+
@@ -353,6 +356,25 @@ let draw viewer =
   draw_beacon b1;
   draw_beacon b2;
 
+  let draw_urg a =
+    Cairo.set_source_rgba ctx 0.5 0.5 0.5 0.5;
+    let aux {x;y} =
+      Cairo.arc ctx x y 0.01 0. (2. *. pi);
+      Cairo.fill ctx
+    in
+    Array.iter aux a in
+  draw_urg viewer.urg;
+
+  let draw_urg_lines a =
+    Cairo.set_source_rgba ctx 1. 0.5 1. 0.5;
+    let aux ({x=x1;y=y1},{x=x2;y=y2}) =
+      Cairo.move_to ctx x1 y1;
+      Cairo.line_to ctx x2 y2;
+      Cairo.stroke ctx
+    in
+    Array.iter aux a in
+  draw_urg_lines viewer.urg_lines;
+
   (* Draw the path of the VM if any or the path of the planner if the
      VM is not following a trajectory. *)
   let path =
@@ -472,6 +494,37 @@ let set_beacons viewer x y =
   ignore (Krobot_bus.send viewer.bus
             (Unix.gettimeofday (),
              Krobot_bus.Set_fake_beacons (b1, b2)))
+
+(* +-----------------------------------------------------------------+
+   | Urg handling                                                    |
+   +-----------------------------------------------------------------+ *)
+
+let convert_pos dist angle =
+  let x = float dist *. cos angle *. 0.001 in
+  let y = float dist *. sin angle *. 0.001 in
+  { x ; y }
+
+let project_urg viewer pos =
+  (* TODO: put the real urg position rather than the robot position *)
+  let theta = viewer.state.theta in
+  let rot = rot_mat theta in
+  let f { x;y } =
+    let urg_pos = [| x; y; 1. |] in
+    let urg_pos = mult rot urg_pos in
+    let state_pos = Krobot_geom.translate viewer.state.pos
+        { vx = urg_pos.(0); vy = urg_pos.(1) } in
+    state_pos
+  in
+  Array.map f pos
+
+let project_urg_lines viewer lines =
+  let rot = rot_mat viewer.state.theta in
+  let f v =
+    let v = [|v.x;v.y;1.|] in
+    let v = mult rot v in
+    Krobot_geom.translate viewer.state.pos { vx = v.(0); vy = v.(1) }
+  in
+  Array.map (fun (v1,v2) -> f v1,f v2) lines
 
 (* +-----------------------------------------------------------------+
    | Message handling                                                |
@@ -605,6 +658,12 @@ let handle_message viewer (timestamp, message) =
       viewer.collisions <- Some (curve, l);
       queue_draw viewer
 
+    | Urg dist ->
+      viewer.urg <- project_urg viewer dist
+
+    | Urg_lines lines ->
+      viewer.urg_lines <- project_urg_lines viewer lines
+
     | _ ->
         ()
 
@@ -657,6 +716,8 @@ lwt () =
     motor_status = (false, false, false, false);
     coins = Krobot_config.initial_coins;
     collisions = None;
+    urg = [||];
+    urg_lines = [||];
   } in
 
   (* Handle messages. *)

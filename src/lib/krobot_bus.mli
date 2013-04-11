@@ -87,7 +87,8 @@ type message =
   | Coins of vertice list
 
   (** distances mesured by the URG (in millimeters) *)
-  | Urg of int array
+  | Urg of vertice array
+  | Urg_lines of (vertice*vertice) array
 
   | Beacon_raw of (int * int * int * int * int * int
       * int * int * int * int * int)

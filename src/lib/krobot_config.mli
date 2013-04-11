@@ -53,5 +53,7 @@ val fixed_obstacles : Krobot_geom.obj list
 
 val initial_coins : Krobot_geom.vertice list
 
+val urg_position : Krobot_geom.vertice
+
 val urg_angles : float array
 (* angles (in radiant) for each index of urg messages *)
