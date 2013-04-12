@@ -45,6 +45,7 @@ val vector_of_polar : norm : float -> angle : float -> vector
 (** [vector_of_polar norm angle] *)
 
 val norm : vector -> float
+val angle : vector -> float
 val distance : vertice -> vertice -> float
 val normalize : vector -> vector
 

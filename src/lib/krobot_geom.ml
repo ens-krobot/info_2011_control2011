@@ -64,6 +64,7 @@ let ( *| ) = mul
 let ( /| ) = div
 
 let norm v = sqrt (sqr v.vx +. sqr v.vy)
+let angle v = atan2 v.vy v.vx
 
 (* +-----------------------------------------------------------------+
    | Vertices                                                        |
