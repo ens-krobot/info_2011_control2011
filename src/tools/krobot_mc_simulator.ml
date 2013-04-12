@@ -17,6 +17,7 @@ open Krobot_message
 open Krobot_geom
 
 let section = Lwt_log.Section.make "krobot(mc_simulator)"
+let time_step = 0.001
 
 (* +-----------------------------------------------------------------+
    | Command-line arguments                                          |
@@ -59,7 +60,7 @@ type command =
       (* [Turn(t_acc, velocity)] *)
   | Move of float * float
       (* [Move(t_acc, velocity)] *)
-  | Bezier of
+  | Bezier_cmd of
       ( float * float * float * float * float * float ) *
       ( float * float * float )
       (** [Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end)]
@@ -69,12 +70,20 @@ type command =
 type simulator = {
   mutable state : state;
   (* The state of the robot. *)
+  mutable state_indep : state;
+  (* The state of the robot for second set of encoders. *)
   mutable internal_state : internal_state;
   (* The state of the wheels. *)
   mutable velocity_l : float;
   (* Velocity of the left motor. *)
   mutable velocity_r : float;
   (* Velocity of the right motor. *)
+  mutable ghost : state;
+  (* The state of the ghost. *)
+  mutable bezier_u : float;
+  (* position on the Bezier's curve*)
+  mutable bezier_curve : Bezier.curve option;
+  (* Bezier's curve currently being followed if existing *)
   mutable time : float;
   (* The current time. *)
   mutable command : command;
@@ -119,35 +128,54 @@ velocities:
    +-----------------------------------------------------------------+ *)
 
 let velocities sim =
+  (* Put the robot into idle if the last command is terminated. *)
+  (match sim.command with
+    | Bezier_cmd _ -> ()
+    | _ -> if sim.time > sim.command_end then sim.command <- Idle);
   match sim.command with
     | Idle ->
-        (0., 0.)
+      (0., 0.)
     | Speed(l_v, r_v) ->
-        ((l_v +. r_v) *. wheels_diameter /. 4., (l_v -. r_v) *. wheels_diameter /. wheels_distance)
+      ((l_v +. r_v) *. wheels_diameter /. 4., (l_v -. r_v) *. wheels_diameter /. wheels_distance)
     | Turn(t_acc, vel) ->
-        if sim.time < (sim.command_start +. t_acc) then
-          (0., vel *. (sim.time -. sim.command_start) /. t_acc)
-        else if sim.time < (sim.command_end -. t_acc) then
-          (0., vel)
-        else
-          (0., vel *. (sim.command_end -. sim.time) /. t_acc)
+      if sim.time < (sim.command_start +. t_acc) then
+        (0., vel *. (sim.time -. sim.command_start) /. t_acc)
+      else if sim.time < (sim.command_end -. t_acc) then
+        (0., vel)
+      else
+        (0., vel *. (sim.command_end -. sim.time) /. t_acc)
     | Move(t_acc, vel) ->
-        if sim.time < (sim.command_start +. t_acc) then
-          (vel *. (sim.time -. sim.command_start) /. t_acc, 0.)
-        else if sim.time < (sim.command_end -. t_acc) then
-          (vel, 0.)
-        else
-          (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
-    | Bezier(_,_) -> failwith "todo"
+      if sim.time < (sim.command_start +. t_acc) then
+        (vel *. (sim.time -. sim.command_start) /. t_acc, 0.)
+      else if sim.time < (sim.command_end -. t_acc) then
+        (vel, 0.)
+      else
+        (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
+    | Bezier_cmd(_,_) ->
+      sim.command <- Idle;
+      sim.bezier_curve <- None;
+      (0., 0.)
+
+(*  val of_vertices : vertice -> vertice -> vertice -> vertice -> curve
+    (** [of_vertices p q r s] creates a bezier curve from the given
+        four control points. [p] and [s] are the first and end point
+        of the curve. *)*)
 
 let bezier sim (x_end, y_end, d1, d2, theta_end, v_end) =
-  assert false
-(*
-  sim.command <- Bezier((x_end, y_end, d1, d2, theta_end, v_end),
-                        sim.bezier_limits);
-  sim.command_start <- sim.time;
-  sim.command_end <- sim.time +. t_end
-*)
+  sim.bezier_u <- 0.;
+  let p,theta_start = match sim.bezier_curve with
+    | None ->
+      {Krobot_geom.x = sim.state.x; Krobot_geom.y = sim.state.y},
+      sim.state.theta
+    | Some curve ->
+      let p,_,r,s = Bezier.pqrs curve in
+      s,
+      (angle (vector r s))
+  in
+  let s = {Krobot_geom.x = x_end; Krobot_geom.y = y_end} in
+  let q = translate p (vector_of_polar d1 theta_start) in
+  let r = translate s (vector_of_polar (-.d2) theta_end) in
+  sim.bezier_curve <- Some (Bezier.of_vertices p q r s)
 
 let move sim distance velocity acceleration =
   if distance <> 0. && velocity > 0. && acceleration > 0. then begin
@@ -215,7 +243,7 @@ let get_encoders sim =
 
 
 (* +-----------------------------------------------------------------+
-   | Main loop                                                       |
+   | Main loops                                                      |
    +-----------------------------------------------------------------+ *)
 
 let sim = ref None
@@ -226,21 +254,6 @@ let loop bus sim =
     let delta = time -. sim.time in
     sim.time <- time;
 
-    (* Put the robot into idle if the last command is terminated. *)
-    if sim.time > sim.command_end then sim.command <- Idle;
-
-    (* Sends the state of the robot. *)
-    lwt () = Krobot_message.send bus (sim.time, Odometry(sim.state.x, sim.state.y, sim.state.theta)) in
-    lwt () = Krobot_message.send bus (sim.time, Odometry_indep(sim.state.x, sim.state.y, sim.state.theta)) in
-    (* Sends the state of the motors. *)
-    lwt () = match sim.command with
-               | Turn(a, b) ->
-                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, true, false, false))
-               | Move(a, b) ->
-                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(true, false, false, false))
-               | _ ->
-                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, false, false, false))
-    in
     lwt () = print sim in
 
     let u1, u2 = if !hil then
@@ -261,7 +274,36 @@ let loop bus sim =
       theta_l = sim.internal_state.theta_l +. delta *. (u1 *. 4. +. u2 *. wheels_distance) /. (2. *. wheels_diameter);
       theta_r = sim.internal_state.theta_r +. delta *. (u1 *. 4. -. u2 *. wheels_distance) /. (2. *. wheels_diameter);
     };
-    lwt () = Lwt_unix.sleep 0.01 in
+    lwt () = Lwt_unix.sleep time_step in
+    aux () in
+  aux ()
+
+let send_CAN_messages sim bus =
+  let rec aux () =
+    (* Sends the state of the robot. *)
+    lwt () = Krobot_message.send bus (sim.time, Odometry(sim.state.x, sim.state.y, sim.state.theta)) in
+    lwt () = Krobot_message.send bus (sim.time, Odometry_indep(sim.state.x, sim.state.y, sim.state.theta)) in
+    (* Wait before next batch of packets (emulate the electronic board behavior) *)
+    lwt () = Lwt_unix.sleep 0.005 in
+    (* Sends the state of the ghost. *)
+    lwt () = Krobot_message.send bus (sim.time,
+                                      Odometry_ghost(sim.ghost.x,
+                                                     sim.ghost.y,
+                                                     sim.ghost.theta,
+                                                     int_of_float (255. *. sim.bezier_u),
+                                                     match sim.command with Bezier_cmd _ -> true | _ -> false)) in
+    (* Sends the state of the motors. *)
+    lwt () = match sim.command with
+               | Turn(a, b) ->
+                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, true, false, false))
+               | Move(a, b) ->
+                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(true, false, false, false))
+               | Bezier_cmd _ ->
+                 (* Motor State to be verifyed on the real Motor Controller card *)
+                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(true, true, false, false))
+               | _ ->
+                 Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, false, false, false)) in
+    lwt () = Lwt_unix.sleep 0.005 in
     aux () in
   aux ()
 
@@ -302,18 +344,8 @@ let handle_message bus (timestamp, message) =
                 turn sim angle speed acc
               | Motor_stop(lin_acc, rot_acc) ->
                 sim.command <- Idle
-              | Req_motor_status ->
-                begin
-                  Lwt_unix.run (match sim.command with
-                    | Turn(a, b) ->
-                      Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, true, false, false))
-                    | Move(a, b) ->
-                      Krobot_message.send bus (Unix.gettimeofday (), Motor_status(true, false, false, false))
-                    | _ ->
-                      Krobot_message.send bus (Unix.gettimeofday (), Motor_status(false, false, false, false)))
-                end
               | Set_odometry(x, y, theta) ->
-                sim.state <- { x; y; theta }
+                sim.state_indep <- { x; y; theta }
               | Set_odometry_indep(x, y, theta) ->
                 sim.state <- { x; y; theta }
               | Motor_bezier_limits(v_max, a_tan_max, a_rad_max) ->
@@ -355,14 +387,18 @@ lwt () =
 
   (* Set the motor_controller card in HIL mode if necessary *)
   if !hil then
-    Lwt_unix.run (Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true)) ;
+    ignore (Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true)) ;
 
   (* Initial state of the simulator *)
   let local_sim = {
     state = { x = 0.; y = 0.; theta = 0. };
+    state_indep = { x = 0.; y = 0.; theta = 0. };
     internal_state = { theta_l = 0.; theta_r = 0. };
     velocity_l = 0.;
     velocity_r = 0.;
+    ghost = { x = 0.; y = 0.; theta = 0. };
+    bezier_u = 0.;
+    bezier_curve = None;
     command = Idle;
     command_start = 0.;
     command_end = 0.;
@@ -371,5 +407,7 @@ lwt () =
   } in
   sim := Some local_sim;
 
+  ignore(send_CAN_messages local_sim bus);
+
   (* Loop forever. *)
-  loop bus local_sim
+  Lwt_unix.run (loop bus local_sim)
