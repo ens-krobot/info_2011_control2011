@@ -35,13 +35,46 @@ let robot = ref { s_x = 0.; s_y = 0.; theta = 0.}
    | read/send loop                                                  |
    +-----------------------------------------------------------------+ *)
 
+let dist_x x y theta obstacle =
+  let y_int = y +. (obstacle -. x) *. (tan theta) in
+  if (y_int > 0. && y_int < Krobot_config.world_height) then
+    let d = (obstacle -. x) /. (cos theta) in
+    if d >= 0. then
+      Some d
+    else
+      None
+  else
+    None
+
+let dist_y x y theta obstacle =
+  let x_int = x +. (obstacle -. y) /. (tan theta) in
+  if (x_int > 0. && x_int < Krobot_config.world_width) then
+    let d = (obstacle -. y) /. (sin theta) in
+    if d >= 0. then
+      Some d
+    else
+      None
+  else
+    None
+
+let min_border_distance x y theta =
+  let l = match dist_x x y theta 0. with Some v -> [v] | None -> [] in
+  let l = match dist_x x y theta Krobot_config.world_width with Some v -> v::l | None -> l in
+  let l = match dist_y x y theta 0. with Some v -> v::l | None -> l in
+  let l = match dist_y x y theta Krobot_config.world_height with Some v -> v::l | None -> l in
+  match l with
+    | [] -> assert false
+    | l -> List.fold_left min max_float l
+    | _ -> assert false
+
 let gen_data robot =
   let dim = Array.length Krobot_config.urg_angles in
   let l = ref [] in
   for i = 0 to dim - 1 do
     let angle = Krobot_config.urg_angles.(i) in
-    let x = 1. *. cos angle in
-    let y = 1. *. sin angle  in
+    let dist = min_border_distance robot.s_x robot.s_y (robot.theta +. angle) in
+    let x = dist *. cos angle in
+    let y = dist *. sin angle  in
     l := {x;y} :: !l
   done;
   Array.of_list !l
@@ -49,7 +82,7 @@ let gen_data robot =
 let loop bus =
   let rec aux () =
     let time = Unix.gettimeofday () in
-    let msg = Urg (gen_data robot) in
+    let msg = Urg (gen_data !robot) in
     lwt () = Krobot_bus.send bus (time, msg) in
     lwt () = Lwt_unix.sleep 0.01 in
     aux () in

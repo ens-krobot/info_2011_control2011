@@ -1,5 +1,5 @@
 (*
- * krobot_motor_controller_simulator.ml
+ * krobot_simulator.ml
  * -----------------------
  * Copyright : (c) 2013, Xavier Lagorce <Xavier.Lagorce@crans.org>
  * Licence   : BSD3
@@ -16,7 +16,7 @@ open Krobot_bus
 open Krobot_message
 open Krobot_geom
 
-let section = Lwt_log.Section.make "krobot(mc_simulator)"
+let section = Lwt_log.Section.make "krobot(simulator)"
 let time_step = 0.001
 
 (* +-----------------------------------------------------------------+
@@ -400,6 +400,90 @@ let handle_message bus (timestamp, message) =
     | _ -> Lwt.return ()
 
 (* +-----------------------------------------------------------------+
+   | Hokuyo emulation                                                |
+   +-----------------------------------------------------------------+ *)
+
+let dist_x x y theta obstacle =
+  let y_int = y +. (obstacle -. x) *. (tan theta) in
+  if (y_int > 0. && y_int < Krobot_config.world_height) then
+    let d = (obstacle -. x) /. (cos theta) in
+    if d >= 0. then
+      Some d
+    else
+      None
+  else
+    None
+
+let dist_y x y theta obstacle =
+  let x_int = x +. (obstacle -. y) /. (tan theta) in
+  if (x_int > 0. && x_int < Krobot_config.world_width) then
+    let d = (obstacle -. y) /. (sin theta) in
+    if d >= 0. then
+      Some d
+    else
+      None
+  else
+    None
+
+let min_border_distance x y theta =
+  let l = match dist_x x y theta 0. with Some v -> [v] | None -> [] in
+  let l = match dist_x x y theta Krobot_config.world_width with Some v -> v::l | None -> l in
+  let l = match dist_y x y theta 0. with Some v -> v::l | None -> l in
+  let l = match dist_y x y theta Krobot_config.world_height with Some v -> v::l | None -> l in
+  match l with
+    | [] -> None
+    | l -> Some (List.fold_left min max_float l)
+
+(*let gen_data robot =
+  let dim = Array.length Krobot_config.urg_angles in
+  let {Krobot_geom.x=urg_rel_x;
+       Krobot_geom.y=urg_rel_y } = Krobot_config.urg_position in
+  let urg_pos = [| urg_rel_x; urg_rel_y; 1. |] in
+  let rot = rot_mat robot.theta in
+  let urg_pos = mult rot urg_pos in
+  let pos = Krobot_geom.translate
+    { Krobot_geom.x=robot.x; Krobot_geom.y=robot.y }
+    { Krobot_geom.vx = urg_pos.(0); Krobot_geom.vy = urg_pos.(1) } in
+  let {Krobot_geom.x=cen_x;
+       Krobot_geom.y=cen_y } = pos in
+  let l = ref [] in
+  for i = 0 to dim - 1 do
+    let angle = Krobot_config.urg_angles.(i) in
+    match min_border_distance cen_x cen_y (robot.theta +. angle) with
+      | Some dist ->
+        let x = dist *. cos angle +. urg_pos.(0) in
+        let y = dist *. sin angle +. urg_pos.(1) in
+        l := {Krobot_geom.x;Krobot_geom.y} :: !l
+      | None ->
+        ()
+  done;
+  Array.of_list !l*)
+
+let gen_data robot =
+  let dim = Array.length Krobot_config.urg_angles in
+  let l = ref [] in
+  for i = 0 to dim - 1 do
+    let angle = Krobot_config.urg_angles.(i) in
+    match min_border_distance robot.x robot.y (robot.theta +. angle) with
+      | Some dist ->
+        let x = dist *. cos angle in
+        let y = dist *. sin angle  in
+        l := {Krobot_geom.x=x;Krobot_geom.y=y} :: !l
+      | None ->
+        ()
+  done;
+  Array.of_list !l
+
+let loop_urg sim bus =
+  let rec aux () =
+    let time = Unix.gettimeofday () in
+    let msg = Urg (gen_data sim.state) in
+    lwt () = Krobot_bus.send bus (time, msg) in
+    lwt () = Lwt_unix.sleep 0.01 in
+    aux () in
+  aux ()
+
+(* +-----------------------------------------------------------------+
    | Entry point                                                     |
    +-----------------------------------------------------------------+ *)
 
@@ -448,6 +532,7 @@ lwt () =
   sim := Some local_sim;
 
   ignore(send_CAN_messages local_sim bus);
+  ignore(loop_urg local_sim bus);
 
   (* Loop forever. *)
   Lwt_unix.run (loop bus local_sim)
