@@ -60,11 +60,8 @@ type command =
       (* [Turn(t_acc, velocity)] *)
   | Move of float * float
       (* [Move(t_acc, velocity)] *)
-  | Bezier_cmd of
-      ( float * float * float * float * float * float ) *
-      ( float * float * float )
-      (** [Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end)]
-          [Motor_bezier_limits(v_max, a_tan_max, a_rad_max)] *)
+  | Bezier_cmd of (float * float * float) * bool
+      (** [Motor_bezier_limits(v_max, a_tan_max, a_rad_max)] *)
 
 (* Type of simulators. *)
 type simulator = {
@@ -84,6 +81,8 @@ type simulator = {
   (* position on the Bezier's curve*)
   mutable bezier_curve : Bezier.curve option;
   (* Bezier's curve currently being followed if existing *)
+  mutable bezier_next : (Bezier.curve * bool) option;
+  (* Next Bezier's curve to follow *)
   mutable time : float;
   (* The current time. *)
   mutable command : command;
@@ -127,10 +126,20 @@ velocities:
    | Trajectory generation                                           |
    +-----------------------------------------------------------------+ *)
 
-let velocities sim =
+let velocities sim dt =
   (* Put the robot into idle if the last command is terminated. *)
   (match sim.command with
-    | Bezier_cmd _ -> ()
+    | Bezier_cmd (_,cur_dir) ->
+      if sim.bezier_u >= 1. then begin
+        match sim.bezier_next with
+        | None ->
+          sim.command <- Idle
+        | Some (curve,dir) ->
+          sim.command <- Bezier_cmd (sim.bezier_limits, cur_dir);
+          sim.bezier_curve <- Some curve;
+          sim.bezier_next <- None;
+          sim.bezier_u <- 0.
+      end
     | _ -> if sim.time > sim.command_end then sim.command <- Idle);
   match sim.command with
     | Idle ->
@@ -151,31 +160,46 @@ let velocities sim =
         (vel, 0.)
       else
         (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
-    | Bezier_cmd(_,_) ->
-      sim.command <- Idle;
-      sim.bezier_curve <- None;
-      (0., 0.)
-
-(*  val of_vertices : vertice -> vertice -> vertice -> vertice -> curve
-    (** [of_vertices p q r s] creates a bezier curve from the given
-        four control points. [p] and [s] are the first and end point
-        of the curve. *)*)
+    | Bezier_cmd (limits, dir) ->
+      (match sim.bezier_curve with
+         | None ->
+           sim.command <- Idle;
+           (0., 0.)
+         | Some curve ->
+           let (v_max,_,a_r_max) = limits in
+           let s' = norm (Bezier.dt curve sim.bezier_u) in
+           let { vx = x'; vy = y' } = Bezier.dt curve sim.bezier_u in
+           let { vx = x'';vy = y''} = Bezier.ddt curve sim.bezier_u in
+           let theta' = ( y'' *. x' -. x'' *. y' ) /. ( x' *. x' +. y' *. y' ) in
+           let cr = (x'*.x'+.y'*.y') ** 1.5 /. (x'*.y''-.y'*.x'') in
+           let vel = min v_max (sqrt (a_r_max *. (abs_float cr))) in
+           sim.bezier_u <- sim.bezier_u +. vel /. s' *. dt;
+           if dir then
+             (vel, theta' *. vel /. s')
+           else
+             (-.vel, theta' *. vel /. s'))
 
 let bezier sim (x_end, y_end, d1, d2, theta_end, v_end) =
-  sim.bezier_u <- 0.;
   let p,theta_start = match sim.bezier_curve with
     | None ->
       {Krobot_geom.x = sim.state.x; Krobot_geom.y = sim.state.y},
       sim.state.theta
     | Some curve ->
-      let p,_,r,s = Bezier.pqrs curve in
+      let _,_,r,s = Bezier.pqrs curve in
       s,
       (angle (vector r s))
   in
   let s = {Krobot_geom.x = x_end; Krobot_geom.y = y_end} in
   let q = translate p (vector_of_polar d1 theta_start) in
   let r = translate s (vector_of_polar (-.d2) theta_end) in
-  sim.bezier_curve <- Some (Bezier.of_vertices p q r s)
+  let dir = d1 >= 0. in
+  match sim.bezier_curve with
+    | None ->
+      sim.command <- Bezier_cmd (sim.bezier_limits,dir);
+      sim.bezier_u <- 0.;
+      sim.bezier_curve <- Some (Bezier.of_vertices p q r s);
+    | Some _ ->
+      sim.bezier_next <- Some ((Bezier.of_vertices p q r s),dir)
 
 let move sim distance velocity acceleration =
   if distance <> 0. && velocity > 0. && acceleration > 0. then begin
@@ -228,8 +252,8 @@ let set_velocities sim left_velocity right_velocity duration =
   sim.command_start <- sim.time;
   sim.command_end <- sim.time +. duration
 
-let get_velocities sim =
-  let (u1, u2) = velocities sim in
+let get_velocities sim dt =
+  let (u1, u2) = velocities sim dt in
   let l_v = (4. *. u1 +. wheels_distance *. u2) /. (2. *. wheels_diameter)
   and r_v = (4. *. u1 -. wheels_distance *. u2) /. (2. *. wheels_diameter) in
   (l_v, r_v)
@@ -260,20 +284,32 @@ let loop bus sim =
       (sim.velocity_l +. sim.velocity_r) *. wheels_diameter /. 4. ,
       (sim.velocity_l -. sim.velocity_r) *. wheels_diameter /. wheels_distance /. 2.
     else
-      velocities sim
+      velocities sim delta
     in
     let dx = u1 *. (cos sim.state.theta)
     and dy = u1 *. (sin sim.state.theta)
     and dtheta = u2 in
+    let theta = sim.state.theta +. dtheta *. delta in
+    let theta =
+      if theta > pi then
+        theta -. 2. *. pi
+      else if theta < -.pi then
+        theta +. 2. *. pi
+      else
+        theta
+    in
     sim.state <- {
       x = sim.state.x +. dx *. delta;
       y = sim.state.y +. dy *. delta;
-      theta = math_mod_float (sim.state.theta +. dtheta *. delta) (2. *. pi);
+      theta = theta;
     };
     sim.internal_state <- {
       theta_l = sim.internal_state.theta_l +. delta *. (u1 *. 4. +. u2 *. wheels_distance) /. (2. *. wheels_diameter);
       theta_r = sim.internal_state.theta_r +. delta *. (u1 *. 4. -. u2 *. wheels_distance) /. (2. *. wheels_diameter);
     };
+    (match sim.command with
+       | Bezier_cmd _ -> sim.ghost <- sim.state
+       | _ -> ());
     lwt () = Lwt_unix.sleep time_step in
     aux () in
   aux ()
@@ -343,7 +379,9 @@ let handle_message bus (timestamp, message) =
                 Lwt_unix.run (Lwt_log.info_f "received: turn(%f, %f, %f)" angle speed acc);
                 turn sim angle speed acc
               | Motor_stop(lin_acc, rot_acc) ->
-                sim.command <- Idle
+                sim.command <- Idle;
+                sim.bezier_curve <- None;
+                sim.bezier_next <- None;
               | Set_odometry(x, y, theta) ->
                 sim.state_indep <- { x; y; theta }
               | Set_odometry_indep(x, y, theta) ->
@@ -351,6 +389,7 @@ let handle_message bus (timestamp, message) =
               | Motor_bezier_limits(v_max, a_tan_max, a_rad_max) ->
                 sim.bezier_limits <- (v_max, a_tan_max, a_rad_max)
               | Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end) ->
+                Lwt_unix.run (Lwt_log.info_f "received: bezier(%f, %f, %f, %f, %f, %f)" x_end y_end d1 d2 theta_end v_end);
                 bezier sim (x_end, y_end, d1, d2, theta_end, v_end)
               | _ ->
                 () end);
@@ -399,6 +438,7 @@ lwt () =
     ghost = { x = 0.; y = 0.; theta = 0. };
     bezier_u = 0.;
     bezier_curve = None;
+    bezier_next = None;
     command = Idle;
     command_start = 0.;
     command_end = 0.;
