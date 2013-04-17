@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 68e14c8d43423b2050fb1cf67d1938cc)
+# DO NOT EDIT (digest: 44c1536155bea156ff4e324744cffda8)
 # Library krobot
 "src/lib": include
 <src/lib/krobot.{cma,cmxa}>: use_libkrobot
@@ -260,6 +260,11 @@
 <src/tools/krobot_homologation.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_homologation.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_homologation.{native,byte}>: pkg_lwt.react
+# Executable krobot-io-simulator
+<src/tools/krobot_io_simulator.{native,byte}>: use_krobot
+<src/tools/krobot_io_simulator.{native,byte}>: pkg_lwt.unix
+<src/tools/krobot_io_simulator.{native,byte}>: pkg_lwt.syntax
+<src/tools/krobot_io_simulator.{native,byte}>: pkg_lwt.react
 # Executable krobot-pet
 <src/tools/krobot_pet.{native,byte}>: use_krobot
 <src/tools/krobot_pet.{native,byte}>: pkg_lwt.unix
