@@ -2,7 +2,7 @@
 <src/interfaces/*.ml>: -syntax_camlp4o
 
 # OASIS_START
-# DO NOT EDIT (digest: 44c1536155bea156ff4e324744cffda8)
+# DO NOT EDIT (digest: 9a283fb86531fb8de178da3ad5f872b1)
 # Library krobot
 "src/lib": include
 <src/lib/krobot.{cma,cmxa}>: use_libkrobot
@@ -84,11 +84,6 @@
 <src/tools/krobot_monitor.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_monitor.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_monitor.{native,byte}>: pkg_lwt.react
-# Executable krobot-hil-simulator
-<src/tools/krobot_hil_simulator.{native,byte}>: use_krobot
-<src/tools/krobot_hil_simulator.{native,byte}>: pkg_lwt.unix
-<src/tools/krobot_hil_simulator.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_hil_simulator.{native,byte}>: pkg_lwt.react
 # Executable krobot-hub
 <src/tools/krobot_hub.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_hub.{native,byte}>: pkg_lwt.syntax
@@ -192,11 +187,6 @@
 <src/tools/krobot_dump_ax12.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_dump_ax12.{native,byte}>: pkg_lwt.react
 <src/tools/krobot_dump_ax12.{native,byte}>: pkg_bitstring
-# Executable krobot-mc-simulator
-<src/tools/krobot_mc_simulator.{native,byte}>: use_krobot
-<src/tools/krobot_mc_simulator.{native,byte}>: pkg_lwt.unix
-<src/tools/krobot_mc_simulator.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_mc_simulator.{native,byte}>: pkg_lwt.react
 # Executable krobot-replay
 <src/tools/krobot_replay.{native,byte}>: use_krobot
 <src/tools/krobot_replay.{native,byte}>: pkg_lwt.unix
@@ -260,11 +250,6 @@
 <src/tools/krobot_homologation.{native,byte}>: pkg_lwt.unix
 <src/tools/krobot_homologation.{native,byte}>: pkg_lwt.syntax
 <src/tools/krobot_homologation.{native,byte}>: pkg_lwt.react
-# Executable krobot-io-simulator
-<src/tools/krobot_io_simulator.{native,byte}>: use_krobot
-<src/tools/krobot_io_simulator.{native,byte}>: pkg_lwt.unix
-<src/tools/krobot_io_simulator.{native,byte}>: pkg_lwt.syntax
-<src/tools/krobot_io_simulator.{native,byte}>: pkg_lwt.react
 # Executable krobot-pet
 <src/tools/krobot_pet.{native,byte}>: use_krobot
 <src/tools/krobot_pet.{native,byte}>: pkg_lwt.unix
