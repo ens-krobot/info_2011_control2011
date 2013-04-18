@@ -445,6 +445,42 @@ let min_border_distance x y theta =
     | [] -> None
     | l -> Some (List.fold_left min max_float l)
 
+let distance_to_obj x y theta obj =
+  let x2, y2 = x +. cos theta, y +. sin theta in
+  let x3, y3, r = obj.pos.Krobot_geom.x, obj.pos.Krobot_geom.y, obj.size in
+  let a = (x2 -. x) ** 2. +. (y2 -. y) ** 2. in
+  let b = 2. *. ( (x2-.x)*.(x-.x3)+.(y2-.y)*.(y-.y3) ) in
+  let c = x3**2. +. y3**2. +. x**2. +. y**2. -. 2. *. (x*.x3+.y*.y3) -. r**2. in
+  let delta = b**2. -. 4. *.a*.c in
+  if abs_float delta < 0.01 then
+    Some (-.b/.(2.*.a))
+  else if delta > 0. then
+    let d1 = (-.b -. sqrt (delta)) /. (2.*.a) in
+    let d2 = (-.b +. sqrt (delta)) /. (2.*.a) in
+    if d1 < 0. && d2 < 0. then
+      None
+    else if d1 < 0. && d2 > 0. then
+      Some d2
+    else if d1 > 0. && d2 < 0. then
+      Some d1
+    else
+      Some (min d1 d2)
+  else
+    None
+
+let closest_obstacle x y theta objs =
+  let border = min_border_distance x y theta in
+  let dist_to_objs = List.map (distance_to_obj x y theta) objs in
+  List.fold_left
+    (fun min_dist dist -> match dist with
+       | Some dist ->
+         (match min_dist with
+            | Some min_dist -> Some (min min_dist dist)
+            | None -> Some dist)
+       | None -> min_dist)
+    border
+    dist_to_objs
+
 (*let gen_data robot =
   let dim = Array.length Krobot_config.urg_angles in
   let {Krobot_geom.x=urg_rel_x;
@@ -475,7 +511,7 @@ let gen_data robot =
   let l = ref [] in
   for i = 0 to dim - 1 do
     let angle = Krobot_config.urg_angles.(i) in
-    match min_border_distance robot.x robot.y (robot.theta +. angle) with
+    match closest_obstacle robot.x robot.y (robot.theta +. angle) Krobot_config.fixed_obstacles with
       | Some dist ->
         let x = dist *. cos angle in
         let y = dist *. sin angle  in
