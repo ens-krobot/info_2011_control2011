@@ -25,14 +25,18 @@ let time_step = 0.001
 
 let fork = ref true
 let hil = ref false
+let sensors_emu = ref true
+let robot_sim = ref true
 
 let options = Arg.align [
   "-no-fork", Arg.Clear fork, " Run in foreground";
+  "-no-sensor", Arg.Clear sensors_emu, " Don't emulate sensor inputs";
+  "-no-simulation", Arg.Clear robot_sim, " Don't simulate the robot";
   "-hil", Arg.Set hil, " Run in hardware in the loop mode";
 ]
 
 let usage = "\
-Usage: krobot-mc-simulator [options]
+Usage: krobot-simulator [options]
 options are:"
 
 (* +-----------------------------------------------------------------+
@@ -349,7 +353,7 @@ let send_CAN_messages sim bus =
 
 let handle_message bus (timestamp, message) =
   match message with
-    | Kill "mc_simulator" ->
+    | Kill "simulator" ->
       exit 0
     | CAN(_, frame) -> begin
       match !sim with
@@ -502,15 +506,11 @@ lwt () =
   (* Handle krobot message. *)
   E.keep (E.map (handle_message bus) (Krobot_bus.recv bus));
 
-  (* Kill any running mc_simulator. *)
-  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "mc_simulator") in
+  (* Kill any running simulator. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "simulator") in
 
   (* Wait a bit to let the other handler release the connection *)
   lwt () = Lwt_unix.sleep 0.4 in
-
-  (* Set the motor_controller card in HIL mode if necessary *)
-  if !hil then
-    ignore (Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true)) ;
 
   (* Initial state of the simulator *)
   let local_sim = {
@@ -531,8 +531,17 @@ lwt () =
   } in
   sim := Some local_sim;
 
-  ignore(send_CAN_messages local_sim bus);
-  ignore(loop_urg local_sim bus);
+  if !robot_sim then begin
+    (* Set the motor_controller card in HIL mode if necessary *)
+    if !hil then
+    ignore (Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true)) ;
+    ignore(send_CAN_messages local_sim bus);
+    ignore(loop bus local_sim)
+  end;
+  if !sensors_emu then begin
+  ignore(loop_urg local_sim bus)
+  end;
 
-  (* Loop forever. *)
-  Lwt_unix.run (loop bus local_sim)
+  (* Run forever *)
+  let t, _ = Lwt.wait () in
+  t
