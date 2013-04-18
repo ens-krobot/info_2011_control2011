@@ -18,6 +18,8 @@ open Lwt_react
 
 type direction = Forward | Backward
 
+type simulation_mode = Sim_no | Sim_normal | Sim_HIL
+
 type t =
   | Battery1_voltages of float * float * float * float
   | Battery2_voltages of float * float * float * float
@@ -54,7 +56,7 @@ type t =
   | Odometry_ghost of float * float * float * int * bool
   | Set_odometry of float * float * float
   | Set_odometry_indep of float * float * float
-  | Set_controller_mode of bool
+  | Set_simulation_mode of simulation_mode
   | Elevator of float * float
   | Req_motor_status
   | Unknown of frame
@@ -66,6 +68,11 @@ type t =
 let string_of_direction = function
   | Forward -> "Forward"
   | Backward -> "Backward"
+
+let string_of_simulation_mode = function
+  | Sim_no -> "Normal mode"
+  | Sim_normal -> "Simulation mode"
+  | Sim_HIL -> "HIL mode"
 
 let to_string = function
   | Battery1_voltages(elem1, elem2, elem3, elem4) ->
@@ -222,10 +229,10 @@ let to_string = function
       sprintf
         "Set_odometry_indep(%f, %f, %f)"
         x y theta
-  | Set_controller_mode b ->
+  | Set_simulation_mode m ->
       sprintf
-        "Set_controller_mode(%B)"
-        b
+        "Set_simulation_mode(%s)"
+        (string_of_simulation_mode m)
   | Elevator(p1, p2) ->
       sprintf
         "Elevator(%f, %f)"
@@ -641,13 +648,16 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Set_controller_mode b ->
+  | Set_simulation_mode m ->
       frame
         ~identifier:205
         ~kind:Data
         ~remote:false
         ~format:F29bits
-        ~data:(if b then "\x01" else "\x00")
+        ~data:(match m with
+                 | Sim_no -> "\x00"
+                 | Sim_normal -> "\x01"
+                 | Sim_HIL -> "\x02")
   | Elevator(p1, p2) ->
       let data = String.create 8 in
       put_float32 data 0 p1;
@@ -761,8 +771,9 @@ let decode frame =
               (get_float32 frame.data 0,
                get_float32 frame.data 4)
         | 205 ->
-            Set_controller_mode
-              (get_uint8 frame.data 0 <> 0)
+            Set_simulation_mode
+              (let v = get_uint8 frame.data 0 in
+               if v == 1 then Sim_normal else if v == 2 then Sim_HIL else Sim_no)
         | 206 ->
             let x, y, d1, d2, theta, v = decode_bezier frame.data in
             Motor_bezier(float x /. 1000.,

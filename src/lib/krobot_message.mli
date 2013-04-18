@@ -12,6 +12,9 @@
 type direction = Forward | Backward
     (** Type of directions. *)
 
+type simulation_mode = Sim_no | Sim_normal | Sim_HIL
+    (** Type of simulation. *)
+
 (** Type of messages. *)
 type t =
   | Battery1_voltages of float * float * float * float
@@ -117,8 +120,8 @@ type t =
   | Set_odometry_indep of float * float * float
       (** [set_odometry_ident(x, y, theta)] sets the parameters of the
           independant odometry to the given ones. *)
-  | Set_controller_mode of bool
-      (** Put the card into simulation mode or not. *)
+  | Set_simulation_mode of simulation_mode
+      (** Put the cards into a given simulation mode. *)
   | Elevator of float * float
       (** Set the position of the elevators, between 0 and 1. Negative
           positions are ignored. *)

@@ -27,12 +27,19 @@ let fork = ref true
 let hil = ref false
 let sensors_emu = ref true
 let robot_sim = ref true
+let go_normal = ref false
+let go_simu = ref false
+let go_hil = ref false
 
 let options = Arg.align [
   "-no-fork", Arg.Clear fork, " Run in foreground";
   "-no-sensor", Arg.Clear sensors_emu, " Don't emulate sensor inputs";
   "-no-simulation", Arg.Clear robot_sim, " Don't simulate the robot";
   "-hil", Arg.Set hil, " Run in hardware in the loop mode";
+  "-go-normal", Arg.Set go_normal, " Put the card in normal mode and exit";
+  "-go-simulation", Arg.Set go_simu, " Put the cards in simulation mode and exit";
+  "-go-normal", Arg.Set go_normal, " Put the cards in normal mode and exit";
+  "-go-hil", Arg.Set go_hil, " Put the cards in hardware in the loop mode and exit";
 ]
 
 let usage = "\
@@ -500,6 +507,17 @@ lwt () =
   (* Open the krobot bus. *)
   lwt bus = Krobot_bus.get () in
 
+  if (!go_hil or !go_simu or !go_normal) then begin
+    if !go_normal then
+      ignore(Krobot_message.send bus (Unix.gettimeofday (), Set_simulation_mode Sim_no))
+    else if !go_hil then
+      ignore(Krobot_message.send bus (Unix.gettimeofday (), Set_simulation_mode Sim_HIL))
+    else if !go_simu then
+      ignore(Krobot_message.send bus (Unix.gettimeofday (), Set_simulation_mode Sim_normal))
+    else
+    exit 0
+  end;
+
   (* Fork if not prevented. *)
   if !fork then Krobot_daemon.daemonize bus;
 
@@ -531,13 +549,19 @@ lwt () =
   } in
   sim := Some local_sim;
 
+  (* Set the correct simulation mode *)
+  if !robot_sim || !sensors_emu then
+    (if !hil then
+        ignore(Krobot_message.send bus (Unix.gettimeofday (), Set_simulation_mode Sim_HIL))
+     else
+        ignore(Krobot_message.send bus (Unix.gettimeofday (), Set_simulation_mode Sim_normal))
+    );
+  (* Launch robot simulation *)
   if !robot_sim then begin
-    (* Set the motor_controller card in HIL mode if necessary *)
-    if !hil then
-    ignore (Krobot_message.send bus (Unix.gettimeofday (), Set_controller_mode true)) ;
     ignore(send_CAN_messages local_sim bus);
     ignore(loop bus local_sim)
   end;
+  (* Launch sensor simulation *)
   if !sensors_emu then begin
   ignore(loop_urg local_sim bus)
   end;

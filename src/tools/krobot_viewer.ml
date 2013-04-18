@@ -614,11 +614,10 @@ let handle_message viewer (timestamp, message) =
             viewer.ui#beacon_period#set_text (string_of_int period);
             queue_draw viewer
 
-          | Set_controller_mode hil ->
-              if hil then
-                viewer.ui#menu_mode_hil#set_active true
-              else
-                viewer.ui#menu_mode_normal#set_active true
+          | Set_simulation_mode m ->
+              match m with
+                | Sim_HIL -> viewer.ui#menu_mode_hil#set_active true
+                | _ -> viewer.ui#menu_mode_normal#set_active true
 
           | _ ->
               ()
@@ -830,7 +829,7 @@ lwt () =
             ignore (
               Krobot_message.send bus
                 (Unix.gettimeofday (),
-                 Set_controller_mode false)
+                 Set_simulation_mode Sim_no)
             );
           false));
 
@@ -841,7 +840,7 @@ lwt () =
             ignore_result (
               Krobot_message.send bus
                 (Unix.gettimeofday (),
-                 Set_controller_mode true)
+                 Set_simulation_mode Sim_HIL)
             );
           false));
 
