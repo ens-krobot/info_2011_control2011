@@ -262,12 +262,6 @@ let string_of_test = function
   | `Lt -> "Lt"
   | `Le -> "Le"
 
-let revert_vertice v = { v with x = Krobot_config.world_width -. v.x }
-let revert_vector_opt v =
-  match v with
-    | None -> None
-    | Some v -> Some { v with vx = -. v.vx }
-
 let bezier_collide objects curve c1 c2 shift_vector curve_parameter =
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
@@ -424,12 +418,8 @@ let rec exec robot actions =
     | Set_curve(Some curve) :: rest ->
         robot.curve <- Some curve;
         exec robot rest
-    | Goto (revert,v,last_vector) :: rest -> begin
+    | Goto (v,last_vector) :: rest -> begin
       ignore (Lwt_log.info_f "Goto");
-        let v,last_vector = if revert && robot.team = `Blue
-          then revert_vertice v, revert_vector_opt last_vector
-          else v, last_vector
-        in
         (* Try to find a path to the destination. *)
         match Krobot_path.find ~src:robot.position ~dst:v ~beacon:robot.beacon with
           | Some vertices ->
@@ -438,11 +428,11 @@ let rec exec robot actions =
                 (Node (
                   Some
                     (Node (None, [Stop; Wait_for 0.05;
-                                  Goto (false,v,last_vector)])),
-                  [Follow_path (false,vertices,last_vector, true)]) :: rest)
+                                  Goto (v,last_vector)])),
+                  [Follow_path (vertices,last_vector, true)]) :: rest)
 
           | None ->
-              ([Stop; Wait_for 0.05; Goto (revert,v,last_vector)] @ rest,
+              ([Stop; Wait_for 0.05; Goto (v,last_vector)] @ rest,
                Wait)
     end
     | Can c ::rest ->
@@ -458,12 +448,8 @@ let rec exec robot actions =
           | `Green -> 6
           | `Yellow -> 5 in
         (rest, Send[Switch_request(led,value)])
-    | Follow_path (revert,vertices,last_vector, correct_curve ) :: rest -> begin
+    | Follow_path (vertices,last_vector, correct_curve ) :: rest -> begin
         ignore (Lwt_log.info_f "Follow_path");
-        let vertices,vector = if revert && robot.team = `Blue
-          then List.map revert_vertice vertices, revert_vector_opt last_vector
-          else vertices, last_vector
-        in
         (* Compute bezier curves. *)
         let vector = { vx = cos robot.orientation; vy = sin robot.orientation } in
 (*
@@ -651,7 +637,7 @@ let rec exec robot actions =
     | Calibrate ( approach_position, approach_orientation, distance,
                   supposed_x, supposed_y, supposed_orientation )::rest ->
       Node (None,
-            ([ Goto (false,approach_position,
+            ([ Goto (approach_position,
                      Some { vx = cos approach_orientation;
                             vy = cos approach_orientation });
                Set_orientation approach_orientation;

@@ -615,10 +615,10 @@ let handle_message viewer (timestamp, message) =
             queue_draw viewer
 
           | Set_simulation_mode m ->
-              match m with
-                | Sim_HIL -> viewer.ui#menu_mode_hil#set_active true
-                | _ -> viewer.ui#menu_mode_normal#set_active true
-
+            begin match m with
+              | Sim_HIL -> viewer.ui#menu_mode_hil#set_active true
+              | _ -> viewer.ui#menu_mode_normal#set_active true
+            end
           | _ ->
               ()
       end
@@ -795,7 +795,7 @@ lwt () =
           if GdkEvent.Button.button ev = 1 then begin
             match viewer.planner_path with
               | curve :: _ ->
-                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Goto(false,Bezier.dst curve,None)]))
+                  ignore (Krobot_bus.send bus (Unix.gettimeofday (), Strategy_set [Krobot_action.Goto(Bezier.dst curve,None)]))
               | _ ->
                   ()
           end;

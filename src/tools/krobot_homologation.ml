@@ -43,10 +43,10 @@ let strat_loop =
                  None,
                  Some (pi) );
 
-    Goto (false, { x = 1.5; y = 0.5 }, None);
-    Goto (false, { x = 1.5; y = 1.5 }, None);
-    Goto (false, { x = 1.5; y = 0.5 }, None);
-    Goto (false, { x = 1.5; y = 1.5 }, None);
+    Goto ({ x = 1.5; y = 0.5 }, None);
+    Goto ({ x = 1.5; y = 1.5 }, None);
+    Goto ({ x = 1.5; y = 0.5 }, None);
+    Goto ({ x = 1.5; y = 1.5 }, None);
     Wait_for 2.;
     End;
   ]

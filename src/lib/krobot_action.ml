@@ -14,9 +14,9 @@ type t =
   | Node of t option * t list
   | Stop
   | Think
-  | Goto of bool * vertice * vector option
+  | Goto of vertice * vector option
   | Set_limits of float * float * float
-  | Follow_path of bool * vertice list * vector option * bool
+  | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
   | Wait_for_jack of bool
@@ -64,13 +64,13 @@ let rec to_string = function
       "Stop"
   | Think ->
       "Think"
-  | Goto (reverted,v,vect) ->
-      sprintf "Goto %b %s %s" reverted (string_of_vertice v) (string_of_option string_of_vector vect)
+  | Goto (v,vect) ->
+      sprintf "Goto %s %s" (string_of_vertice v) (string_of_option string_of_vector vect)
   | Set_limits (vmax,atan_max, arad_max) ->
       sprintf "Set_limits(%f, %f, %f)" vmax atan_max arad_max
   | Set_led (_,_) -> "Set_led"
-  | Follow_path (reverted,l,vect, correct) ->
-      sprintf "Follow_path [%b, %s, %s, %b]" reverted
+  | Follow_path (l,vect, correct) ->
+      sprintf "Follow_path [%s, %s, %b]"
         (String.concat "; " (List.map string_of_vertice l))
         (string_of_option string_of_vector vect)
         correct

@@ -20,7 +20,7 @@ type t =
   | Think
       (** This is the highest-level action. It instruct the VM to
           think about a new strategy. *)
-  | Goto of bool * vertice * vector option
+  | Goto of vertice * vector option
       (** Go to the given point.
           if the bool parameter is true, the path is inverted according
           to the robot team *)
@@ -31,10 +31,8 @@ type t =
   (* TODO: en faire un node pour pouvoir revenir a des limites normales en sortant
      d'une serie d'actions *)
 
-  | Follow_path of bool * vertice list * vector option * bool
+  | Follow_path of vertice list * vector option * bool
       (** Follow the given path. It does not check for obstacles.
-          if the bool parameter is true, the path is inverted according
-          to the robot team.
           the last boolean tells to correct the bezier curves
           to avoid obstacles.
           Use only if the lines between vertices does not colide obstacles *)
