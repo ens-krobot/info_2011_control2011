@@ -32,6 +32,9 @@ val wheels_position : float
   (** The distance between the axe of the wheels and the back of the
       robot. *)
 
+val robot_radius : float
+  (** distance between the point between the wheel and the farthest point *)
+
 val rotary_beacon_index_pos : float
   (** The angle of the rotary beacon index angle with respect to the
       robot's front *)

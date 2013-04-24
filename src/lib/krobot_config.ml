@@ -11,16 +11,20 @@ let sqr x = x *. x
 
 let world_height = 2.
 let world_width = 3.
-let robot_length = 0.39
+let robot_length = 0.22
 let robot_width = 0.33
 let wheels_diameter = 0.098
 let wheels_distance = 0.224
 let wheels_position = 0.04
+let robot_radius =
+  let l1 = robot_length -. wheels_position in
+  let l2 = robot_width /. 2. in
+  sqrt (l1 *. l1 +. l2 *. l2)
 let rotary_beacon_index_pos = 0.
 
 let safety_margin = 0.01
 
-let beacon_radius = 0.4
+let beacon_radius = 0.2
 
 let coin_radius = 0.06
 

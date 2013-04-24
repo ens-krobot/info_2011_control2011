@@ -287,6 +287,13 @@ let draw viewer =
       Krobot_config.fixed_obstacles
   in
 
+  (* Draw the robot bounding circle *)
+
+  Cairo.arc ctx viewer.state.pos.x viewer.state.pos.y
+    Krobot_config.robot_radius 0. (2. *. pi);
+  Cairo.set_source_rgba ctx 1. 1. 1. 0.5;
+  Cairo.fill ctx;
+
   (* Draw the robot and the ghost *)
   List.iter
     (fun (state, (r,g,b,alpha)) ->
