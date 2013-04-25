@@ -867,6 +867,9 @@ lwt () =
     (ui#v_max#connect#value_changed
        (fun () -> send_motor_limit ()));
   ignore
+    (ui#omega_max#connect#value_changed
+       (fun () -> send_motor_limit ()));
+  ignore
     (ui#a_tan_max#connect#value_changed
        (fun () -> send_motor_limit ()));
   ignore
