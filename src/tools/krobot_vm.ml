@@ -438,9 +438,9 @@ let rec exec robot actions =
     | Can c ::rest ->
         ignore (Lwt_log.info_f "Can");
         (rest, Send_frame[c])
-    | Set_limits(vmax,atan_max,arad_max) :: rest ->
+    | Set_limits(vmax,omega_max,atan_max,arad_max) :: rest ->
         ignore (Lwt_log.info_f "Set_limit");
-        (rest, Send[Motor_bezier_limits(vmax,atan_max,arad_max)])
+        (rest, Send[Motor_bezier_limits(vmax,omega_max,atan_max,arad_max)])
     | Set_led(led,value) :: rest ->
         ignore (Lwt_log.info_f "Set_led");
         let led = match led with

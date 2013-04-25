@@ -71,8 +71,8 @@ type command =
       (* [Turn(t_acc, velocity)] *)
   | Move of float * float
       (* [Move(t_acc, velocity)] *)
-  | Bezier_cmd of (float * float * float) * bool
-      (** [Motor_bezier_limits(v_max, a_tan_max, a_rad_max)] *)
+  | Bezier_cmd of (float * float * float * float) * bool
+      (** [Motor_bezier_limits(v_max, omega_max, a_tan_max, a_rad_max)] *)
 
 (* Type of simulators. *)
 type simulator = {
@@ -102,7 +102,7 @@ type simulator = {
   (* The start time of the current command. *)
   mutable command_end : float;
   (* The end time of the current command. *)
-  mutable bezier_limits : float * float * float;
+  mutable bezier_limits : float * float * float * float;
 }
 
 (* +-----------------------------------------------------------------+
@@ -177,13 +177,22 @@ let velocities sim dt =
            sim.command <- Idle;
            (0., 0.)
          | Some curve ->
-           let (v_max,_,a_r_max) = limits in
+           let (v_max,omega_max,_,a_r_max) = limits in
            let s' = norm (Bezier.dt curve sim.bezier_u) in
            let { vx = x'; vy = y' } = Bezier.dt curve sim.bezier_u in
            let { vx = x'';vy = y''} = Bezier.ddt curve sim.bezier_u in
            let theta' = ( y'' *. x' -. x'' *. y' ) /. ( x' *. x' +. y' *. y' ) in
            let cr = (x'*.x'+.y'*.y') ** 1.5 /. (x'*.y''-.y'*.x'') in
            let vel = min v_max (sqrt (a_r_max *. (abs_float cr))) in
+           let omega = theta' *. vel /. s' in
+           let vel, omega =
+             if omega > omega_max then
+               omega_max *. s' /. theta', omega_max
+             else if omega < -. omega_max then
+               -. omega_max *. s' /. theta', -. omega_max
+             else
+               vel, omega
+           in
            sim.bezier_u <- sim.bezier_u +. vel /. s' *. dt;
            if dir then
              (vel, theta' *. vel /. s')
@@ -397,8 +406,8 @@ let handle_message bus (timestamp, message) =
                 sim.state_indep <- { x; y; theta }
               | Set_odometry_indep(x, y, theta) ->
                 sim.state <- { x; y; theta }
-              | Motor_bezier_limits(v_max, a_tan_max, a_rad_max) ->
-                sim.bezier_limits <- (v_max, a_tan_max, a_rad_max)
+              | Motor_bezier_limits(v_max, omega_max, a_tan_max, a_rad_max) ->
+                sim.bezier_limits <- (v_max, omega_max, a_tan_max, a_rad_max)
               | Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end) ->
                 Lwt_unix.run (Lwt_log.info_f "received: bezier(%f, %f, %f, %f, %f, %f)" x_end y_end d1 d2 theta_end v_end);
                 bezier sim (x_end, y_end, d1, d2, theta_end, v_end)
@@ -581,7 +590,7 @@ lwt () =
     command_start = 0.;
     command_end = 0.;
     time = Unix.gettimeofday ();
-    bezier_limits = 1., 1., 1.;
+    bezier_limits = 0.5, 3.14, 1., 1.;
   } in
   sim := Some local_sim;
 

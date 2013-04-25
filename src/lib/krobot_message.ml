@@ -50,7 +50,7 @@ type t =
   | Motor_command of int * int
   | Motor_activation of int * bool
   | Motor_stop of float * float
-  | Motor_bezier_limits of float * float * float
+  | Motor_bezier_limits of float * float * float * float
   | Odometry of float * float * float
   | Odometry_indep of float * float * float
   | Odometry_ghost of float * float * float * int * bool
@@ -197,10 +197,10 @@ let to_string = function
       sprintf
         "Motor_stop(%f, %f)"
         lin_acc rot_acc
-  | Motor_bezier_limits(v_max, a_tan_max, a_rad_max) ->
+  | Motor_bezier_limits(v_max, omega_max, a_tan_max, a_rad_max) ->
       sprintf
-        "Motor_bezier_limits(%f, %f, %f)"
-        v_max a_tan_max a_rad_max
+        "Motor_bezier_limits(%f, %f, %f, %f)"
+        v_max omega_max a_tan_max a_rad_max
   | Motor_command(motor_id, speed) ->
       sprintf
         "Motor_command(%d, %d)"
@@ -634,14 +634,16 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
-  | Motor_bezier_limits(v_max, a_tan_max, a_rad_max) ->
+  | Motor_bezier_limits(v_max, omega_max, a_tan_max, a_rad_max) ->
       let v_max = v_max *. 1000. in
+      let omega_max = omega_max *. 1000. in
       let a_tan_max = a_tan_max *. 1000. in
       let a_rad_max = a_rad_max *. 1000. in
-      let data = String.create 6 in
+      let data = String.create 8 in
       put_uint16 data 0 (int_of_float v_max);
-      put_uint16 data 2 (int_of_float a_tan_max);
-      put_uint16 data 4 (int_of_float a_rad_max);
+      put_uint16 data 2 (int_of_float omega_max);
+      put_uint16 data 4 (int_of_float a_tan_max);
+      put_uint16 data 6 (int_of_float a_rad_max);
       frame
         ~identifier:207
         ~kind:Data
@@ -786,7 +788,8 @@ let decode frame =
             Motor_bezier_limits
               (float (get_uint16 frame.data 0) /. 1000.,
                float (get_uint16 frame.data 2) /. 1000.,
-               float (get_uint16 frame.data 4) /. 1000.)
+               float (get_uint16 frame.data 4) /. 1000.,
+               float (get_uint16 frame.data 6) /. 1000.)
         | 208 ->
             Motor_command
               (get_uint8 frame.data 0,

@@ -25,7 +25,7 @@ type t =
           if the bool parameter is true, the path is inverted according
           to the robot team *)
 
-  | Set_limits of float * float * float
+  | Set_limits of float * float * float * float
       (** limit the speed *)
 
   (* TODO: en faire un node pour pouvoir revenir a des limites normales en sortant

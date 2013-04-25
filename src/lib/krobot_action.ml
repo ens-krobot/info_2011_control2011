@@ -15,7 +15,7 @@ type t =
   | Stop
   | Think
   | Goto of vertice * vector option
-  | Set_limits of float * float * float
+  | Set_limits of float * float * float * float
   | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Set_curve of Bezier.curve option
@@ -66,8 +66,8 @@ let rec to_string = function
       "Think"
   | Goto (v,vect) ->
       sprintf "Goto %s %s" (string_of_vertice v) (string_of_option string_of_vector vect)
-  | Set_limits (vmax,atan_max, arad_max) ->
-      sprintf "Set_limits(%f, %f, %f)" vmax atan_max arad_max
+  | Set_limits (vmax,omega_max,atan_max, arad_max) ->
+      sprintf "Set_limits(%f, %f, %f, %f)" vmax omega_max atan_max arad_max
   | Set_led (_,_) -> "Set_led"
   | Follow_path (l,vect, correct) ->
       sprintf "Follow_path [%s, %s, %b]"

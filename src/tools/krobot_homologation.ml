@@ -62,7 +62,7 @@ let strat_base =
     Set_led(`Green,false);
     Reset_odometry `Auto;
     Wait_for_odometry_reset `Auto;
-    Set_limits (0.3,1.0,1.0);
+    Set_limits (0.3,3.14,1.0,1.0);
     End;
   ]
 
