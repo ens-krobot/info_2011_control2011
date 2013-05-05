@@ -71,7 +71,7 @@ type command =
       (* [Turn(t_acc, velocity)] *)
   | Move of float * float
       (* [Move(t_acc, velocity)] *)
-  | Bezier_cmd of (float * float * float * float) * bool
+  | Bezier_cmd of (float array) * (float * float * float * float) * bool
       (** [Motor_bezier_limits(v_max, omega_max, a_tan_max, a_rad_max)] *)
 
 (* Type of simulators. *)
@@ -90,9 +90,9 @@ type simulator = {
   (* The state of the ghost. *)
   mutable bezier_u : float;
   (* position on the Bezier's curve*)
-  mutable bezier_curve : Bezier.curve option;
+  mutable bezier_curve : (Bezier.curve * float) option;
   (* Bezier's curve currently being followed if existing *)
-  mutable bezier_next : (Bezier.curve * bool) option;
+  mutable bezier_next : (Bezier.curve * float * bool) option;
   (* Next Bezier's curve to follow *)
   mutable time : float;
   (* The current time. *)
@@ -140,14 +140,23 @@ velocities:
 let velocities sim dt =
   (* Put the robot into idle if the last command is terminated. *)
   (match sim.command with
-    | Bezier_cmd (_,cur_dir) ->
+    | Bezier_cmd (_,_,cur_dir) ->
       if sim.bezier_u >= 1. then begin
+        let v_ini = match sim.bezier_curve with
+          | Some (curve, v_end) -> v_end
+          | None -> assert false
+        in
         match sim.bezier_next with
         | None ->
           sim.command <- Idle
-        | Some (curve,dir) ->
-          sim.command <- Bezier_cmd (sim.bezier_limits, cur_dir);
-          sim.bezier_curve <- Some curve;
+        | Some (curve,v_end,dir) ->
+          let v_max, omega_max, at_max, ar_max = sim.bezier_limits in
+          sim.command <-
+            Bezier_cmd (Bezier.velocity_profile
+                          curve v_max omega_max at_max ar_max v_ini v_end 0.01,
+                        sim.bezier_limits,
+                        cur_dir);
+          sim.bezier_curve <- Some (curve, v_end);
           sim.bezier_next <- None;
           sim.bezier_u <- 0.
       end
@@ -171,13 +180,22 @@ let velocities sim dt =
         (vel, 0.)
       else
         (vel *. (sim.command_end -. sim.time) /. t_acc, 0.)
-    | Bezier_cmd (limits, dir) ->
+    | Bezier_cmd (v_tab, limits, dir) ->
       (match sim.bezier_curve with
          | None ->
            sim.command <- Idle;
            (0., 0.)
-         | Some curve ->
+         | Some (curve,_) ->
            let (v_max,omega_max,_,a_r_max) = limits in
+           let ui = int_of_float (sim.bezier_u *. 100.) in
+           let v_max =
+             if ui >= (Array.length v_tab)-1 then
+               v_tab.((Array.length v_tab)-1)
+             else if ui < 0 then
+               v_tab.(0)
+             else
+               v_tab.(ui) +. (v_tab.(ui+1)-.v_tab.(ui)) *. (sim.bezier_u -. 0.01*.(float_of_int ui))/.0.01;
+           in
            let s' = norm (Bezier.dt curve sim.bezier_u) in
            let { vx = x'; vy = y' } = Bezier.dt curve sim.bezier_u in
            let { vx = x'';vy = y''} = Bezier.ddt curve sim.bezier_u in
@@ -204,7 +222,7 @@ let bezier sim (x_end, y_end, d1, d2, theta_end, v_end) =
     | None ->
       {Krobot_geom.x = sim.state.x; Krobot_geom.y = sim.state.y},
       sim.state.theta
-    | Some curve ->
+    | Some (curve,_) ->
       let _,_,r,s = Bezier.pqrs curve in
       s,
       (angle (vector r s))
@@ -213,13 +231,19 @@ let bezier sim (x_end, y_end, d1, d2, theta_end, v_end) =
   let q = translate p (vector_of_polar d1 theta_start) in
   let r = translate s (vector_of_polar (-.d2) theta_end) in
   let dir = d1 >= 0. in
+  let curve = Bezier.of_vertices p q r s in
   match sim.bezier_curve with
     | None ->
-      sim.command <- Bezier_cmd (sim.bezier_limits,dir);
+      let v_max, omega_max, at_max, ar_max = sim.bezier_limits in
+      sim.command <-
+        Bezier_cmd (Bezier.velocity_profile
+                      curve v_max omega_max at_max ar_max 0.01 v_end 0.01,
+                    sim.bezier_limits,
+                    dir);
       sim.bezier_u <- 0.;
-      sim.bezier_curve <- Some (Bezier.of_vertices p q r s);
+      sim.bezier_curve <- Some (curve, v_end);
     | Some _ ->
-      sim.bezier_next <- Some ((Bezier.of_vertices p q r s),dir)
+      sim.bezier_next <- Some (curve,v_end,dir)
 
 let move sim distance velocity acceleration =
   if distance <> 0. && velocity > 0. && acceleration > 0. then begin
