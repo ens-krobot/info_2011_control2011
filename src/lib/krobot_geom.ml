@@ -223,10 +223,66 @@ module Bezier = struct
   let ddt b t =
     (b.a *| (6. *. t)) +| (b.b *| 2.)
 
+  let cr b t =
+    let db = dt b t in
+    let ddb = ddt b t in
+    ((db.vx*.db.vx +. db.vy*.db.vy) ** 1.5) /. (db.vx*.ddb.vy -. db.vy*.ddb.vx)
+
   type robot_info =
     { r_width : float; (* distance between wheels: m *)
       r_max_wheel_speed : float; (* m / s *)
       r_max_a : float; } (* m / s^2 *)
+
+  exception Exit_for_vel
+
+  let velocity_profile b v_max omega_max at_max ar_max v_ini v_end du =
+    Printf.printf "inside velocity_profile\n%!";
+    let n_pts = int_of_float ( 1. /. du +. 1.) in
+    let us = Array.init n_pts (fun i -> (float_of_int i) *. du) in
+    let v_tab = Array.map (fun _ -> v_max) us in
+    let mins = ref [(0,v_ini); ((n_pts-1),v_end)] in
+    let cr_pp = ref (abs_float (cr b 0.)) in
+    let cr_p = ref (abs_float (cr b du)) in
+    Array.iteri (fun i u -> if (i > 1) then begin
+      let cr = abs_float (cr b u) in
+      if (cr >= !cr_p && !cr_p < !cr_pp) then begin
+        mins := (i, sqrt (ar_max*.cr)) :: !mins;
+      end;
+      cr_pp := !cr_p;
+      cr_p := cr;
+      end
+    ) us;
+    mins := List.rev !mins;
+    List.iter (fun (m, vm) ->
+      if (vm < v_tab.(m)) then begin
+        v_tab.(m) <- vm;
+        (try
+           for i = m-1 downto 0 do
+             let db = dt b (us.(i+1)) in
+             let dsu = sqrt (db.vx*.db.vx +. db.vy*.db.vy) in
+             let dt = (-.v_tab.(i+1)+.sqrt(v_tab.(i+1)*.v_tab.(i+1)+.2.*.at_max*.du*.dsu))/.at_max in
+             let nv = v_tab.(i+1)+.at_max*.dt in
+             if (nv < v_tab.(i)) then
+               v_tab.(i) <- nv
+             else
+               raise Exit_for_vel
+           done
+         with Exit_for_vel -> ());
+        (try
+           for i = m+1 to (n_pts-1) do
+             let db = dt b (us.(i-1)) in
+             let dsu = sqrt (db.vx*.db.vx +. db.vy*.db.vy) in
+             let dt = (-.v_tab.(i-1)+.sqrt(v_tab.(i-1)*.v_tab.(i-1)+.2.*.at_max*.du*.dsu))/.at_max in
+             let nv = v_tab.(i-1)+.at_max*.dt in
+             if (nv < v_tab.(i)) then
+               v_tab.(i) <- nv
+             else
+               raise Exit_for_vel
+           done
+         with Exit_for_vel -> ());
+      end
+    ) !mins;
+    v_tab
 
   let wheel_speed_rapport r b t =
     let s' = norm (dt b t) in

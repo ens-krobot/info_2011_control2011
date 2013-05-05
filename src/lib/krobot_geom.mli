@@ -113,14 +113,19 @@ module Bezier : sig
   val mul_d2 : curve -> float -> curve
 
   val dt : curve -> float -> vector
-  (** [dt curve t] is the value of the dérivée de curve en t *)
+  (** [dt curve t] is the value of the derivative of curve in t *)
   val ddt : curve -> float -> vector
-  (** [ddt curve t] is the value of the dérivée seconde de curve en t *)
+  (** [ddt curve t] is the value of the second derivative of curve in t *)
+  val cr : curve -> float -> float
+  (** [cr curve t] is the value of the curvature radius of curve in t *)
 
   type robot_info =
     { r_width : float; (* distance between wheels: m *)
       r_max_wheel_speed : float; (* m / s *)
       r_max_a : float; } (* m / s^2 *)
+
+  val velocity_profile : curve -> float -> float -> float -> float -> float -> float -> float -> float array
+  (** [velocity_profile curve v_max omega_max at_max ar_max v_ini v_end du] *)
 
   val wheel_speed_rapport : robot_info -> curve -> float -> float
   (** [wheel_speed_rapport width curve t] is the rapport between the
