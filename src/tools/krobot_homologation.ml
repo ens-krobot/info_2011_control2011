@@ -57,7 +57,7 @@ let strat_base =
     Wait_for_jack true;
     Wait_for 1.;
     Wait_for_jack false;
-    Start_timer;
+    Start_timer (10.,[End]);
     Set_led(`Red,false);
     Set_led(`Green,false);
     Reset_odometry `Auto;

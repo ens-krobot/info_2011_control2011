@@ -38,7 +38,7 @@ type t =
   | Wait_until of float
   | Wait_for_grip_open_low of [ `Front | `Back ]
   | Wait_for_grip_close_low of [ `Front | `Back ]
-  | Start_timer
+  | Start_timer of float * t list
   | Can of Krobot_can.frame
   | Set_led of [ `Red | `Yellow | `Green ] * bool
   | Set_orientation of float
@@ -59,7 +59,7 @@ let string_of_face = function
 
 let rec to_string = function
   | Node (t,l) ->
-      sprintf "Node [%s, %s]" (string_of_option to_string t) (String.concat "; " (List.map to_string l))
+      sprintf "Node [%s, %s]" (string_of_option to_string t) (list_to_string l)
   | Stop ->
       "Stop"
   | Think ->
@@ -137,7 +137,8 @@ let rec to_string = function
       sprintf "Wait_for_grip_open_low %S" (string_of_face face)
   | Wait_for_grip_close_low face ->
       sprintf "Wait_for_grip_close_low %S" (string_of_face face)
-  | Start_timer -> "Start_timer"
+  | Start_timer (delay,t) ->
+      sprintf "Start_timer(%f,%s)" delay (list_to_string t)
   | Can c -> "Can"
   | Try_something v ->
       sprintf "Try_something %s" (string_of_vertice v)
@@ -151,3 +152,5 @@ let rec to_string = function
       (string_of_option string_of_float o)
   | Calibrate (_,_,_,_,_,_) -> "Calibrate"
   | End -> "End"
+
+and list_to_string l = String.concat "; " (List.map to_string l)

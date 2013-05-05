@@ -89,6 +89,8 @@ type robot = {
 
   mutable init_time : float option;
 
+  mutable delayed_action : (float * Krobot_action.t list) option;
+
   ax12_front_low_left : ax12;
   ax12_front_low_right : ax12;
   ax12_front_high_left : ax12;
@@ -673,6 +675,13 @@ let rec exec robot actions =
           else
             exec robot actions
         end
+
+    | Start_timer(delay,action) :: rest ->
+      let current_time = Unix.gettimeofday () in
+      robot.init_time <- Some (current_time);
+      robot.delayed_action <- Some (current_time +. delay, action);
+      (rest, Wait)
+
     | End :: rest ->
       ([], Send_bus [Strategy_finished])
     | _ :: rest ->
@@ -685,6 +694,19 @@ let rec exec robot actions =
 let run robot =
   while_lwt true do
     let timestamp = Unix.gettimeofday () in
+
+    (* check if the current time is higher than the delayed action *)
+    begin
+      match robot.delayed_action with
+        | Some (timeout,l) ->
+            if timeout >= timestamp
+            then begin
+              robot.delayed_action <- None;
+              robot.strategy <- l
+            end
+        | None ->
+            ()
+    end;
 
     (* Check if a program asked for the strategy to change. *)
     begin
@@ -821,6 +843,7 @@ lwt () =
     ax12_back_high_right = { ax12_position = 0; ax12_speed = 0; ax12_torque = 0 };
     replace = false;
     init_time = None;
+    delayed_action = None;
   } in
 
   (* Handle krobot message. *)
