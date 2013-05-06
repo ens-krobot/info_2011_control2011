@@ -665,7 +665,8 @@ let handle_message viewer (timestamp, message) =
       queue_draw viewer
 
     | Urg dist ->
-      viewer.urg <- project_urg viewer dist
+      viewer.urg <- project_urg viewer dist;
+      queue_draw viewer
 
     | Urg_lines lines ->
       viewer.urg_lines <- project_urg_lines viewer lines
