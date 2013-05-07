@@ -88,3 +88,11 @@ let far_enougth_filter kd a min_dist data =
   let ai = Array.of_list (List.filter far_enougth distl) in
   { dx = Array.map (fun (i,_) -> data.dx.(i)) ai;
     dy = Array.map (fun (i,_) -> data.dy.(i)) ai }
+
+let invert_transform a =
+  let co = cos (-. a.ath) in
+  let si = sin (-. a.ath) in
+  let x' = a.ax *. co -. a.ay *. si in
+  let y' = a.ax *. si +. a.ay *. co in
+  { ath = -. a.ath; ax = -. x'; ay = -. y'}
+
