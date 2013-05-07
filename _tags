@@ -1,5 +1,6 @@
 <**/*.ml{,i}>: syntax_camlp4o
 <src/interfaces/*.ml>: -syntax_camlp4o
+<src/icp/*.ml>: -syntax_camlp4o
 
 # OASIS_START
 # DO NOT EDIT (digest: 9a283fb86531fb8de178da3ad5f872b1)

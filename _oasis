@@ -74,6 +74,18 @@ Library "krobot-can"
    Krobot_can_desc_parser
   CSources: can_stubs.c
 
+Library "krobot-icp"
+  FindlibName: icp
+  FindlibParent: krobot
+  BuildDepends: lacaml
+  XMETADescription: 2d Point cloud registration
+  XMETARequires: lacaml
+  Path: src/icp
+  Install: true
+  Modules:
+   Kd_tree,
+   Icp_minimisation,
+   Icp_utils
 # +-------------------------------------------------------------------+
 # | The driver                                                        |
 # +-------------------------------------------------------------------+
