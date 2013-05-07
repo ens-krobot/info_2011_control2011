@@ -14,9 +14,10 @@ val make_kd_tree : data -> int Kd_tree.t
 (** create a kd tree containting index in the data *)
 
 val distance_transform : kernel -> 'a Kd_tree.t -> a -> data -> float array
-(** [distance_transform kernel kd a data] Calculates the distance for
-   each point of [data] after transformation to the closest point in
-   the kd tree. the kernel is applied to the result after *)
+(** [distance_transform kernel kd a data] Calculates the square of the
+   distance for each point of [data] after transformation to
+   the closest point in the kd tree. the kernel is applied to the
+   result after *)
 
 val default_kernel : kernel
 (** Huber kernel *)

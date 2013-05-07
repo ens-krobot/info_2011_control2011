@@ -75,3 +75,16 @@ let load_file ?(min_dist=0.15) ?(max_dist=6.) f =
       let x,y = List.split v in
       ts, { dx = Array.of_list x; dy = Array.of_list y }) l in
   Array.of_list l'
+
+
+(**** filtering ****)
+
+let far_enougth_filter kd a min_dist data =
+  let dist = distance_transform (fun i -> i) kd a data in
+  let dist = Array.mapi (fun i d -> i,d) dist in
+  let distl = Array.to_list dist in
+  let min_dist2 = min_dist *. min_dist in
+  let far_enougth (i,d) = d >= min_dist2 in
+  let ai = Array.of_list (List.filter far_enougth distl) in
+  { dx = Array.map (fun (i,_) -> data.dx.(i)) ai;
+    dy = Array.map (fun (i,_) -> data.dy.(i)) ai }
