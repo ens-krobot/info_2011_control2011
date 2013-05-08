@@ -31,7 +31,7 @@ type message =
   | Trajectory_simplify of float
   | Trajectory_go
   | Trajectory_find_path
-  | Objects of vertice list
+  | Objects of (vertice*float) list
   | Sharps of float array
   | Strategy_append of Krobot_action.t list
   | Strategy_stop
@@ -59,6 +59,9 @@ open Printf
 
 let string_of_vertice v =
   sprintf "{ x = %f; y = %f }" v.x v.y
+
+let string_of_object (v,d) =
+  sprintf "{ x = %f; y = %f; d = %f }" v.x v.y d
 
 let string_of_vector v =
   sprintf "{ vx = %f; vy = %f }" v.vx v.vy
@@ -109,7 +112,7 @@ let string_of_message = function
   | Objects objects ->
       sprintf
         "Objects [%s]"
-        (String.concat "; " (List.map string_of_vertice objects))
+        (String.concat "; " (List.map string_of_object objects))
   | Sharps a ->
       sprintf
         "Sharps [|%s|]"

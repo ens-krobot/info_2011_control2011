@@ -34,6 +34,10 @@ Flag sdl
   Description: enable sdl
   Default: true
 
+Flag lacaml
+  Description: compile icp depending on lacaml
+  Default: true
+
 # +-------------------------------------------------------------------+
 # | Libraries                                                         |
 # +-------------------------------------------------------------------+
@@ -77,6 +81,8 @@ Library "krobot-can"
 Library "krobot-icp"
   FindlibName: icp
   FindlibParent: krobot
+  Build$: flag(lacaml)
+  Install$: flag(lacaml)
   BuildDepends: lacaml
   XMETADescription: 2d Point cloud registration
   XMETARequires: lacaml
@@ -316,6 +322,14 @@ Executable "krobot-urg"
   CompiledObject: best
   MainIs: krobot_urg.ml
   BuildDepends: krobot, urg, lwt.syntax, lwt.preemptive, threads
+
+Executable "krobot-urg-extract"
+  Path: src/tools
+  Build$: flag(lacaml)
+  Install$: flag(lacaml)
+  CompiledObject: best
+  MainIs: krobot_urg_extract.ml
+  BuildDepends: krobot, krobot.icp, lwt.syntax
 
 Executable "krobot-beacon-reader"
   Path: src/tools

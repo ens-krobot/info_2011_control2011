@@ -52,7 +52,7 @@ type message =
 
   (** Objects *)
 
-  | Objects of vertice list
+  | Objects of (vertice*float) list
       (** The list of objects on the board. *)
 
   (** Sharps *)

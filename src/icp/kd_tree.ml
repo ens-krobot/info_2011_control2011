@@ -98,6 +98,58 @@ let nearest_neighbor v = function
     let curr = (med_val, median_elt, sq_dist median_elt v) in
     nearest_neighbor' v curr t
 
+let rec closer' dist_sq v t = match t with
+  | Empty -> false
+  | Leaf (va,p) -> sq_dist v p <= dist_sq
+  | Split (dir, med_val, median_elt, left, right) ->
+    let split_distance = match dir with
+      | Hori -> sq (v.x -. median_elt.x)
+      | Vert -> sq (v.y -. median_elt.y) in
+    if split_distance <= dist_sq
+    then begin
+      if sq_dist v median_elt <= dist_sq
+      then true
+      else closer' dist_sq v left || closer' dist_sq v right
+    end
+    else
+      let cmp = match dir with
+        | Hori -> compare v.x median_elt.x
+        | Vert -> compare v.y median_elt.y in
+      if cmp > 0
+      then closer' dist_sq v right
+      else closer' dist_sq v left
+
+let closer dist v t = closer' (sq dist) v t
+
+let add_closer dist_sq v p va acc =
+  if sq_dist v p <= dist_sq
+  then va::acc
+  else acc
+
+let rec closer_points' dist_sq v t acc = match t with
+  | Empty -> acc
+  | Leaf (va,p) ->
+    add_closer dist_sq v p va acc
+  | Split (dir, med_val, median_elt, left, right) ->
+    let split_distance = match dir with
+      | Hori -> sq (v.x -. median_elt.x)
+      | Vert -> sq (v.y -. median_elt.y) in
+    if split_distance <= dist_sq
+    then begin
+      let acc = add_closer dist_sq v median_elt med_val acc in
+      let acc = closer_points' dist_sq v left acc in
+      closer_points' dist_sq v right acc
+    end
+    else
+      let cmp = match dir with
+        | Hori -> compare v.x median_elt.x
+        | Vert -> compare v.y median_elt.y in
+      if cmp > 0
+      then closer_points' dist_sq v right acc
+      else closer_points' dist_sq v left acc
+
+let closer_points dist v t = closer_points' (sq dist) v t []
+
 let rec depth = function
   | Split (_, _, _, t1,t2 ) ->
     1 + max (depth t1) (depth t2)

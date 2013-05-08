@@ -79,6 +79,7 @@ let load_file ?(min_dist=0.15) ?(max_dist=6.) f =
 
 (**** filtering ****)
 
+(* TODO: can be done more efficiently using Kd_tree.closer *)
 let far_enougth_filter kd a min_dist data =
   let dist = distance_transform (fun i -> i) kd a data in
   let dist = Array.mapi (fun i d -> i,d) dist in

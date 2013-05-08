@@ -12,3 +12,11 @@ val nearest_neighbor : vertice -> 'a t -> 'a * vertice * float
    [vert] *)
 
 val depth : 'a t -> int
+
+val closer : float -> vertice -> 'a t -> bool
+(** [closer dist vert t] returns true if there is a point in [t]
+   closer than [dist] of [vert] *)
+
+val closer_points : float -> vertice -> 'a t -> 'a list
+(** [closer_points dist vert t] returns the lis tof all points in [t]
+   closer than [dist] of [vert] *)

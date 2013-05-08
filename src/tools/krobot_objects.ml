@@ -32,6 +32,8 @@ type objects = {
    | Message handling                                                |
    +-----------------------------------------------------------------+ *)
 
+let add_diameter = List.map (fun v -> v,0.1)
+
 let handle_message objects (timestamp, message) =
   match message with
     | Kill "objects" ->
@@ -40,7 +42,7 @@ let handle_message objects (timestamp, message) =
     | Send ->
         ignore (
           let ts = Unix.gettimeofday () in
-          Krobot_bus.send objects.bus (ts, Objects objects.objects)
+          Krobot_bus.send objects.bus (ts, Objects (add_diameter objects.objects))
         )
 
     | _ ->
@@ -109,7 +111,7 @@ lwt () =
   E.keep (E.map (handle_message objects) (Krobot_bus.recv bus));
 
   (* Sends initial objects. *)
-  lwt () = Krobot_bus.send objects.bus (Unix.gettimeofday (), Objects objects.objects) in
+  lwt () = Krobot_bus.send objects.bus (Unix.gettimeofday (), Objects (add_diameter objects.objects)) in
 
   (* Wait forever. *)
   fst (wait ())

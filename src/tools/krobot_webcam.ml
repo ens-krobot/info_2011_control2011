@@ -24,7 +24,7 @@ type ellipse = { ex : int; ey : int; rx : int; ry : int }
 
 let filter_objects objects =
   (* detect stacks *)
-  List.map fst objects
+  List.map (fun (o,_) -> (o,0.1)) objects
 
 let rec parse bus objects ic =
   (* Read one line from the object finder. *)
