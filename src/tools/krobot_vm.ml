@@ -436,12 +436,12 @@ let rec exec robot actions =
               exec robot
                 (Node (
                   Some
-                    (Node (None, [Stop; Wait_for 0.1;
+                    (Node (None, [Stop; Try_something v; Wait_for 0.1;
                                   Goto (v,last_vector)])),
                   [Follow_path (vertices,last_vector, true)]) :: rest)
 
           | None ->
-              ([Stop; Wait_for 0.1; Goto (v,last_vector)] @ rest,
+              ([Stop; Try_something v; Wait_for 0.1; Goto (v,last_vector)] @ rest,
                Wait)
     end
     | Can c ::rest ->
@@ -501,8 +501,7 @@ let rec exec robot actions =
                 ignore (Lwt_log.info_f "one of the bezier curve is colliding");
                 ignore (Krobot_bus.send robot.bus (Unix.gettimeofday (), Collisions (curve', collisions)));
                 ([],
-                 [Try_something s;
-                  Fail])
+                 [(* Try_something s; *) Fail])
               end else
                 let curves, post = check rest in
                 (curve :: curves, post)
