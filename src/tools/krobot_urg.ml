@@ -25,7 +25,7 @@ let section = Lwt_log.Section.make "krobot(urg)"
 let min_index = 90
 let max_index = 690
 
-let min_distance = 100
+let min_distance = 60
 
 let scale = 0.001
 

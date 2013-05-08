@@ -11,7 +11,7 @@ let sqr x = x *. x
 
 let world_height = 2.
 let world_width = 3.
-let robot_length = 0.225
+let robot_length = 0.23
 let robot_width = 0.30
 let wheels_diameter = 0.098
 let wheels_distance = 0.224
@@ -128,7 +128,7 @@ let initial_coins = []
     (* 2.55, 0.3; *) ]
 *)
 
-let urg_position = { x = 0.135; y = 0. }
+let urg_position = { x = 0.095; y = 0. }
 
 let urg_angles =
   [|-2.356194490192344836998472601408; -2.350058567040802071090865865699;
