@@ -112,7 +112,12 @@ let ax12_1_base_position = 518
 let ax12_1_high_position = 823
 
 let strat_base status =
-  let destination = gift_destination status.team (List.hd gifts_positions) in
+  let n_gift = match status.team with
+    | `Red -> 2
+    | `Blue -> 1
+  in
+  let gift = List.nth gifts_positions n_gift in
+  let destination = gift_destination status.team gift in
   let dst = { destination with y = destination.y +. secure_dist } in
   [
     Wait_for 0.1;
@@ -124,21 +129,20 @@ let strat_base status =
     Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 100)));
     Wait_for 1.;
     Wait_for_jack false;
-    Start_timer (20.,[Stop] @ gonfle_baloon @ [End]);
+    Start_timer (90.,[Stop] @ gonfle_baloon @ [End]);
     Set_led(`Red,false);
     Set_led(`Green,false);
     Reset_odometry `Auto;
     Wait_for_odometry_reset `Auto;
     Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max);
-    Goto (dst, Some { vx = 0.; vy = 1. });
+    Goto (dst, Some { vx = 0.; vy = -.1. });
     Stop;
     Follow_path ([destination], Some { vx = 0.; vy = 1. }, false);
     Stop;
-    Can (Krobot_message.encode (Motor_turn(pi/.2.,0.5,1.)));
+    Can (Krobot_message.encode (Motor_turn(-.(pi/.2.),0.5,1.)));
     Wait_for_motors_moving (true,None);
     Wait_for 0.1;
     Wait_for_motors_moving (false,None);
-    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
     Wait_for 0.1;
     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
     Wait_for 3.;
