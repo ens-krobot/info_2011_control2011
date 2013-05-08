@@ -100,10 +100,10 @@ let accel_tan_max = 1.0
 let accel_rad_max = 1.0
 
 let gonfle_baloon =
-  [Motor_command (2,3600);
+  [Can (Krobot_message.encode (Motor_command (2,3600)));
    Wait_for 10.;
-   Motor_command (2,0);
-   Wait_for 0.1;]
+   Can (Krobot_message.encode (Motor_command (2,0)));
+   Wait_for 0.1]
 
 let strat_base status =
   let destination = gift_destination status.team (List.hd gifts_positions) in
@@ -115,7 +115,7 @@ let strat_base status =
     Wait_for_jack true;
     Wait_for 1.;
     Wait_for_jack false;
-    Start_timer (20.,[Stop;gonfle_baloon;End]);
+    Start_timer (20.,[Stop] @ gonfle_baloon @ [End]);
     Set_led(`Red,false);
     Set_led(`Green,false);
     Reset_odometry `Auto;
