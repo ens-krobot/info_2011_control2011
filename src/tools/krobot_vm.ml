@@ -707,7 +707,7 @@ let run robot =
     begin
       match robot.delayed_action with
         | Some (timeout,l) ->
-            if timeout >= timestamp
+            if timeout <= timestamp
             then begin
               robot.delayed_action <- None;
               robot.strategy <- l
