@@ -113,6 +113,11 @@ let fixed_obstacles =
       size = 0.5; };
   ] @ (List.map symetrical left_obstacles) @ left_obstacles
 
+let test_obstacles =
+  [ { pos =
+        { x = 1.5;
+          y = 1.0 };
+      size = 0.1; }; ]
 
 let initial_coins = []
 (*

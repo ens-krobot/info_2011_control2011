@@ -539,12 +539,22 @@ let closest_obstacle x y theta objs =
   done;
   Array.of_list !l*)
 
+let circle_obstacle r { pos = { Krobot_geom.x; y }; size } =
+  let t = Unix.gettimeofday () in
+  let t = 0.3 *. t in
+  let x' = x +. r *. cos t in
+  let y' = y +. r *. sin t in
+  { pos = { Krobot_geom.x = x'; y = y' }; size }
+
 let gen_data robot =
   let dim = Array.length Krobot_config.urg_angles in
   let l = ref [] in
   for i = 0 to dim - 1 do
     let angle = Krobot_config.urg_angles.(i) in
-    match closest_obstacle robot.x robot.y (robot.theta +. angle) Krobot_config.fixed_obstacles with
+    let test_obstacles = List.map (circle_obstacle 0.2)
+        Krobot_config.test_obstacles in
+    let obstacles = test_obstacles @ Krobot_config.fixed_obstacles in
+    match closest_obstacle robot.x robot.y (robot.theta +. angle) obstacles with
       | Some dist ->
         let x = dist *. cos angle in
         let y = dist *. sin angle  in

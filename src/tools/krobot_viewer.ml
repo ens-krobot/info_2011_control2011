@@ -64,6 +64,8 @@ type viewer = {
 
   mutable urg : vertice array;
   mutable urg_lines : (vertice*vertice) array;
+
+  mutable objects : (vertice*float) list;
 }
 
 (* +-----------------------------------------------------------------+
@@ -276,6 +278,18 @@ let draw viewer =
       Cairo.arc ctx x y Krobot_config.coin_radius 0. (2. *. pi);
       Cairo.stroke ctx)
     viewer.coins;
+
+  (* Draw moving objects *)
+  List.iter
+    (fun ({ x; y }, radius) ->
+      set_color ctx Green;
+      Cairo.arc ctx x y radius 0. (2. *. pi);
+      Cairo.fill ctx;
+
+      set_color ctx Black;
+      Cairo.arc ctx x y radius 0. (2. *. pi);
+      Cairo.stroke ctx)
+    viewer.objects;
 
   (* Draw obstacles *)
   Cairo.set_source_rgba ctx 1. 1. 1. 0.5;
@@ -671,6 +685,10 @@ let handle_message viewer (timestamp, message) =
     | Urg_lines lines ->
       viewer.urg_lines <- project_urg_lines viewer lines
 
+    | Objects objects ->
+      viewer.objects <- objects;
+      queue_draw viewer
+
     | _ ->
         ()
 
@@ -725,6 +743,7 @@ lwt () =
     collisions = None;
     urg = [||];
     urg_lines = [||];
+    objects = [];
   } in
 
   (* Handle messages. *)

@@ -18,18 +18,22 @@ let rec prev_last = function
   | _ :: l ->
       prev_last l
 
-let find ~src ~dst ~beacon =
+let find ~src ~dst ~beacon ~objects =
 
   let fixed_objects = List.map (fun { pos; size } -> pos,
     size +. Krobot_config.robot_radius +. 0.01)
     Krobot_config.fixed_obstacles in
+
+  let objects = List.map (fun { pos; size } -> pos,
+    size +. Krobot_config.robot_radius +. 0.01)
+    objects in
 
   (* do that in a better way when we have time... *)
   let init_coins = List.map (fun pos -> pos,
     Krobot_config.coin_radius +. Krobot_config.robot_radius +. 0.01)
     Krobot_config.initial_coins in
 
-  let l = fixed_objects @ init_coins in
+  let l = objects @ init_coins @ fixed_objects in
   let l =
     match beacon with
       | (Some v, None)

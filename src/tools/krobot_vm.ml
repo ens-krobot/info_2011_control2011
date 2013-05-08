@@ -57,6 +57,9 @@ type robot = {
   mutable coins : vertice list;
   (* Position of coins on the table *)
 
+  mutable objects : Krobot_geom.obj list;
+  (* objects seen by the urg *)
+
   mutable bezier_moving : bool;
   (* Is the robot following a bezier curve ? *)
 
@@ -176,6 +179,9 @@ let handle_message robot (timestamp, message) =
           Krobot_bus.send robot.bus (timestamp, Strategy_path robot.path)
         )
 
+    | Objects objects ->
+      robot.objects <- List.map (fun (pos,size) -> { pos; size }) objects
+
     | Coins l ->
         robot.coins <-
           List.map
@@ -292,7 +298,7 @@ let build_objects robot =
       size = Krobot_config.coin_radius })
     Krobot_config.initial_coins in
 
-  let l = fixed_objects @ init_coins in
+  let l = robot.objects @ fixed_objects @ init_coins in
 
   let l =
     match robot.beacon with
@@ -423,18 +429,19 @@ let rec exec robot actions =
     | Goto (v,last_vector) :: rest -> begin
       ignore (Lwt_log.info_f "Goto");
         (* Try to find a path to the destination. *)
-        match Krobot_path.find ~src:robot.position ~dst:v ~beacon:robot.beacon with
+        match Krobot_path.find ~src:robot.position ~dst:v
+            ~beacon:robot.beacon ~objects:robot.objects with
           | Some vertices ->
 
               exec robot
                 (Node (
                   Some
-                    (Node (None, [Stop; Wait_for 0.05;
+                    (Node (None, [Stop; Wait_for 0.1;
                                   Goto (v,last_vector)])),
                   [Follow_path (vertices,last_vector, true)]) :: rest)
 
           | None ->
-              ([Stop; Wait_for 0.05; Goto (v,last_vector)] @ rest,
+              ([Stop; Wait_for 0.1; Goto (v,last_vector)] @ rest,
                Wait)
     end
     | Can c ::rest ->
@@ -823,6 +830,7 @@ lwt () =
     ghost_position = { x = 0.; y = 0. };
     orientation = 0.;
     coins = [];
+    objects = [];
     bezier_moving = false;
     motors_moving = false;
     path = None;

@@ -54,6 +54,8 @@ val blue_initial_position : Krobot_geom.vertice * float
 
 val fixed_obstacles : Krobot_geom.obj list
 
+val test_obstacles : Krobot_geom.obj list
+
 val initial_coins : Krobot_geom.vertice list
 
 val urg_position : Krobot_geom.vertice

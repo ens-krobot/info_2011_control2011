@@ -24,7 +24,7 @@ type info = {
 
 (**********************)
 
-let default_obstacle_diameter = 0.1
+let default_obstacle_diameter = 0.05
 let keep_above_dist = 0.1
 
 let table = Icp_utils.table 2. 3. 200
@@ -67,22 +67,30 @@ let circles_points (count,marking) data =
   (* TODO: filter if too few points *)
   Array.map (baricenter data) a
 
-let extract_obstacles info data =
-  let tr = Icp_utils.invert_transform
-      { ax = info.position.x; ay = info.position.y;
-        ath = info.orientation } in
+let extract_obstacles trans data =
+  let tr = Icp_utils.invert_transform trans in
   let data_rest = filter_data keep_above_dist tr data in
   let filtered = transform tr data_rest in
   let marked = mark_circles default_obstacle_diameter filtered in
   circles_points marked filtered
 
+let transform_vertice { ath; ax; ay } { x; y } =
+  let co = cos ath in
+  let si = sin ath in
+  let x' = x *. co -. y *. si +. ax in
+  let y' = x *. si +. y *. co +. ay in
+  { x = x'; y = y' }
 
 let run_extract info urg =
   let dxl, dyl = List.split (List.map (fun {x;y} -> x,y) (Array.to_list urg)) in
   let data = { dx = Array.of_list dxl; dy = Array.of_list dyl } in
-  let obstacles = extract_obstacles info data in
+  let trans = { ax = info.position.x; ay = info.position.y;
+                ath = info.orientation } in
+  let obstacles = extract_obstacles trans data in
   let ts = Unix.gettimeofday () in
-  let objects = Array.map (fun v -> v,default_obstacle_diameter) obstacles in
+  let objects = Array.map (fun v ->
+      transform_vertice trans v,
+      default_obstacle_diameter) obstacles in
   Krobot_bus.send info.bus (ts, Objects (Array.to_list objects))
 
 (*******************)
