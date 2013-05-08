@@ -33,13 +33,13 @@ open Krobot_geom
 let pi = 4. *. atan 1.
 
 let red_initial_position =
-  { x = world_width -. 0.10;
-    y = world_height -. 0.25; },
+  { x = world_width -. wheels_position;
+    y = world_height -. (0.40 +. robot_width/.2.); },
   pi
 
 let blue_initial_position =
-  { x = 0.10;
-    y = world_height -. 0.25; },
+  { x = wheels_position;
+    y = world_height -. (0.40 +. robot_width/.2.); },
   0.
 
 
