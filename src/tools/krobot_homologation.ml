@@ -105,6 +105,12 @@ let gonfle_baloon =
    Can (Krobot_message.encode (Motor_command (2,0)));
    Wait_for 0.1]
 
+let ax12_2_base_position = 519
+let ax12_2_high_position = 210
+
+let ax12_1_base_position = 518
+let ax12_1_high_position = 823
+
 let strat_base status =
   let destination = gift_destination status.team (List.hd gifts_positions) in
   let dst = { destination with y = destination.y +. secure_dist } in
@@ -113,6 +119,9 @@ let strat_base status =
     Reset_odometry `Auto;
     Can (Krobot_message.encode (Drive_activation true));
     Wait_for_jack true;
+    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
+    Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 100)));
     Wait_for 1.;
     Wait_for_jack false;
     Start_timer (20.,[Stop] @ gonfle_baloon @ [End]);
@@ -131,8 +140,11 @@ let strat_base status =
     Wait_for_motors_moving (false,None);
     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
     Wait_for 0.1;
-    Can (Krobot_message.encode (Ax12_Goto (2, 500, 100)));
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
+    Wait_for 3.;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
     Wait_for 2.;
+    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true)));
     End;
   ]
 
