@@ -352,11 +352,11 @@ let rec exec robot actions =
       let actions, effect = exec robot actions in
       (Node (t,actions) :: rest, effect)
     | Wait_for_jack state :: rest ->
-        if robot.jack = state then
-          (ignore (Lwt_log.info_f "Wait_for_jack finished");
-           exec robot rest)
-        else
-          (actions, Wait)
+      if robot.jack = state then
+        (ignore (Lwt_log.info_f "Wait_for_jack finished");
+         exec robot rest)
+      else
+        (actions, Wait)
     | Wait_for_bezier_moving (state, opt) :: rest ->
         if robot.bezier_moving = state then
           (ignore (Lwt_log.info_f "Wait_for_bezier_moving %b done" state);
@@ -593,12 +593,12 @@ let rec exec robot actions =
            (match which, robot.team with
               | `Red, _ | `Auto, `Red ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.red_initial_position in
-                [Krobot_message.Set_odometry( x, y, 0. );
-                 Set_odometry_indep( x, y, 0. ); ]
+                [Krobot_message.Set_odometry( x, y, angle );
+                 Set_odometry_indep( x, y, angle ); ]
               | `Blue, _ | `Auto, `Blue ->
                 let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
-                [Krobot_message.Set_odometry( x, y, pi);
-                 Set_odometry_indep( x, y, pi )]))
+                [Krobot_message.Set_odometry( x, y, angle);
+                 Set_odometry_indep( x, y, angle )]))
     | Load face :: rest ->
         exec robot (Node (None,[
                       Lift_down face;
@@ -684,6 +684,7 @@ let rec exec robot actions =
         end
 
     | Start_timer(delay,action) :: rest ->
+      ignore (Lwt_log.info_f "Start_timer(%f)" delay);
       let current_time = Unix.gettimeofday () in
       robot.init_time <- Some (current_time);
       robot.delayed_action <- Some (current_time +. delay, action);

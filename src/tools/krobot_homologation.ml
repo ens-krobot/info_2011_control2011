@@ -16,65 +16,76 @@ open Krobot_bus
 open Krobot_action
 open Krobot_geom
 
-let init_pos, init_angle = Krobot_config.red_initial_position
+let secure_dist = 0.20
 
-let path =
-  [
-    { x = 0.7; y = init_pos.y -. 0.1};
-    { x = 0.85; y = 1.5 };
-    { x = 0.75; y = 1.20 };
-    { x = 0.55; y = 1.15 };
-    { x = 0.4; y = 1.15 };
-  ]
+let gift_distance = 0.21
 
-let strat_loop =
-  [
-    Calibrate  ( { x = 0.64 +. 0.477; y = 1. +. 0.125 +. 0.1; },
-                 pi /. 2.,
-                 0.20,
-                 None,
-                 Some (1. +. 0.125),
-                 Some (pi /. 2.) );
+let gift_width = 0.15
 
-    Calibrate  ( { x = 0.9; y = 1.; },
-                 pi,
-                 0.20,
-                 Some (0.64 +. 0.477 -. 0.125),
-                 None,
-                 Some (pi) );
+let gifts_positions =
+  [ { x = 0.60 ; y = 0. };
+    { x = 1.2 ; y = 0. };
+    { x = 1.8 ; y = 0. };
+    { x = 2.4 ; y = 0. }; ]
 
-    Goto ({ x = 1.5; y = 0.5 }, None);
-    Goto ({ x = 1.5; y = 1.5 }, None);
-    Goto ({ x = 1.5; y = 0.5 }, None);
-    Goto ({ x = 1.5; y = 1.5 }, None);
-    Wait_for 2.;
-    End;
-  ]
+let team_gift_position team p =
+  match team with
+  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.01); y = p.y }
+  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.01); y = p.y }
 
-let strat_base =
-  [
-    Can (Krobot_message.encode (Drive_activation true));
-    Wait_for_jack true;
-    Wait_for 1.;
-    Wait_for_jack false;
-    Start_timer (10.,[End]);
-    Set_led(`Red,false);
-    Set_led(`Green,false);
-    Reset_odometry `Auto;
-    Wait_for_odometry_reset `Auto;
-    Set_limits (0.3,3.14,1.0,1.0);
-    End;
-  ]
+let gift_destination team p =
+  let p = team_gift_position team p in
+  { x = p.x; y = p.y +. gift_distance }
 
-let launch bus =
-  Krobot_bus.send bus
-    (Unix.gettimeofday (),
-     Strategy_set strat_base)
+(* let init_pos, init_angle = Krobot_config.red_initial_position *)
 
-let loop bus =
-  Krobot_bus.send bus
-    (Unix.gettimeofday (),
-     Strategy_set strat_loop)
+(* let path = *)
+(*   [ *)
+(*     { x = 0.7; y = init_pos.y -. 0.1}; *)
+(*     { x = 0.85; y = 1.5 }; *)
+(*     { x = 0.75; y = 1.20 }; *)
+(*     { x = 0.55; y = 1.15 }; *)
+(*     { x = 0.4; y = 1.15 }; *)
+(*   ] *)
+
+(* let strat_loop = *)
+(*   [ *)
+(*     Calibrate  ( { x = 0.64 +. 0.477; y = 1. +. 0.125 +. 0.1; }, *)
+(*                  pi /. 2., *)
+(*                  0.20, *)
+(*                  None, *)
+(*                  Some (1. +. 0.125), *)
+(*                  Some (pi /. 2.) ); *)
+
+(*     Calibrate  ( { x = 0.9; y = 1.; }, *)
+(*                  pi, *)
+(*                  0.20, *)
+(*                  Some (0.64 +. 0.477 -. 0.125), *)
+(*                  None, *)
+(*                  Some (pi) ); *)
+
+(*     Goto ({ x = 1.5; y = 0.5 }, None); *)
+(*     Goto ({ x = 1.5; y = 1.5 }, None); *)
+(*     Goto ({ x = 1.5; y = 0.5 }, None); *)
+(*     Goto ({ x = 1.5; y = 1.5 }, None); *)
+(*     Wait_for 2.; *)
+(*     End; *)
+(*   ] *)
+
+(* let strat_base = *)
+(*   [ *)
+(*     Can (Krobot_message.encode (Drive_activation true)); *)
+(*     Wait_for_jack true; *)
+(*     Wait_for 1.; *)
+(*     Wait_for_jack false; *)
+(*     Start_timer (10.,[End]); *)
+(*     Set_led(`Red,false); *)
+(*     Set_led(`Green,false); *)
+(*     Reset_odometry `Auto; *)
+(*     Wait_for_odometry_reset `Auto; *)
+(*     Set_limits (0.3,3.14,1.0,1.0); *)
+(*     End; *)
+(*   ] *)
 
 type status = {
   bus : Krobot_bus.t;
@@ -82,6 +93,48 @@ type status = {
   mutable team : [ `Red | `Blue ];
   (* The state of the team selector. *)
 }
+
+let vmax = 0.3
+let omega_max = 3.14 /. 2.
+let accel_tan_max = 1.0
+let accel_rad_max = 1.0
+
+let strat_base status =
+  let destination = gift_destination status.team (List.hd gifts_positions) in
+  let dst = { destination with y = destination.y +. secure_dist } in
+  [
+    Wait_for 0.1;
+    Reset_odometry `Auto;
+    Can (Krobot_message.encode (Drive_activation true));
+    Wait_for_jack true;
+    Wait_for 1.;
+    Wait_for_jack false;
+    (* Start_timer (90.,[Stop;End]); *)
+    Set_led(`Red,false);
+    Set_led(`Green,false);
+    Reset_odometry `Auto;
+    Wait_for_odometry_reset `Auto;
+    Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max);
+    Goto (dst, Some { vx = 0.; vy = 1. });
+    Stop;
+    Follow_path ([destination], Some { vx = 0.; vy = 1. }, false);
+    Stop;
+    Can (Krobot_message.encode (Motor_turn(pi/.2.,0.5,1.)));
+    Wait_for_motors_moving (true,None);
+    Wait_for 0.1;
+    Wait_for_motors_moving (false,None);
+    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, 500, 100)));
+    Wait_for 2.;
+    End;
+  ]
+
+
+let launch bus status =
+  Krobot_bus.send bus
+    (Unix.gettimeofday (),
+     Strategy_set (strat_base status))
 
 let update_team_led status =
   let m1,m2 =
@@ -106,14 +159,14 @@ let handle_message status (timestamp, message) =
               begin
                 status.team <- team;
                 ignore (update_team_led status);
-                ignore (launch bus)
+                ignore (launch bus status)
               end
           | _ ->
               ()
       end
 
-    | Strategy_finished ->
-      ignore (loop bus)
+    (* | Strategy_finished -> *)
+    (*   ignore (loop bus) *)
 
     | Kill "homologation" ->
         exit 0
