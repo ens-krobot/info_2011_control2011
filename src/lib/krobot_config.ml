@@ -22,7 +22,7 @@ let robot_radius =
   sqrt (l1 *. l1 +. l2 *. l2)
 let rotary_beacon_index_pos = 0.
 
-let safety_margin = 0.01
+let safety_margin = 0.0
 
 let beacon_radius = 0.2
 
@@ -33,12 +33,12 @@ open Krobot_geom
 let pi = 4. *. atan 1.
 
 let red_initial_position =
-  { x = world_width -. wheels_position;
+  { x = world_width -. wheels_position -. 0.001;
     y = world_height -. (0.40 +. robot_width/.2.); },
   pi
 
 let blue_initial_position =
-  { x = wheels_position;
+  { x = wheels_position +. 0.001;
     y = world_height -. (0.40 +. robot_width/.2.); },
   0.
 
