@@ -81,6 +81,7 @@ type color =
   | Yellow
   | Purple
   | Brown
+  | Light_gray
 
 let set_color ctx color =
   let r, g, b = match color with
@@ -92,6 +93,7 @@ let set_color ctx color =
     | Yellow -> (232., 232., 0.)
     | Purple -> (180., 0., 128.)
     | Brown -> (175., 89., 67.)
+    | Light_gray -> (200., 200., 200.)
   in
   Cairo.set_source_rgb ctx (r /. 255.) (g /. 255.) (b /. 255.)
 
@@ -358,7 +360,7 @@ let draw viewer =
       Cairo.restore ctx)
     [(viewer.ghost, (1., 1., 1., 0.5));
      (viewer.state_indep, (0.8, 0.8, 1., 0.8));
-     (viewer.state, (1., 1., 1., 1.5));];
+     (viewer.state, (0.8, 0.8, 0.8, 1.5));];
 
   (* Draw the beacon *)
   let draw_beacon = function
