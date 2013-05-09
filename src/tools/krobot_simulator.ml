@@ -148,7 +148,8 @@ let velocities sim dt =
         in
         match sim.bezier_next with
         | None ->
-          sim.command <- Idle
+          sim.command <- Idle;
+          sim.bezier_curve <- None
         | Some (curve,v_end,dir) ->
           let v_max, omega_max, at_max, ar_max = sim.bezier_limits in
           sim.command <-
@@ -417,10 +418,10 @@ let handle_message bus (timestamp, message) =
            else begin
              match decode frame with
               | Motor_move(dist, speed, acc) ->
-                Lwt_unix.run (Lwt_log.info_f "received: move(%f, %f, %f)" dist speed acc);
+                ignore (Lwt_log.info_f "received: move(%f, %f, %f)" dist speed acc);
                 move sim dist speed acc
               | Motor_turn(angle, speed, acc) ->
-                Lwt_unix.run (Lwt_log.info_f "received: turn(%f, %f, %f)" angle speed acc);
+                ignore (Lwt_log.info_f "received: turn(%f, %f, %f)" angle speed acc);
                 turn sim angle speed acc
               | Motor_stop(lin_acc, rot_acc) ->
                 sim.command <- Idle;
@@ -433,7 +434,7 @@ let handle_message bus (timestamp, message) =
               | Motor_bezier_limits(v_max, omega_max, a_tan_max, a_rad_max) ->
                 sim.bezier_limits <- (v_max, omega_max, a_tan_max, a_rad_max)
               | Motor_bezier(x_end, y_end, d1, d2, theta_end, v_end) ->
-                Lwt_unix.run (Lwt_log.info_f "received: bezier(%f, %f, %f, %f, %f, %f)" x_end y_end d1 d2 theta_end v_end);
+                ignore (Lwt_log.info_f "received: bezier(%f, %f, %f, %f, %f, %f)" x_end y_end d1 d2 theta_end v_end);
                 bezier sim (x_end, y_end, d1, d2, theta_end, v_end)
               | _ ->
                 () end);

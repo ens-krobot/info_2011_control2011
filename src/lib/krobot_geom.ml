@@ -236,7 +236,6 @@ module Bezier = struct
   exception Exit_for_vel
 
   let velocity_profile b v_max omega_max at_max ar_max v_ini v_end du =
-    Printf.printf "inside velocity_profile\n%!";
     let n_pts = int_of_float ( 1. /. du +. 1.) in
     let us = Array.init n_pts (fun i -> (float_of_int i) *. du) in
     let v_tab = Array.map (fun _ -> v_max) us in

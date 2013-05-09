@@ -111,3 +111,5 @@ type t =
 val to_string : t -> string
   (** [to_string action] returns the string representation of the
       given string. *)
+
+val list_to_string : t list -> string

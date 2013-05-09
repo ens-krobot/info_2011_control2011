@@ -251,8 +251,11 @@ let rec cancel_node = function
       | None -> Some (t::rest)
       | Some rep -> Some (Node(Some t,rep)::rest))
   | (Node (None, l)) :: rest ->
-      cancel_node l
-  | _ -> None
+    (match cancel_node l with
+     | None -> None
+     | Some rep -> Some(rep@rest))
+  | _ ->
+    None
 
 let replace robot =
   ignore (Lwt_log.info "replace");
@@ -697,7 +700,7 @@ let rec exec robot actions =
             (Wait_for_motors_moving (true, Some (Unix.gettimeofday () +. 1.0)) :: Wait_for_motors_moving (false, None) :: rest,
              Send [Motor_move (d, 0.5, 1.)])
           else
-            ((Wait_for 0.1) :: actions, Wait)
+            ((Wait_for 0.1) :: rest, Wait)
         end else begin
           let a = if Random.bool () then -. pi /. 8. else pi /. 8. in
           if Krobot_collision.possible objects robot.position (robot.orientation +. a) then
@@ -705,7 +708,7 @@ let rec exec robot actions =
             (Wait_for_motors_moving (true, Some (Unix.gettimeofday () +. 1.0)) :: Wait_for_motors_moving (false, None) :: rest,
              Send [Motor_turn (a, 0.5, 1.)])
           else
-            ((Wait_for 0.1) :: actions, Wait)
+            ((Wait_for 0.1) :: rest, Wait)
         end
 
     | Start_timer(delay,action) :: rest ->
