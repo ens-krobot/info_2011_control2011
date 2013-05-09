@@ -326,6 +326,21 @@ let build_objects robot =
   in
   l
 
+let not_ignore_probal = 0.7
+
+let ignore_some proba l =
+  List.filter (fun _ -> Random.float 1. <= proba) l
+
+let path_ignoring proba robot dst last_vector =
+  Krobot_path.find ~src:robot.position ~dst
+    ~beacon:robot.beacon
+    ~objects:(ignore_some proba robot.objects)
+
+let goto_node v vertices last_vector =
+  (Node (Some (Node (None, [Stop; Try_something v; Wait_for 0.1;
+                            Goto (v,last_vector)])),
+     [Follow_path (vertices,last_vector, true)]))
+
 let () = Random.self_init ()
 
 (* TODO: check if the original line is admissible (no collision)
@@ -444,18 +459,17 @@ let rec exec robot actions =
         match Krobot_path.find ~src:robot.position ~dst:v
             ~beacon:robot.beacon ~objects:robot.objects with
           | Some vertices ->
-
-              exec robot
-                (Node (
-                  Some
-                    (Node (None, [Stop; Try_something v; Wait_for 0.1;
-                                  Goto (v,last_vector)])),
-                  [Follow_path (vertices,last_vector, true)]) :: rest)
+              exec robot ((goto_node v vertices last_vector) :: rest)
 
           | None ->
+            match path_ignoring not_ignore_probal robot v last_vector with
+            | Some vertices ->
+              exec robot ((goto_node v vertices last_vector) :: rest)
+            | None ->
               ([Stop; Try_something v; Wait_for 0.1; Goto (v,last_vector)] @ rest,
                Wait)
-    end
+      end
+
     | Can c ::rest ->
         ignore (Lwt_log.info_f "Can");
         (rest, Send_frame[c])
@@ -683,7 +697,7 @@ let rec exec robot actions =
             (Wait_for_motors_moving (true, Some (Unix.gettimeofday () +. 1.0)) :: Wait_for_motors_moving (false, None) :: rest,
              Send [Motor_move (d, 0.5, 1.)])
           else
-            exec robot actions
+            ((Wait_for 0.1) :: actions, Wait)
         end else begin
           let a = if Random.bool () then -. pi /. 8. else pi /. 8. in
           if Krobot_collision.possible objects robot.position (robot.orientation +. a) then
@@ -691,7 +705,7 @@ let rec exec robot actions =
             (Wait_for_motors_moving (true, Some (Unix.gettimeofday () +. 1.0)) :: Wait_for_motors_moving (false, None) :: rest,
              Send [Motor_turn (a, 0.5, 1.)])
           else
-            exec robot actions
+            ((Wait_for 0.1) :: actions, Wait)
         end
 
     | Start_timer(delay,action) :: rest ->
