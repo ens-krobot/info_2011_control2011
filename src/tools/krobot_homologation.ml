@@ -30,8 +30,8 @@ let gifts_positions =
 
 let team_gift_position team p =
   match team with
-  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.01); y = p.y }
-  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.01); y = p.y }
+  | `Red -> { x = p.x +. (gift_width /. 2. -. 0.04); y = p.y }
+  | `Blue -> { x= p.x -. (gift_width /. 2. -. 0.04); y = p.y }
 
 let gift_destination team p =
   let p = team_gift_position team p in
@@ -142,13 +142,25 @@ let strat_base status =
     Stop;
     Wait_for 0.1;
     Can (Krobot_message.encode (Motor_turn(-.(pi/.2.),0.5,1.)));
-    Wait_for_motors_moving (true,None);
+    (* Wait_for_motors_moving (true,None); *)
     Wait_for 0.1;
-    Wait_for_motors_moving (false,None);
+    (* Wait_for_motors_moving (false,None); *)
+    Wait_for 0.1;
+    Wait_for 2.;
+    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
     Wait_for 0.1;
     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
     Wait_for 3.;
     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
+    Wait_for 0.1;
     Wait_for 2.;
     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true)));
     End;
