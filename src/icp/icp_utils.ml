@@ -21,6 +21,12 @@ let shuffle l =
   let l1,l2 = split ([],[]) l in
   merge [] l1 (List.rev l2)
 
+let circle (dx,dy) r a0 an n =
+  let angle_ramp = linear a0 an n in
+  let x = Array.map (fun theta -> r *. cos theta +. dx) angle_ramp in
+  let y = Array.map (fun theta -> r *. sin theta +. dy) angle_ramp in
+  x,y
+
 let table ~width ~length n =
   let x1,y1 = line (0.,0.) (length,0.) n in
   let x2,y2 = line (length,0.) (length,width) n in
@@ -28,6 +34,22 @@ let table ~width ~length n =
   let x4,y4 = line (0.,width) (0.,0.) n in
   let x = Array.concat [x1;x2;x3;x4] in
   let y = Array.concat [y1;y2;y3;y4] in
+  let f a = Array.of_list (shuffle (shuffle (Array.to_list a))) in
+  { dx = f x; dy = f y }
+
+let pi = 3.14159265358979323
+
+let real_table n =
+  let length = 3. in
+  let width = 2. in
+  let x1,y1 = line (0.,0.) (length,0.) n in
+  let x2,y2 = line (length,0.) (length,width) n in
+  let x3,y3 = line (0.,width) (0.,0.) n in
+  let x4,y4 = line (0.,width) (1.,width) n in
+  let x5,y5 = line (2.,width) (length,width) n in
+  let x6,y6 = circle (1.5,2.0) 0.5 (-.pi) 0. n in
+  let x = Array.concat [x1;x2;x3;x4;x5;x6] in
+  let y = Array.concat [y1;y2;y3;y4;y5;y6] in
   let f a = Array.of_list (shuffle (shuffle (Array.to_list a))) in
   { dx = f x; dy = f y }
 
@@ -76,6 +98,13 @@ let load_file ?(min_dist=0.15) ?(max_dist=6.) f =
       ts, { dx = Array.of_list x; dy = Array.of_list y }) l in
   Array.of_list l'
 
+let load_raw_file f =
+  let l = load_file' f in
+  let l' =
+    List.map (fun (ts,v) ->
+      let x,y = List.split v in
+      ts, { dx = Array.of_list x; dy = Array.of_list y }) l in
+  Array.of_list l'
 
 (**** filtering ****)
 

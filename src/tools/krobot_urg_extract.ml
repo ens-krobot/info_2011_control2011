@@ -27,7 +27,8 @@ type info = {
 let default_obstacle_diameter = 0.05
 let keep_above_dist = 0.1
 
-let table = Icp_utils.table 2. 3. 200
+(* let table = Icp_utils.table 2. 3. 200 *)
+let table = Icp_utils.real_table 200
 let table_kd = make_kd_tree table
 
 let a0 = { ath = 0.; ax = 0.; ay = 0. }
@@ -65,7 +66,7 @@ let circles_points (count,marking) data =
   let a = Array.make count [] in
   Array.iteri (fun index i -> a.(i) <- index :: a.(i)) marking;
   let l = Array.to_list a in
-  let l = List.filter (fun pts -> List.length pts >= 2) l in
+  let l = List.filter (fun pts -> List.length pts >= 4) l in
   Array.of_list (List.map (baricenter data) l)
 
 let extract_obstacles trans data =
