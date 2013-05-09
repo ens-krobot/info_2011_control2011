@@ -64,8 +64,9 @@ let baricenter { dx; dy } l =
 let circles_points (count,marking) data =
   let a = Array.make count [] in
   Array.iteri (fun index i -> a.(i) <- index :: a.(i)) marking;
-  (* TODO: filter if too few points *)
-  Array.map (baricenter data) a
+  let l = Array.to_list a in
+  let l = List.filter (fun pts -> List.length pts >= 2) l in
+  Array.of_list (List.map (baricenter data) l)
 
 let extract_obstacles trans data =
   let tr = Icp_utils.invert_transform trans in
