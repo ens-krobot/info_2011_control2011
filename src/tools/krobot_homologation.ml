@@ -161,9 +161,9 @@ let launch bus status =
 let update_team_led status =
   let m1,m2 =
     if status.team = `Red then
-      Switch_request(7,true), Switch_request(6,false)
-    else
       Switch_request(7,false), Switch_request(6,true)
+    else
+      Switch_request(7,true), Switch_request(6,false)
   in
   lwt () = Krobot_message.send status.bus (Unix.gettimeofday (),m1) in
   Krobot_message.send status.bus (Unix.gettimeofday (), m2)
