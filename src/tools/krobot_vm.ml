@@ -66,7 +66,7 @@ type robot = {
   mutable motors_moving : bool;
   (* Are motors moving ? *)
 
-  mutable curve : Bezier.curve option;
+  mutable curve : (bool * Bezier.curve) option;
   (* The bezier curve currently being followed by the robot. *)
 
   mutable curve_parameter : int;
@@ -285,7 +285,7 @@ let string_of_test = function
   | `Lt -> "Lt"
   | `Le -> "Le"
 
-let bezier_collide objects curve c1 c2 shift_vector curve_parameter =
+let bezier_collide dir objects curve c1 c2 shift_vector curve_parameter =
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
   let collisions = ref [] in
@@ -294,6 +294,7 @@ let bezier_collide objects curve c1 c2 shift_vector curve_parameter =
     let vert = translate (Bezier.vertice curve u) shift_vector in
     let tangent = Bezier.dt curve u in
     let angle = atan2 tangent.vy tangent.vx in
+    let angle = if dir then angle else angle +. pi in
     if not (Krobot_collision.robot_in_world vert angle) then
       collisions := (u, None) :: !collisions;
     List.iter
@@ -348,13 +349,13 @@ let () = Random.self_init ()
 
 (* TODO: check if the original line is admissible (no collision)
    if it is not the case, it will loop infinitely *)
-let correct_bezier objects curve shift_vector =
+let correct_bezier sign objects curve shift_vector =
   let rec aux c1 c2 =
     if c1 <= 0.2 || c2 <= 0.2
     then 0.2,0.2 (* not the good solution: improve later: do straight lines *)
     else
       begin
-        let _, collisions = bezier_collide objects curve c1 c2 shift_vector 0 in
+        let _, collisions = bezier_collide sign objects curve c1 c2 shift_vector 0 in
         let collisions = List.map fst collisions in
         let col_1, col_2 = List.partition (fun u -> u <= 0.5) collisions in
         match col_1, col_2 with
@@ -500,7 +501,7 @@ let rec exec robot actions =
             let shift_vector = null in
             let c =
               if correct_curve
-              then correct_bezier objects curve shift_vector
+              then correct_bezier (sign>0.) objects curve shift_vector
               else curve
             in
             (sign,c) :: acc) vector
@@ -520,6 +521,7 @@ let rec exec robot actions =
               (* Check if the curve can be followed. *)
               let curve', collisions =
                 bezier_collide
+                  (sign>0.)
                   (build_objects robot)
                   (Bezier.of_vertices p q r s)
                   1. 1.
@@ -561,7 +563,8 @@ let rec exec robot actions =
                 (* Wait for the odometry to start the new curve. *)
                 Wait_for_odometry(`Lt, 128);
                 (* Set the new curve. *)
-                Set_curve(Some(Bezier.of_vertices p q r s));
+                (let dir = sign > 0. in
+                 Set_curve(Some(dir,Bezier.of_vertices p q r s)));
                 (* Wait for the end of the new curve. *)
                 Wait_for_bezier_moving (false, None);
                 (* Remove the current curve. *)
@@ -572,7 +575,7 @@ let rec exec robot actions =
               Wait_for_odometry(`Ge, 128)
               :: Bezier(sign, p, q, r, s, 0.5)
               :: Wait_for_odometry(`Lt, 128)
-              :: Set_curve(Some(Bezier.of_vertices p q r s))
+              :: Set_curve(Some(sign > 0., Bezier.of_vertices p q r s))
               :: loop rest
         in
         match curves with
@@ -580,7 +583,7 @@ let rec exec robot actions =
               exec robot (Node (None, post) :: rest)
           | [(sign, p, q, r, s)] ->
             exec robot (Node (None,[
-              Set_curve(Some(Bezier.of_vertices p q r s));
+              Set_curve(Some(sign>0.,Bezier.of_vertices p q r s));
               Bezier(sign, p, q, r, s, 0.01);
               Wait_for_odometry(`Le, 128);
               Wait_for_odometry(`Ge, 128);
@@ -589,7 +592,7 @@ let rec exec robot actions =
             ] @ post) :: rest)
           | (sign, p, q, r, s) :: curves ->
             exec robot (Node(None,
-                             Set_curve(Some(Bezier.of_vertices p q r s))
+                             Set_curve(Some(sign>0.,Bezier.of_vertices p q r s))
                              :: Bezier(sign, p, q, r, s, 0.5)
                              :: Wait_for_odometry(`Le, 128)
                              :: loop curves) :: rest)
@@ -726,6 +729,10 @@ let rec exec robot actions =
 
     | End :: rest ->
       ([], Send_bus [Strategy_finished])
+
+    | Start_match :: rest ->
+      (rest, Send_bus [Match_start])
+
     | _ :: rest ->
         exec robot rest
 
@@ -775,7 +782,7 @@ let run robot =
       match robot.curve with
         | None ->
             ()
-        | Some curve ->
+        | Some (dir,curve) ->
           let problem =
               (* Check that the robot is not too far from the ghost.
                  if it is then stop brutaly:
@@ -787,7 +794,7 @@ let run robot =
               let shift_vector = vector robot.ghost_position robot.position in
                 (* Check that there is no colision between the current
                    position and the end of the current curve. *)
-              let curve, collisions = bezier_collide (build_objects robot) curve 1. 1. shift_vector robot.curve_parameter in
+              let curve, collisions = bezier_collide dir (build_objects robot) curve 1. 1. shift_vector robot.curve_parameter in
               match collisions with
                 | [] ->
                   false

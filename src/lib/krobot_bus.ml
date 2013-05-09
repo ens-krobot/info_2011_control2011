@@ -45,6 +45,7 @@ type message =
   | Urg_lines of (vertice*vertice) array
   | Beacon_raw of (int * int * int * int * int * int
       * int * int * int * int * int)
+  | Match_start
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -159,6 +160,8 @@ let string_of_message = function
       sprintf "Urg_lines (many_lines...)"
   | Beacon_raw _ ->
       sprintf "Raw beacon packet"
+  | Match_start ->
+      sprintf "Match start"
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |

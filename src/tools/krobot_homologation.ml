@@ -16,6 +16,8 @@ open Krobot_bus
 open Krobot_action
 open Krobot_geom
 
+type reset = [ `Auto | `Blue | `Red ]
+
 let secure_dist = 0.25
 
 let gift_distance = 0.21
@@ -49,30 +51,22 @@ let omega_max = 3.14 /. 2.
 let accel_tan_max = 1.0
 let accel_rad_max = 1.0
 
-let gonfle_baloon =
-  [Can (Krobot_message.encode (Motor_command (2,3600)));
-   Wait_for 10.;
-   Can (Krobot_message.encode (Motor_command (2,0)));
-   Wait_for 0.1]
-
 let ax12_2_base_position = 519
 let ax12_2_high_position = 210
 
 let ax12_1_base_position = 518
 let ax12_1_high_position = 823
 
-let strat_base status =
-  let n_gift = match status.team with
-    | `Red -> 2
-    | `Blue -> 1
-  in
-  let gift = List.nth gifts_positions n_gift in
-  let destination = gift_destination status.team gift in
-  let dst = { destination with y = destination.y +. secure_dist } in
-  [
-    Stop_timer;
+let gonfle_baloon =
+  [Can (Krobot_message.encode (Motor_command (2,3600)));
+   Wait_for 10.;
+   Can (Krobot_message.encode (Motor_command (2,0)));
+   Wait_for 0.1]
+
+let start team =
+  [ Stop_timer;
     Wait_for 0.1;
-    Reset_odometry `Auto;
+    Reset_odometry (team:>reset);
     Can (Krobot_message.encode (Drive_activation true));
     Wait_for_jack true;
     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
@@ -81,40 +75,146 @@ let strat_base status =
     Wait_for 1.;
     Wait_for_jack false;
     Start_timer (90.,[Stop] @ gonfle_baloon @ [End]);
+    Start_match;
     Set_led(`Red,false);
     Set_led(`Green,false);
-    Reset_odometry `Auto;
-    Wait_for_odometry_reset `Auto;
-    Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max);
-    Goto (dst, Some { vx = 0.; vy = -.1. });
-    Stop;
-    Follow_path ([destination], Some { vx = 0.; vy = 1. }, false);
-    Stop;
-    Wait_for 0.1;
-    Can (Krobot_message.encode (Motor_turn(-.(pi/.2.),0.5,1.)));
-    (* Wait_for_motors_moving (true,None); *)
-    Wait_for 0.1;
-    (* Wait_for_motors_moving (false,None); *)
-    Wait_for 0.1;
-    Wait_for 2.;
-    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
-    Wait_for 0.1;
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
-    Wait_for 0.1;
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
-    Wait_for 0.1;
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100)));
-    Wait_for 3.;
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
-    Wait_for 0.1;
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
-    Wait_for 0.1;
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
-    Wait_for 0.1;
-    Wait_for 2.;
-    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true)));
-    End;
-  ]
+    Reset_odometry (team:>reset);
+    Wait_for_odometry_reset (team:>reset);
+    Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max) ]
+
+let end_ =
+  [ End; ]
+
+let hit_ax12_id id =
+  let base, high =
+    if id = 1
+    then ax12_1_base_position, ax12_1_high_position
+    else ax12_2_base_position, ax12_2_high_position
+  in
+  [Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
+   Wait_for 0.1;
+   Can (Krobot_message.encode (Ax12_Goto (2, high, 100)));
+   Wait_for 1.;
+   Can (Krobot_message.encode (Ax12_Goto (2, base, 100)));
+   Wait_for 1.]
+
+let hit_ax12_dir dir =
+  (* TODO: test ! *)
+  let ax12id = if dir.vx < 0. then 1 else 2 in
+  hit_ax12_id ax12id
+
+let retry_follow_node dest dir =
+  let rec follow_node =
+    Node(Some (Node(None,[Wait_for 0.2; follow_node])),
+      [Follow_path ([dest], Some dir, false)]) in
+  follow_node
+
+let direction pos = function
+  | `Blue ->
+    if pos.x >= 2.2
+    then { vx = -.1.; vy = 0. }
+    else { vx = 1.; vy = 0. }
+  | `Red ->
+    if pos.x <= 0.8
+    then { vx = 1.; vy = 0. }
+    else { vx = -.1.; vy = 0. }
+
+let approach_lower_border pos dir =
+  let shift_len = 0.1 in
+  let shift =
+    if dir.vx >= 0.
+    then shift_len
+    else -. shift_len in
+  let shifted_position =
+    { x = pos.x +. shift; y = Krobot_config.robot_radius +. 0.01 } in
+  [ Goto (shifted_position, Some (minus dir));
+    Follow_path ([pos], Some dir, false);
+    (* retry_follow_node pos dir; *) ]
+
+let goto_gift team gift =
+  let destination = gift_destination team gift in
+  approach_lower_border destination (direction destination team)
+
+let do_gift team gift =
+  let destination = gift_destination team gift in
+  let dir = direction destination team in
+  let goto = approach_lower_border destination dir in
+  let hit = hit_ax12_dir dir in
+  goto @ hit
+
+let gifts_actions team =
+  let gifts = match team with
+    | `Red -> List.rev gifts_positions
+    | `Blue -> gifts_positions
+  in
+  List.flatten (List.map (do_gift team) gifts)
+
+let strategy team =
+  start team @ gifts_actions team @ end_
+
+(* let strat_base team = *)
+(*   let n_gift = match team with *)
+(*     | `Red -> 2 *)
+(*     | `Blue -> 1 *)
+(*   in *)
+(*   let gift = List.nth gifts_positions n_gift in *)
+(*   let destination = gift_destination team gift in *)
+(*   let dst = { destination with y = destination.y +. secure_dist } in *)
+(*   [ *)
+(*     Stop_timer; *)
+(*     Wait_for 0.1; *)
+(*     Reset_odometry `Auto; *)
+(*     Can (Krobot_message.encode (Drive_activation true)); *)
+(*     Wait_for_jack true; *)
+(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true))); *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
+(*     Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 100))); *)
+(*     Wait_for 1.; *)
+(*     Wait_for_jack false; *)
+(*     Start_timer (90.,[Stop] @ gonfle_baloon @ [End]); *)
+(*     Start_match; *)
+(*     Set_led(`Red,false); *)
+(*     Set_led(`Green,false); *)
+(*     Reset_odometry `Auto; *)
+(*     Wait_for_odometry_reset `Auto; *)
+(*     Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max); *)
+(*     Goto (dst, Some { vx = 0.; vy = -.1. }); *)
+(*     Stop; *)
+(*     Follow_path ([destination], Some { vx = 0.; vy = 1. }, false); *)
+(*     Stop; *)
+(*     Wait_for 0.1; *)
+(*     Can (Krobot_message.encode (Motor_turn(-.(pi/.2.),0.5,1.))); *)
+(*     (\* Wait_for_motors_moving (true,None); *\) *)
+(*     Wait_for 0.1; *)
+(*     (\* Wait_for_motors_moving (false,None); *\) *)
+(*     Wait_for 0.1; *)
+(*     Wait_for 2.; *)
+(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true))); *)
+(*     Wait_for 0.1; *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100))); *)
+(*     Wait_for 0.1; *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100))); *)
+(*     Wait_for 0.1; *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100))); *)
+(*     Wait_for 3.; *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
+(*     Wait_for 0.1; *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
+(*     Wait_for 0.1; *)
+(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
+(*     Wait_for 0.1; *)
+(*     Wait_for 2.; *)
+(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true))); *)
+(*     End; *)
+(*   ] *)
+
+
+(* let strat team = *)
+(*   [Reset_odometry (team:>reset); *)
+(*    Wait_for_odometry_reset (team:>reset)] @ *)
+(*     gifts_actions team *)
+
+
 
 (* let { y = init_y },_ = Krobot_config.red_initial_position *)
 
@@ -171,10 +271,10 @@ let strat_base status =
 (*     End; *)
 (*   ] *)
 
-let launch bus status =
+let launch bus team =
   Krobot_bus.send bus
     (Unix.gettimeofday (),
-     Strategy_set (strat_base status))
+     Strategy_set (strategy team))
 
 let update_team_led status =
   let m1,m2 =
@@ -199,7 +299,7 @@ let handle_message status (timestamp, message) =
               begin
                 status.team <- team;
                 ignore (update_team_led status);
-                ignore (launch bus status)
+                ignore (launch bus status.team)
               end
           | _ ->
               ()

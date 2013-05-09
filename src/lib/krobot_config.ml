@@ -34,12 +34,12 @@ let pi = 4. *. atan 1.
 
 let red_initial_position =
   { x = world_width -. wheels_position -. 0.001;
-    y = world_height -. (0.40 +. robot_width/.2.); },
+    y = (0.10 +. robot_width/.2.); },
   pi
 
 let blue_initial_position =
   { x = wheels_position +. 0.001;
-    y = world_height -. (0.40 +. robot_width/.2.); },
+    y = (0.10 +. robot_width/.2.); },
   0.
 
 
@@ -65,42 +65,33 @@ let line_obs p1 p2 =
 
 let left_obstacles =
   [
-    (* the trees *)
-    (*{ pos =
-        { x = 0.64 +. 0.477;
-          y = 1. };
-      size = sqrt (2. *. 0.125 *. 0.125) +. 0.12; };*)
-
-    (* entry position *)
-    (*{ pos =
-        { x = 0.;
-          y = 1.5 };
-      size = 0.02; };
-    { pos =
-        { x = 0.1;
-          y = 1.5 };
-      size = 0.02; };
-    { pos =
-        { x = 0.2;
-          y = 1.5 };
-      size = 0.02; };
-    { pos =
-        { x = 0.3;
-          y = 1.5 };
-      size = 0.02; };
-    { pos =
-        { x = 0.4;
-          y = 1.5 };
-      size = 0.02; };*)
 
     (* coins at the bottom *)
-(*
+    (* we cheat a bit on the size to avoid problems... *)
     { pos =
-        { x = 1.5;
-          y = 0.3; };
-      size = 0.15 };
-*)
-
+        { x = 0.0;
+          y = 0.0; };
+      size = 0.09 };
+    { pos =
+        { x = 0.1;
+          y = 0.0; };
+      size = 0.09 };
+    { pos =
+        { x = 0.2;
+          y = 0.0; };
+      size = 0.09 };
+    { pos =
+        { x = 0.3;
+          y = 0.0; };
+      size = 0.09 };
+    { pos =
+        { x = 0.33;
+          y = 0.0; };
+      size = 0.09 };
+    { pos =
+        { x = 0.35;
+          y = 0.05; };
+      size = 0.05 };
   (*] @ (line_obs { x = 0.325; y = 0. } { x = 0.325 +. (0.075 /. 2.); y = 0.75 } )*)
   ]
 

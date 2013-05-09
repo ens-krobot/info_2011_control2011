@@ -93,6 +93,8 @@ type message =
   | Beacon_raw of (int * int * int * int * int * int
       * int * int * int * int * int)
 
+  | Match_start
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

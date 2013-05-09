@@ -40,7 +40,7 @@ type t =
       (** Follow the bezier curve determined by the given four
           vertices. The first float is the sign, the last one is the
           end velocity. *)
-  | Set_curve of Bezier.curve option
+  | Set_curve of (bool * Bezier.curve) option
       (** Set the curve currently being followed. *)
   | Wait_for_jack of bool
       (** Wait for the jack to be in the given state. *)
@@ -90,6 +90,7 @@ type t =
 
   | Start_timer of float * t list
   | Stop_timer
+  | Start_match
 
   | Can of Krobot_can.frame
   | Set_led of [ `Red | `Yellow | `Green ] * bool

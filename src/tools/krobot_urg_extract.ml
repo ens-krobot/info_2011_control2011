@@ -28,7 +28,7 @@ let default_obstacle_diameter = 0.05
 let keep_above_dist = 0.1
 
 (* let table = Icp_utils.table 2. 3. 200 *)
-let table = Icp_utils.real_table 200
+let table = Icp_utils.real_table 100
 let table_kd = make_kd_tree table
 
 let a0 = { ath = 0.; ax = 0.; ay = 0. }

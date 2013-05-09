@@ -18,7 +18,7 @@ type t =
   | Set_limits of float * float * float * float
   | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
-  | Set_curve of Bezier.curve option
+  | Set_curve of (bool * Bezier.curve) option
   | Wait_for_jack of bool
   | Wait_for_bezier_moving of bool * float option
   | Wait_for_motors_moving of bool * float option
@@ -40,6 +40,7 @@ type t =
   | Wait_for_grip_close_low of [ `Front | `Back ]
   | Start_timer of float * t list
   | Stop_timer
+  | Start_match
   | Can of Krobot_can.frame
   | Set_led of [ `Red | `Yellow | `Green ] * bool
   | Set_orientation of float
@@ -84,8 +85,8 @@ let rec to_string = function
         (string_of_vertice r)
         (string_of_vertice s)
         end_velocity
-  | Set_curve(Some c) ->
-      sprintf "Set_curve(Some %s)" (Bezier.string_of_curve c)
+  | Set_curve(Some (dir,c)) ->
+      sprintf "Set_curve(Some (%b, %s))" dir (Bezier.string_of_curve c)
   | Set_curve None ->
       "Set_curve None"
   | Wait_for_jack st ->
@@ -155,5 +156,6 @@ let rec to_string = function
       (string_of_option string_of_float o)
   | Calibrate (_,_,_,_,_,_) -> "Calibrate"
   | End -> "End"
+  | Start_match -> "Start_match"
 
 and list_to_string l = String.concat "; " (List.map to_string l)
