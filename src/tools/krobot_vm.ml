@@ -860,7 +860,7 @@ lwt () =
   (* Ask for parameters. *)
   lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Send) in
 
-  ignore (lwt () = Lwt_unix.sleep 2.); in
+  ignore (Lwt_unix.sleep 2.);
 
   ignore(blink bus false);
 
