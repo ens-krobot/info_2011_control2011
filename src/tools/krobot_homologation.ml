@@ -127,9 +127,24 @@ let approach_lower_border pos dir =
     else -. shift_len in
   let shifted_position =
     { x = pos.x +. shift; y = Krobot_config.robot_radius +. 0.01 } in
-  [ Goto (shifted_position, Some (minus dir));
-    Follow_path ([pos], Some dir, false);
-    (* retry_follow_node pos dir; *) ]
+  let goto_path =
+    Node(None,
+      [ Goto (shifted_position, Some (minus dir));
+        retry_follow_node pos dir; ]) in
+  let simple_path = [Follow_path ([pos], Some (minus dir), false)] in
+  [Node (Some goto_path, simple_path)]
+
+(* let approach_lower_border pos dir = *)
+(*   let shift_len = 0.1 in *)
+(*   let shift = *)
+(*     if dir.vx >= 0. *)
+(*     then shift_len *)
+(*     else -. shift_len in *)
+(*   let shifted_position = *)
+(*     { x = pos.x +. shift; y = Krobot_config.robot_radius +. 0.01 } in *)
+(*   [ Goto (shifted_position, Some (minus dir)); *)
+(*     (\* Follow_path ([pos], Some dir, false); *\) *)
+(*     retry_follow_node pos dir; ] *)
 
 let goto_gift team gift =
   let destination = gift_destination team gift in
