@@ -39,6 +39,7 @@ type t =
   | Wait_for_grip_open_low of [ `Front | `Back ]
   | Wait_for_grip_close_low of [ `Front | `Back ]
   | Start_timer of float * t list
+  | Stop_timer
   | Can of Krobot_can.frame
   | Set_led of [ `Red | `Yellow | `Green ] * bool
   | Set_orientation of float
@@ -139,6 +140,8 @@ let rec to_string = function
       sprintf "Wait_for_grip_close_low %S" (string_of_face face)
   | Start_timer (delay,t) ->
       sprintf "Start_timer(%f,%s)" delay (list_to_string t)
+  | Stop_timer ->
+      sprintf "Stop_timer"
   | Can c -> "Can"
   | Try_something v ->
       sprintf "Try_something %s" (string_of_vertice v)

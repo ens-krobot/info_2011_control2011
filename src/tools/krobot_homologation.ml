@@ -16,7 +16,7 @@ open Krobot_bus
 open Krobot_action
 open Krobot_geom
 
-let secure_dist = 0.20
+let secure_dist = 0.25
 
 let gift_distance = 0.21
 
@@ -120,6 +120,7 @@ let strat_base status =
   let destination = gift_destination status.team gift in
   let dst = { destination with y = destination.y +. secure_dist } in
   [
+    Stop_timer;
     Wait_for 0.1;
     Reset_odometry `Auto;
     Can (Krobot_message.encode (Drive_activation true));
@@ -139,6 +140,7 @@ let strat_base status =
     Stop;
     Follow_path ([destination], Some { vx = 0.; vy = 1. }, false);
     Stop;
+    Wait_for 0.1;
     Can (Krobot_message.encode (Motor_turn(-.(pi/.2.),0.5,1.)));
     Wait_for_motors_moving (true,None);
     Wait_for 0.1;

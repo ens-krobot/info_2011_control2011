@@ -701,6 +701,12 @@ let rec exec robot actions =
       robot.delayed_action <- Some (current_time +. delay, action);
       (rest, Wait)
 
+    | Stop_timer :: rest ->
+      ignore (Lwt_log.info_f "Stop_time");
+      robot.init_time <- None;
+      robot.delayed_action <- None;
+      (rest, Wait)
+
     | End :: rest ->
       ([], Send_bus [Strategy_finished])
     | _ :: rest ->

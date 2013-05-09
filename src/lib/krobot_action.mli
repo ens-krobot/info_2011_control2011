@@ -89,6 +89,7 @@ type t =
       (** Wait for the given low grip to be opened. *)
 
   | Start_timer of float * t list
+  | Stop_timer
 
   | Can of Krobot_can.frame
   | Set_led of [ `Red | `Yellow | `Green ] * bool
