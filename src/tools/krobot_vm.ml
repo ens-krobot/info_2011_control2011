@@ -110,11 +110,23 @@ type robot = {
    +-----------------------------------------------------------------+ *)
 
 
-let rec blink bus f =
-  lwt () = Krobot_message.send bus (Unix.gettimeofday (),
-                                    Switch_request(5,f)) in
+let rec blink bus robot f =
+  lwt () = if (not robot.emergency_stop) then begin
+    lwt () = Krobot_message.send bus (Unix.gettimeofday (),
+                                      Switch_request(5,f)) in
+    lwt () = Krobot_message.send bus (Unix.gettimeofday (),
+                                      Switch_request(6,f)) in
+    lwt () = Krobot_message.send bus (Unix.gettimeofday (),
+                                      Switch_request(7,f)) in
+    Lwt.return ()
+    end
+  else
+    lwt () = Krobot_message.send bus (Unix.gettimeofday (),
+                                      Switch_request(5,f)) in
+    Lwt.return ()
+  in
   lwt () = Lwt_unix.sleep 0.5 in
-  blink bus (not f)
+  blink bus robot (not f)
 
 let handle_message robot (timestamp, message) =
   match message with
@@ -862,7 +874,7 @@ lwt () =
 
   ignore (Lwt_unix.sleep 2.);
 
-  ignore(blink bus false);
+  ignore(blink bus robot false);
 
   (* Run forever. *)
   run robot
