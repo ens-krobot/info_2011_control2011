@@ -331,6 +331,14 @@ Executable "krobot-urg-extract"
   MainIs: krobot_urg_extract.ml
   BuildDepends: krobot, krobot.icp, lwt.syntax
 
+Executable "krobot-urg-replay"
+  Path: src/tools
+  Build$: flag(lacaml)
+  Install$: flag(lacaml)
+  CompiledObject: best
+  MainIs: krobot_urg_replay.ml
+  BuildDepends: krobot, lwt.syntax, krobot.icp
+
 Executable "krobot-beacon-reader"
   Path: src/tools
   Install: true
