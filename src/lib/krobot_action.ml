@@ -27,17 +27,8 @@ type t =
   | Try_something of vertice
   | Fail
   | Wait_for_odometry_reset of [ `Red | `Blue | `Auto ]
-  | Load of [ `Front | `Back ]
-  | Lift_down of [ `Front | `Back ]
-  | Lift_up of [ `Front | `Back ]
-  | Open_grip_low of [ `Front | `Back ]
-  | Close_grip_low of [ `Front | `Back ]
-  | Open_grip_high of [ `Front | `Back ]
-  | Close_grip_high of [ `Front | `Back ]
   | Wait_for of float
   | Wait_until of float
-  | Wait_for_grip_open_low of [ `Front | `Back ]
-  | Wait_for_grip_close_low of [ `Front | `Back ]
   | Start_timer of float * t list
   | Stop_timer
   | Start_match
@@ -117,28 +108,10 @@ let rec to_string = function
     "Wait_for_odometry_reset `Blue"
   | Wait_for_odometry_reset `Auto ->
     "Wait_for_odometry_reset `Auto"
-  | Load face ->
-      sprintf "Load %s" (string_of_face face)
-  | Lift_down face ->
-      sprintf "Lift_down %s" (string_of_face face)
-  | Lift_up face ->
-      sprintf "Lift_up %s" (string_of_face face)
-  | Open_grip_low face ->
-      sprintf "Open_grip_low %s" (string_of_face face)
-  | Close_grip_low face ->
-      sprintf "Close_grip_low %s" (string_of_face face)
-  | Open_grip_high face ->
-      sprintf "Open_grip_high %s" (string_of_face face)
-  | Close_grip_high face ->
-      sprintf "Close_grip_high %s" (string_of_face face)
   | Wait_for t ->
       sprintf "Wait_for %f" t
   | Wait_until t ->
       sprintf "Wait_until %f" t
-  | Wait_for_grip_open_low face ->
-      sprintf "Wait_for_grip_open_low %S" (string_of_face face)
-  | Wait_for_grip_close_low face ->
-      sprintf "Wait_for_grip_close_low %S" (string_of_face face)
   | Start_timer (delay,t) ->
       sprintf "Start_timer(%f,%s)" delay (list_to_string t)
   | Stop_timer ->

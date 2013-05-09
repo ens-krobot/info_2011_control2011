@@ -630,22 +630,6 @@ let rec exec robot actions =
                 let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
                 [Krobot_message.Set_odometry( x, y, angle);
                  Set_odometry_indep( x, y, angle )]))
-    | Load face :: rest ->
-        exec robot (Node (None,[
-                      Lift_down face;
-                      Open_grip_low face;
-                      Wait_for_grip_open_low face;
-                      Wait_for 0.5;
-                      (* Move_to_pawn *)
-                      Close_grip_low face;
-                      Lift_up face;
-                      Wait_for_grip_close_low face;
-                      Wait_for 0.5;
-                    ]) :: rest)
-    | Lift_down `Front :: rest ->
-        (rest, Send[Elevator(0., -1.)])
-    | Lift_up `Front :: rest ->
-        (rest, Send[Elevator(1., -1.)])
     | Think :: rest ->
         exec robot rest
     | Fail :: rest ->
