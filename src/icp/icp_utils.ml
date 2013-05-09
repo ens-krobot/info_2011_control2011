@@ -80,15 +80,28 @@ let load_file ?(min_dist=0.15) ?(max_dist=6.) f =
 (**** filtering ****)
 
 (* TODO: can be done more efficiently using Kd_tree.closer *)
-let far_enougth_filter kd a min_dist data =
-  let dist = distance_transform (fun i -> i) kd a data in
-  let dist = Array.mapi (fun i d -> i,d) dist in
-  let distl = Array.to_list dist in
-  let min_dist2 = min_dist *. min_dist in
-  let far_enougth (i,d) = d >= min_dist2 in
-  let ai = Array.of_list (List.filter far_enougth distl) in
-  { dx = Array.map (fun (i,_) -> data.dx.(i)) ai;
-    dy = Array.map (fun (i,_) -> data.dy.(i)) ai }
+(* let far_enougth_filter kd a min_dist data = *)
+(*   let dist = distance_transform (fun i -> i) kd a data in *)
+(*   let dist = Array.mapi (fun i d -> i,d) dist in *)
+(*   let distl = Array.to_list dist in *)
+(*   let min_dist2 = min_dist *. min_dist in *)
+(*   let far_enougth (i,d) = d >= min_dist2 in *)
+(*   let ai = Array.of_list (List.filter far_enougth distl) in *)
+(*   { dx = Array.map (fun (i,_) -> data.dx.(i)) ai; *)
+(*     dy = Array.map (fun (i,_) -> data.dy.(i)) ai } *)
+
+let far_enougth_filter kd min_dist data =
+  let dx = data.dx in
+  let dy = data.dy in
+  let l = ref [] in
+  for i = 0 to Array.length dx - 1 do
+    if not (Kd_tree.closer min_dist { Kd_tree.x = dx.(i); y = dy.(i) } kd)
+    then l := i :: !l
+  done;
+  let l = Array.of_list !l in
+  let x = Array.map (fun i -> dx.(i)) l in
+  let y = Array.map (fun i -> dy.(i)) l in
+  { dx = x; dy = y }
 
 let invert_transform a =
   let co = cos (-. a.ath) in

@@ -35,7 +35,7 @@ let a0 = { ath = 0.; ax = 0.; ay = 0. }
 let filter_data keep_above_dist robot_transform data =
   let back_transform = Icp_utils.invert_transform robot_transform in
   let data = transform back_transform data in
-  Icp_utils.far_enougth_filter table_kd a0 keep_above_dist data
+  Icp_utils.far_enougth_filter table_kd keep_above_dist data
 
 let mark_close kd marking dist v marking_val =
   let close_points = Kd_tree.closer_points dist v kd in
