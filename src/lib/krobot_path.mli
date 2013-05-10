@@ -11,9 +11,12 @@
 
 open Krobot_geom
 
-val find : src : vertice -> dst : vertice ->
+val find :
+  ?src_orient:float * vector ->
+  ?dst_orient:float * vector ->
+  src : vertice -> dst : vertice ->
   beacon : vertice option * vertice option ->
-  objects : obj list ->
+  obj list ->
   vertice list option
 (** [goto ~src ~dst ~beacon] find a path from [src] to [dst]. *)
 (*

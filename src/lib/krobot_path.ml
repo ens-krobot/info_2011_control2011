@@ -18,7 +18,7 @@ let rec prev_last = function
   | _ :: l ->
       prev_last l
 
-let find ~src ~dst ~beacon ~objects =
+let find ?src_orient ?dst_orient ~src ~dst ~beacon objects =
 
   let fixed_objects = List.map (fun { pos; size } -> pos,
     size +. Krobot_config.robot_radius +. 0.01)
@@ -51,7 +51,7 @@ let find ~src ~dst ~beacon ~objects =
   in
   let l = List.map (fun (v,s) -> (v, min s (distance v src -. 0.1))) l in
   let min_distance = Krobot_config.robot_radius +. safety_margin in
-  Krobot_pathfinding.find_path ~src ~dst
+  Krobot_pathfinding.find_path ?src_orient ?dst_orient ~src ~dst
     ({ x = min_distance;
        y = min_distance},
      { x = world_width -. min_distance;

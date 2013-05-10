@@ -395,15 +395,25 @@ let correct_bezier sign objects curve shift_vector =
   let curve = Bezier.mul_d2 curve c2 in
   curve
 
+let turn_radius = 0.1
+
 let prepare_goto robot dst last_vector =
-  match Krobot_path.find ~src:robot.position ~dst
-      ~beacon:robot.beacon ~objects:robot.objects with
+  let dst_orient = match last_vector with
+    | None -> None
+    | Some v -> Some (turn_radius, v) in
+  let src_orient =
+    let vect = { vx = cos robot.orientation;
+                 vy = sin robot.orientation; } in
+    (turn_radius,vect) in
+  match Krobot_path.find ~src_orient ?dst_orient ~src:robot.position ~dst
+      ~beacon:robot.beacon robot.objects with
   | Some vertices ->
     Follow_path (vertices,last_vector, true)
   | None ->
-    let alternate = Krobot_path.find ~src:robot.position ~dst
+    let alternate = Krobot_path.find ~src_orient ?dst_orient
+        ~src:robot.position ~dst
         ~beacon:robot.beacon
-        ~objects:(ignore_some not_ignore_probal robot.objects) in
+        (ignore_some not_ignore_probal robot.objects) in
     match alternate with
     | Some vertices ->
       Follow_path (vertices,last_vector, true)

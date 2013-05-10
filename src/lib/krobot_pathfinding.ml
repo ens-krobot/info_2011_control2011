@@ -358,11 +358,38 @@ let v_of_vertice { Krobot_geom.x; y } =
 let vertice_of_seg { p1 = {px;py} } =
   { Krobot_geom.x = px; y = py }
 
-let find_path ~src ~dst (box_min,box_max) objects =
+let orientation_circles radius vect p =
+  let unit = unitaire vect in
+  let back_left = unitaire ((turn_trigo unit) -| (2. *@ unit)) in
+  let back_right = unitaire ((turn_antitrigo unit) -| (2. *@ unit)) in
+  let c1 = p +! (radius +. epsilon_float) *@ back_left in
+  let c2 = p +! (radius +. epsilon_float) *@ back_right in
+  [{ c = c1; r = radius };
+   { c = c2; r = radius }]
+
+let v_of_geom_v { Krobot_geom.vx; Krobot_geom.vy} = { vx; vy }
+
+let add_start_orientation b radius vect =
+  let crcls = orientation_circles radius vect b.src in
+  { b with obstacles = crcls @ b.obstacles }
+
+let add_end_orientation b radius vect =
+  let crcls = orientation_circles radius (-. 1. *@ vect) b.dst in
+  { b with obstacles = crcls @ b.obstacles }
+
+let find_path ?src_orient ?dst_orient ~src ~dst (box_min,box_max) objects =
   let b = { src = v_of_vertice src;
 	    dst = v_of_vertice dst;
 	    obstacles = List.map (fun (v,r) -> { c = v_of_vertice v; r }) objects;
 	    box = (v_of_vertice box_min, v_of_vertice box_max)} in
+
+  let b = match src_orient with
+    | None -> b
+    | Some (radius,vect) -> add_start_orientation b radius (v_of_geom_v vect) in
+  let b = match dst_orient with
+    | None -> b
+    | Some (radius,vect) -> add_end_orientation b radius (v_of_geom_v vect) in
+
   (* let b = filter_far_objects b b.src in *)
   if not ( (in_box b.box b.dst) && (check_point b b.dst) && (check_point b b.src) )
   then

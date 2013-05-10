@@ -50,7 +50,7 @@ type planner = {
    +-----------------------------------------------------------------+ *)
 
 let find_path planner src dst =
-  Krobot_path.find ~src ~dst ~beacon:planner.beacon ~objects:[]
+  Krobot_path.find ~src ~dst ~beacon:planner.beacon []
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
