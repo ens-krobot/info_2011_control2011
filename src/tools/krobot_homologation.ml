@@ -121,7 +121,7 @@ let direction pos = function
     (* else *)
     { vx = -.1.; vy = 0. }
 
-let retry_n n t = Node(Retry(n,Node(Simple,[Wait_for 0.1;t])),[t])
+let retry_n n t = Node(Retry(n,Node(Simple,[Stop;Wait_for 0.1;t])),[t])
 
 let approach_lower_border retries pos dir =
   let shift_len = 0.1 in
@@ -169,8 +169,14 @@ let gifts_actions retries team =
   in
   List.map (do_gift retries team) gifts
 
+let random =
+  let r = Random_move ({x = 0.7; y = 0.4},{x = 2.3; y = 1.6}) in
+  [Node(Loop (Node(Simple,[Stop;r])),[r])]
+
+let loop l = Node(Loop(Node(Simple,l)),l)
+
 let strategy gift_retries team =
-  start team @ gifts_actions gift_retries team @ end_
+  start team @ [loop (gifts_actions gift_retries team)] @ end_
 
 (* let strat_base team = *)
 (*   let n_gift = match team with *)

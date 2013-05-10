@@ -415,6 +415,9 @@ let rec exec robot actions =
   match actions with
     | [] ->
         ([], Wait)
+    | Node (Loop t,[]) :: rest ->
+        ignore (Lwt_log.info_f "Exit/reenter node loop");
+        exec robot (Node (Loop t,[t]) :: rest)
     | Node (_,[]) :: rest ->
         ignore (Lwt_log.info_f "Exit node");
         exec robot rest
@@ -496,6 +499,17 @@ let rec exec robot actions =
     | Set_curve(Some curve) :: rest ->
         robot.curve <- Some curve;
         exec robot rest
+
+    | Random_move (v1,v2) :: rest ->
+      ignore (Lwt_log.info_f "Random_move");
+      let min_x = min v1.x v2.x in
+      let max_x = max v1.x v2.x in
+      let min_y = min v1.y v2.y in
+      let max_y = max v1.y v2.y in
+      let x = (Random.float (max_x -. min_x)) +. min_x in
+      let y = (Random.float (max_y -. min_y)) +. min_y in
+      let action = prepare_goto robot {x;y} None in
+      exec robot (action::rest)
 
     | Simple_goto (dst,last_vector) :: rest ->
       ignore (Lwt_log.info_f "Simple_goto");

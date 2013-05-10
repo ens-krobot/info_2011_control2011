@@ -34,6 +34,8 @@ and t =
   | Simple_goto of vertice * vector option
       (** Same as Goto but can fail when obstacles block the trajectory *)
 
+  | Random_move of vertice * vertice
+
   | Set_limits of float * float * float * float
       (** limit the speed *)
 

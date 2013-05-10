@@ -22,6 +22,7 @@ and t =
   | Think
   | Goto of vertice * vector option
   | Simple_goto of vertice * vector option
+  | Random_move of vertice * vertice
   | Set_limits of float * float * float * float
   | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
@@ -71,6 +72,8 @@ let rec to_string = function
       "Stop"
   | Think ->
       "Think"
+  | Random_move (v1,v2) ->
+      sprintf "Random move %s %s" (string_of_vertice v1) (string_of_vertice v2)
   | Goto (v,vect) ->
       sprintf "Goto %s %s" (string_of_vertice v) (string_of_option string_of_vector vect)
   | Simple_goto (v,vect) ->
