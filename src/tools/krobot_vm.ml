@@ -400,7 +400,7 @@ let turn_radius = 0.1
 let prepare_goto robot dst last_vector =
   let dst_orient = match last_vector with
     | None -> None
-    | Some v -> Some (turn_radius, v) in
+    | Some v -> Some (turn_radius, minus v) in
   let src_orient =
     let vect = { vx = cos robot.orientation;
                  vy = sin robot.orientation; } in
@@ -509,6 +509,14 @@ let rec exec robot actions =
     | Set_curve(Some curve) :: rest ->
         robot.curve <- Some curve;
         exec robot rest
+
+    | Move_back dist :: rest ->
+      let move_vect =
+        { vx = cos robot.orientation;
+          vy = sin robot.orientation } *| (-.dist)
+      in
+      let dest = translate robot.position move_vect in
+      exec robot ((Follow_path([dest],None,false))::rest)
 
     | Random_move (v1,v2) :: rest ->
       ignore (Lwt_log.info_f "Random_move");

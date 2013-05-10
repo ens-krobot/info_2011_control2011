@@ -34,7 +34,7 @@ and t =
   | Simple_goto of vertice * vector option
       (** Same as Goto but can fail when obstacles block the trajectory *)
 
-  | Random_move of vertice * vertice
+  | Random_move of ( vertice * vertice )
 
   | Set_limits of float * float * float * float
       (** limit the speed *)
@@ -51,6 +51,7 @@ and t =
       (** Follow the bezier curve determined by the given four
           vertices. The first float is the sign, the last one is the
           end velocity. *)
+  | Move_back of float
   | Set_curve of (bool * Bezier.curve) option
       (** Set the curve currently being followed. *)
   | Wait_for_jack of bool

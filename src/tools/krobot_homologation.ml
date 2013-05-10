@@ -32,8 +32,8 @@ let gifts_positions =
 
 let team_gift_position team p =
   match team with
-  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.01); y = p.y }
-  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.01); y = p.y }
+  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.03); y = p.y }
+  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.03); y = p.y }
 
 let gift_destination team p =
   let p = team_gift_position team p in
@@ -121,23 +121,47 @@ let direction pos = function
     (* else *)
     { vx = -.1.; vy = 0. }
 
-let retry_n n t = Node(Retry(n,Node(Simple,[Stop;Wait_for 0.1;t])),[t])
+let retry_n n t = Node(Retry(n,Node(Simple,[Stop;Wait_for 0.05;t])),[t])
+
+let go_first_gift pos dir =
+  let shift_len = 0.2 in
+  let shift =
+    if dir.vx >= 0.
+    then shift_len
+    else -. shift_len in
+  let back_shifted_position =
+    { x = pos.x +. shift; y = Krobot_config.robot_radius +. 0.01 } in
+  Node(Simple,
+    [ retry_n 2 (Simple_goto (back_shifted_position, Some (minus dir)));
+      retry_n 2 (Follow_path ([pos], Some dir, false)); ])
 
 let approach_lower_border retries pos dir =
-  let shift_len = 0.1 in
+  let shift_len = 0.2 in
   let shift =
     if dir.vx >= 0.
     then shift_len
     else -. shift_len in
   let shifted_position =
+    { x = pos.x -. shift; y = Krobot_config.robot_radius +. 0.01 } in
+  let back_shifted_position =
     { x = pos.x +. shift; y = Krobot_config.robot_radius +. 0.01 } in
-  let goto_path =
+  let goto_normal =
     Node(Simple,
       [ retry_n retries (Simple_goto (shifted_position, Some (minus dir)));
+        retry_n retries (Follow_path ([pos], Some (minus dir), false)); ]) in
+  let goto_back =
+    Node(Simple,
+      [ retry_n retries (Simple_goto (back_shifted_position, Some (minus dir)));
         retry_n retries (Follow_path ([pos], Some dir, false)); ]) in
-  let simple_path =
-    retry_n 2 (Follow_path ([pos], Some (minus dir), false)) in
-  [Node (Retry(1,goto_path), [simple_path])]
+  [Node(Retry(1,goto_back),[goto_normal])]
+
+  (* let goto_path = *)
+  (*   Node(Simple, *)
+  (*     [ retry_n retries (Simple_goto (shifted_position, Some (minus dir))); *)
+  (*       retry_n retries (Follow_path ([pos], Some dir, false)); ]) in *)
+  (* let simple_path = *)
+  (*   retry_n 2 (Follow_path ([pos], Some (minus dir), false)) in *)
+  (* [Node (Retry(1,goto_path), [simple_path])] *)
 
 (* let approach_lower_border pos dir = *)
 (*   let shift_len = 0.1 in *)
@@ -162,21 +186,41 @@ let do_gift retries team gift =
   let hit = hit_ax12_dir dir in
   Node(Next,goto @ hit)
 
+let do_first_gift team gift =
+  let destination = gift_destination team gift in
+  let dir = direction destination team in
+  let goto = go_first_gift destination dir in
+  let hit = hit_ax12_dir dir in
+  Node(Next,goto :: hit)
+
 let gifts_actions retries team =
   let gifts = match team with
     | `Red -> List.rev gifts_positions
     | `Blue -> gifts_positions
   in
-  List.map (do_gift retries team) gifts
+  let first = List.hd gifts in
+  let rest = List.tl gifts in
+  do_first_gift team first
+  ,(List.map (do_gift retries team) rest)
 
-let random =
-  let r = Random_move ({x = 0.7; y = 0.4},{x = 2.3; y = 1.6}) in
-  [Node(Loop (Node(Simple,[Stop;r])),[r])]
+let random team =
+  let zone = match team with
+    | `Red -> ({x = 0.3; y = 0.4},{x = 0.6; y = 1.5})
+    | `Blue -> ({x = 2.2; y = 0.4},{x = 2.5; y = 1.5}) in
+  let home = match team with
+    | `Red -> ({x = 2.5; y = 0.4},{x = 2.4; y = 1.})
+    | `Blue -> ({x = 0.4; y = 0.4},{x = 0.5; y = 1.}) in
+  let go = Random_move zone in
+  let back' = Random_move home in
+  let back = Node(Retry(3,Node(Simple,[Stop;back'])),[back']) in
+  let r = Node(Simple,[Stop;go;back;Move_back 0.1]) in
+  [Node(Loop(Node(Simple,[Stop;Wait_for 0.1;r])),[r])]
 
 let loop l = Node(Loop(Node(Simple,l)),l)
 
 let strategy gift_retries team =
-  start team @ [loop (gifts_actions gift_retries team)] @ end_
+  let first_gift, rest_gift = gifts_actions gift_retries team in
+  start team @ [first_gift] @ rest_gift @ random team @ end_
 
 (* let strat_base team = *)
 (*   let n_gift = match team with *)
