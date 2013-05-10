@@ -11,9 +11,16 @@
 
 open Krobot_geom
 
+type node_kind =
+  | Simple
+  | Retry of int * t
+  | Loop of t
+  | Next
+
 (** Type of actions. *)
-type t =
-  | Node of t option * t list
+and t =
+  | Node of node_kind * t list
+
       (** A sequence of action to execute in order. *)
   | Stop
       (** Stop all actions. *)
@@ -24,6 +31,8 @@ type t =
       (** Go to the given point.
           if the bool parameter is true, the path is inverted according
           to the robot team *)
+  | Simple_goto of vertice * vector option
+      (** Same as Goto but can fail when obstacles block the trajectory *)
 
   | Set_limits of float * float * float * float
       (** limit the speed *)

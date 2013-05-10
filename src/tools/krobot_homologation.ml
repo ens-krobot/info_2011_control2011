@@ -105,21 +105,25 @@ let hit_ax12_dir dir =
 
 let retry_follow_node dest dir =
   let rec follow_node =
-    Node(Some (Node(None,[Wait_for 0.2; follow_node])),
+    Node(Retry(1, Node(Simple,[Wait_for 0.2; follow_node])),
       [Follow_path ([dest], Some dir, false)]) in
   follow_node
 
 let direction pos = function
   | `Blue ->
-    if pos.x >= 2.2
-    then { vx = -.1.; vy = 0. }
-    else { vx = 1.; vy = 0. }
+    (* if pos.x >= 2.2 *)
+    (* then { vx = -.1.; vy = 0. } *)
+    (* else *)
+    { vx = 1.; vy = 0. }
   | `Red ->
-    if pos.x <= 0.8
-    then { vx = 1.; vy = 0. }
-    else { vx = -.1.; vy = 0. }
+    (* if pos.x <= 0.8 *)
+    (* then { vx = 1.; vy = 0. } *)
+    (* else *)
+    { vx = -.1.; vy = 0. }
 
-let approach_lower_border pos dir =
+let retry_n n t = Node(Retry(n,Node(Simple,[Wait_for 0.1;t])),[t])
+
+let approach_lower_border retries pos dir =
   let shift_len = 0.1 in
   let shift =
     if dir.vx >= 0.
@@ -128,11 +132,12 @@ let approach_lower_border pos dir =
   let shifted_position =
     { x = pos.x +. shift; y = Krobot_config.robot_radius +. 0.01 } in
   let goto_path =
-    Node(None,
-      [ Goto (shifted_position, Some (minus dir));
-        retry_follow_node pos dir; ]) in
-  let simple_path = [Follow_path ([pos], Some (minus dir), false)] in
-  [Node (Some goto_path, simple_path)]
+    Node(Simple,
+      [ retry_n retries (Simple_goto (shifted_position, Some (minus dir)));
+        retry_n retries (Follow_path ([pos], Some dir, false)); ]) in
+  let simple_path =
+    retry_n 2 (Follow_path ([pos], Some (minus dir), false)) in
+  [Node (Retry(1,goto_path), [simple_path])]
 
 (* let approach_lower_border pos dir = *)
 (*   let shift_len = 0.1 in *)
@@ -146,26 +151,26 @@ let approach_lower_border pos dir =
 (*     (\* Follow_path ([pos], Some dir, false); *\) *)
 (*     retry_follow_node pos dir; ] *)
 
-let goto_gift team gift =
+let goto_gift retries team gift =
   let destination = gift_destination team gift in
-  approach_lower_border destination (direction destination team)
+  approach_lower_border retries destination (direction destination team)
 
-let do_gift team gift =
+let do_gift retries team gift =
   let destination = gift_destination team gift in
   let dir = direction destination team in
-  let goto = approach_lower_border destination dir in
+  let goto = approach_lower_border retries destination dir in
   let hit = hit_ax12_dir dir in
-  goto @ hit
+  Node(Next,goto @ hit)
 
-let gifts_actions team =
+let gifts_actions retries team =
   let gifts = match team with
     | `Red -> List.rev gifts_positions
     | `Blue -> gifts_positions
   in
-  List.flatten (List.map (do_gift team) gifts)
+  List.map (do_gift retries team) gifts
 
-let strategy team =
-  start team @ gifts_actions team @ end_
+let strategy gift_retries team =
+  start team @ gifts_actions gift_retries team @ end_
 
 (* let strat_base team = *)
 (*   let n_gift = match team with *)
@@ -289,7 +294,7 @@ let strategy team =
 let launch bus team =
   Krobot_bus.send bus
     (Unix.gettimeofday (),
-     Strategy_set (strategy team))
+     Strategy_set (strategy 20 team))
 
 let update_team_led status =
   let m1,m2 =

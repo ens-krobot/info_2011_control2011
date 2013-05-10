@@ -10,11 +10,18 @@
 open Printf
 open Krobot_geom
 
-type t =
-  | Node of t option * t list
+type node_kind =
+  | Simple
+  | Retry of int * t
+  | Loop of t
+  | Next
+
+and t =
+  | Node of node_kind * t list
   | Stop
   | Think
   | Goto of vertice * vector option
+  | Simple_goto of vertice * vector option
   | Set_limits of float * float * float * float
   | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
@@ -51,14 +58,23 @@ let string_of_face = function
   | `Back -> "`Back"
 
 let rec to_string = function
-  | Node (t,l) ->
-      sprintf "Node [%s, %s]" (string_of_option to_string t) (list_to_string l)
+  | Node (Simple,l) ->
+      sprintf "Node [%s]" (list_to_string l)
+  | Node (Next,l) ->
+      sprintf "Node [Next,%s]" (list_to_string l)
+  | Node (Retry(n,l'),l) ->
+      sprintf "Node [%i, %s, %s]"
+        n (to_string l') (list_to_string l)
+  | Node (Loop t,l) ->
+      sprintf "Node [loop, %s, %s]" (to_string t) (list_to_string l)
   | Stop ->
       "Stop"
   | Think ->
       "Think"
   | Goto (v,vect) ->
       sprintf "Goto %s %s" (string_of_vertice v) (string_of_option string_of_vector vect)
+  | Simple_goto (v,vect) ->
+      sprintf "Simple_goto %s %s" (string_of_vertice v) (string_of_option string_of_vector vect)
   | Set_limits (vmax,omega_max,atan_max, arad_max) ->
       sprintf "Set_limits(%f, %f, %f, %f)" vmax omega_max atan_max arad_max
   | Set_led (_,_) -> "Set_led"

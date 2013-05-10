@@ -245,15 +245,40 @@ let rec remove_leftest_node = function
   | l ->
       l
 
+(** cancel the deapest node *)
 let rec cancel_node = function
-  | (Node(Some t, l)) :: rest ->
-    (match cancel_node l with
-      | None -> Some (t::rest)
-      | Some rep -> Some (Node(Some t,rep)::rest))
-  | (Node (None, l)) :: rest ->
+  (* cancel simple node: cancel everything *)
+  | (Node (Simple, l)) :: rest ->
     (match cancel_node l with
      | None -> None
-     | Some rep -> Some(rep@rest))
+     | Some rep ->
+       (* if a son handled the cancel: continue *)
+       Some(rep@rest))
+
+  | (Node (Next, l)) :: rest ->
+    (match cancel_node l with
+     | None ->
+       (* next failing -> continue with the next one *)
+       Some(rest)
+     | Some rep ->
+       (* if a son handled the cancel: continue *)
+       Some(Node(Next,rep)::rest))
+
+  | (Node(Retry(n,t), l)) :: rest ->
+    (match cancel_node l with
+      | None ->
+        (match n with
+         | 0 -> None (* like simple *)
+         | 1 -> Some (t::rest) (* continue simply with the fallback *)
+         | n -> Some (Node(Retry(n-1,t),[t])::rest))
+      | Some rep ->
+        Some (Node(Retry(n,t),rep)::rest))
+
+  | (Node(Loop t, l)) :: rest ->
+    (match cancel_node l with
+     | None -> Some (Node(Loop t,[t])::rest)
+     | Some rep -> Some (Node(Loop(t),rep)::rest))
+
   | _ ->
     None
 
@@ -335,15 +360,15 @@ let not_ignore_probal = 0.7
 let ignore_some proba l =
   List.filter (fun _ -> Random.float 1. <= proba) l
 
-let path_ignoring proba robot dst last_vector =
-  Krobot_path.find ~src:robot.position ~dst
-    ~beacon:robot.beacon
-    ~objects:(ignore_some proba robot.objects)
+(* let path_ignoring proba robot dst last_vector = *)
+(*   Krobot_path.find ~src:robot.position ~dst *)
+(*     ~beacon:robot.beacon *)
+(*     ~objects:(ignore_some proba robot.objects) *)
 
-let goto_node v vertices last_vector =
-  (Node (Some (Node (None, [Stop; Try_something v; Wait_for 0.1;
-                            Goto (v,last_vector)])),
-     [Follow_path (vertices,last_vector, true)]))
+(* let goto_node v vertices last_vector = *)
+(*   (Node (Retry (1,Node (Simple, [Stop; Try_something v; Wait_for 0.1; *)
+(*                                  Goto (v,last_vector)])), *)
+(*      [Follow_path (vertices,last_vector, true)])) *)
 
 let () = Random.self_init ()
 
@@ -369,6 +394,20 @@ let correct_bezier sign objects curve shift_vector =
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
   curve
+
+let prepare_goto robot dst last_vector =
+  match Krobot_path.find ~src:robot.position ~dst
+      ~beacon:robot.beacon ~objects:robot.objects with
+  | Some vertices ->
+    Follow_path (vertices,last_vector, true)
+  | None ->
+    let alternate = Krobot_path.find ~src:robot.position ~dst
+        ~beacon:robot.beacon
+        ~objects:(ignore_some not_ignore_probal robot.objects) in
+    match alternate with
+    | Some vertices ->
+      Follow_path (vertices,last_vector, true)
+    | None -> Fail
 
 (* [exec robot actions] searches for the first action to execute in a
    tree of actions and returns a new tree of actions and an effect. *)
@@ -457,22 +496,36 @@ let rec exec robot actions =
     | Set_curve(Some curve) :: rest ->
         robot.curve <- Some curve;
         exec robot rest
-    | Goto (v,last_vector) :: rest -> begin
-      ignore (Lwt_log.info_f "Goto");
-        (* Try to find a path to the destination. *)
-        match Krobot_path.find ~src:robot.position ~dst:v
-            ~beacon:robot.beacon ~objects:robot.objects with
-          | Some vertices ->
-              exec robot ((goto_node v vertices last_vector) :: rest)
 
-          | None ->
-            match path_ignoring not_ignore_probal robot v last_vector with
-            | Some vertices ->
-              exec robot ((goto_node v vertices last_vector) :: rest)
-            | None ->
-              ([Stop; Try_something v; Wait_for 0.1; Goto (v,last_vector)] @ rest,
-               Wait)
+    | Simple_goto (dst,last_vector) :: rest ->
+      ignore (Lwt_log.info_f "Simple_goto");
+      let action = prepare_goto robot dst last_vector in
+      exec robot (action::rest)
+
+    | Goto (dst,last_vector) :: rest -> begin
+      ignore (Lwt_log.info_f "Goto");
+      let action = prepare_goto robot dst last_vector in
+      exec robot
+        ((Node (Retry (1,Node (Simple, [Stop; Try_something dst; Wait_for 0.1;
+                                        Goto (dst,last_vector)])),
+            [action]))::rest)
       end
+
+
+      (*   (\* Try to find a path to the destination. *\) *)
+      (*   match Krobot_path.find ~src:robot.position ~dst:v *)
+      (*       ~beacon:robot.beacon ~objects:robot.objects with *)
+      (*     | Some vertices -> *)
+      (*         exec robot ((goto_node v vertices last_vector) :: rest) *)
+
+      (*     | None -> *)
+      (*       match path_ignoring not_ignore_probal robot v last_vector with *)
+      (*       | Some vertices -> *)
+      (*         exec robot ((goto_node v vertices last_vector) :: rest) *)
+      (*       | None -> *)
+      (*         ([Stop; Try_something v; Wait_for 0.1; Goto (v,last_vector)] @ rest, *)
+      (*          Wait) *)
+      (* end *)
 
     | Can c ::rest ->
         ignore (Lwt_log.info_f "Can");
@@ -580,9 +633,9 @@ let rec exec robot actions =
         in
         match curves with
           | [] ->
-              exec robot (Node (None, post) :: rest)
+              exec robot (Node (Simple, post) :: rest)
           | [(sign, p, q, r, s)] ->
-            exec robot (Node (None,[
+            exec robot (Node (Simple,[
               Set_curve(Some(sign>0.,Bezier.of_vertices p q r s));
               Bezier(sign, p, q, r, s, 0.01);
               Wait_for_odometry(`Le, 128);
@@ -591,7 +644,7 @@ let rec exec robot actions =
               Set_curve None;
             ] @ post) :: rest)
           | (sign, p, q, r, s) :: curves ->
-            exec robot (Node(None,
+            exec robot (Node(Simple,
                              Set_curve(Some(sign>0.,Bezier.of_vertices p q r s))
                              :: Bezier(sign, p, q, r, s, 0.5)
                              :: Wait_for_odometry(`Le, 128)
@@ -660,7 +713,7 @@ let rec exec robot actions =
            Send [Motor_turn (delta,0.5,1.)]))
     | Calibrate ( approach_position, approach_orientation, distance,
                   supposed_x, supposed_y, supposed_orientation )::rest ->
-      Node (None,
+      Node (Simple,
             ([ Goto (approach_position,
                      Some { vx = cos approach_orientation;
                             vy = cos approach_orientation });
