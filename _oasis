@@ -346,6 +346,13 @@ Executable "krobot-beacon-reader"
   MainIs: krobot_beacon_reader.ml
   BuildDepends: krobot, lwt.syntax, lwt.unix
 
+Executable "krobot-xbee"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_xbee.ml
+  BuildDepends: krobot, lwt.syntax, lwt.unix, str
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+
