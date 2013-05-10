@@ -32,8 +32,8 @@ let gifts_positions =
 
 let team_gift_position team p =
   match team with
-  | `Red -> { x = p.x +. (gift_width /. 2. -. 0.04); y = p.y }
-  | `Blue -> { x= p.x -. (gift_width /. 2. -. 0.04); y = p.y }
+  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.01); y = p.y }
+  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.01); y = p.y }
 
 let gift_destination team p =
   let p = team_gift_position team p in
@@ -93,9 +93,9 @@ let hit_ax12_id id =
   in
   [Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
    Wait_for 0.1;
-   Can (Krobot_message.encode (Ax12_Goto (2, high, 100)));
+   Can (Krobot_message.encode (Ax12_Goto (id, high, 100)));
    Wait_for 1.;
-   Can (Krobot_message.encode (Ax12_Goto (2, base, 100)));
+   Can (Krobot_message.encode (Ax12_Goto (id, base, 100)));
    Wait_for 1.]
 
 let hit_ax12_dir dir =
