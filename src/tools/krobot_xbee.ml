@@ -52,6 +52,8 @@ let open_serial path rate =
    | read/send loop                                                  |
    +-----------------------------------------------------------------+ *)
 
+exception Restart
+
 let slave_start = "KBSS\r"
 let master_acknowledge = "KBMA\r"
 let kb_match_start = "KBMS\r"
@@ -59,11 +61,13 @@ let kb_start_get_team = "KBSGT\r"
 let team_red = "KBMTR\r"
 let team_blue = "KBMTB\r"
 
+let msg_len = max (String.length slave_start) (String.length kb_start_get_team)
+
 let slave_start_matching =
-  Str.regexp (".*"^slave_start^".*"), String.length slave_start
+  Str.regexp (".*"^slave_start^".*"), msg_len
 
 let slave_get_team =
-  Str.regexp (".*"^kb_start_get_team^".*"), String.length kb_start_get_team
+  Str.regexp (".*"^kb_start_get_team^".*"), msg_len
 
 type matched =
   | Matched
@@ -105,46 +109,62 @@ let send_string fd s =
   lwt () = Lwt_log.info_f ~section "sent: %s" s in
   Lwt.return ()
 
-let rec read_until_pattern matching acc fd =
+type recv =
+  | Slave_start
+  | Slave_get_team
+
+let rec read_until_pattern acc fd =
   lwt () = Lwt_log.info_f ~section "wait msg" in
   lwt s = read_string fd in
   lwt () = Lwt_log.info_f ~section "recv %s" s in
   let s = acc ^ s in
-  match get_string matching s with
-  | Matched -> Lwt.return ()
-  | Not_matched acc -> read_until_pattern matching acc fd
+  match get_string slave_start_matching s with
+  | Matched -> Lwt.return Slave_start
+  | Not_matched _ ->
+    match get_string slave_get_team s with
+    | Matched -> Lwt.return Slave_get_team
+    | Not_matched acc -> read_until_pattern acc fd
+
+let rec read_slave_start fd =
+  match_lwt read_until_pattern "" fd with
+  | Slave_start -> Lwt.return ()
+  | Slave_get_team -> read_slave_start fd
 
 let rec answer_slave_start info fd =
   lwt () = Lwt.pick
-      [(read_until_pattern slave_start_matching "" fd);
-       (Lwt_condition.wait info.start_condition)] in
+      [read_slave_start fd;
+       Lwt_condition.wait info.start_condition] in
   lwt () = send_string fd master_acknowledge in
   if info.started
   then Lwt.return ()
   else answer_slave_start info fd
 
 let loop_match_start info fd =
-  let answered = ref false in
+  let answered = ref None in
   let rec send () =
-    if !answered
-    then Lwt.return ()
-    else
+    match !answered with
+    | None ->
       lwt () = Lwt_unix.sleep 0.05 in
       lwt () = send_string fd kb_match_start in
       send ()
+    | Some (Slave_get_team) -> Lwt.return ()
+    | Some (Slave_start) ->
+      raise_lwt Restart
   in
   let t = send () in
   let _ =
-    lwt () = read_until_pattern slave_get_team "" fd in
-    answered := true;
+    lwt r = read_until_pattern "" fd in
+    answered := Some r;
     Lwt.return ()
   in
   t
 
 let rec recv fd =
-  lwt s = read_string fd in
-  lwt () = Lwt_log.info_f ~section "recv %s" s in
-  recv fd
+  match_lwt read_until_pattern "" fd with
+  | Slave_get_team ->
+    recv fd
+  | Slave_start ->
+    raise_lwt Restart
 
 let rec loop_team info fd =
   let msg = match info.team with
@@ -185,11 +205,15 @@ let handle_message info (timestamp, message) =
 let fork = ref true
 let tty = ref "/dev/ttyUSB1"
 let baudrate = ref 57600
+let start_on = ref false
+let start_team : [`Blue|`Red] ref = ref (`Red:>[`Blue|`Red])
 
 let options = Arg.align [
   "-no-fork", Arg.Clear fork, " Run in foreground";
   "-tty", Arg.Set_string tty, " set tty file";
   "-baudrate", Arg.Set_int baudrate, " set tty baudrate file";
+  "-start", Arg.Set start_on, " suppose the robot started";
+  "-blue", Arg.Unit (fun () -> start_team := `Blue), "blue team";
 ]
 
 let usage = "\
@@ -199,6 +223,20 @@ options are:"
 (* +-----------------------------------------------------------------+
    | Entry point                                                     |
    +-----------------------------------------------------------------+ *)
+
+let rec main_loop info fd =
+  try_lwt
+    lwt () = Lwt_log.info ~section "wait slave" in
+    lwt () = answer_slave_start info fd in
+    lwt () = Lwt_log.info ~section "match started" in
+    lwt () = loop_match_start info fd in
+    let _ = recv fd in
+    lwt () = Lwt_log.info ~section "send team" in
+    loop_team info fd
+  with Restart ->
+   info.started <- false;
+   main_loop info fd
+
 
 lwt () =
   Arg.parse options ignore usage;
@@ -216,9 +254,9 @@ lwt () =
 
   let info = {
     bus = bus;
-    team = `Red;
+    team = !start_team;
     jack = false;
-    started = false;
+    started = !start_on;
     start_condition = Lwt_condition.create ();
   } in
 
@@ -229,10 +267,4 @@ lwt () =
   lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "xbee") in
 
   (* Loop forever. *)
-  lwt () = Lwt_log.info ~section "wait slave" in
-  lwt () = answer_slave_start info fd in
-  lwt () = Lwt_log.info ~section "match started" in
-  lwt () = loop_match_start info fd in
-  let _ = recv fd in
-  lwt () = Lwt_log.info ~section "send team" in
-  loop_team info fd
+  main_loop info fd
