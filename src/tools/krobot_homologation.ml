@@ -50,9 +50,11 @@ let gift_position3 = { x = 1.8 ; y = 0. }
 let gift_position4 = { x = 2.4 ; y = 0. }
 
 let gift_go pos = { x = pos.x +. gift_shift ; y = init_y }
+let gift_go_red pos = { x = pos.x -. gift_shift ; y = init_y }
 
 let gitf_go1 = { x = gift_position1.x +. gift_shift ; y = init_y }
-let gift_dir1 = { vx = -.1.; vy = 0. }
+let gift_dir1_blue = { vx = -.1.; vy = 0. }
+let gift_dir1_red = { vx = 1.; vy = 0. }
 
 let retry_n n t = Node(Retry(n,Node(Simple,[Stop;Wait_for 0.2;t])),[t])
 
@@ -70,18 +72,16 @@ let retry_follow n dst dir =
     Node(Retry(n,node [Stop;Wait_for 0.2;follow]),[follow]) in
   Node(Next,[back_and_retry [tmp]])
 
-let act1 = Follow_path ([gift_go gift_position1], Some gift_dir1, false)
-let act2 = Follow_path ([gift_go gift_position2], Some gift_dir1, false)
-let act3 = Follow_path ([gift_go gift_position3], Some gift_dir1, false)
-let act4 = Follow_path ([gift_go gift_position4], Some gift_dir1, false)
+let act1_blue = retry_follow 15 (gift_go gift_position1) gift_dir1_blue
+let act2_blue = retry_follow 15 (gift_go gift_position2) gift_dir1_blue
+let act3_blue = retry_follow 15 (gift_go gift_position3) gift_dir1_blue
+let act4_blue = retry_follow 15 (gift_go gift_position4) gift_dir1_blue
 
-let act1 = retry_follow 15 (gift_go gift_position1) gift_dir1
-let act2 = retry_follow 15 (gift_go gift_position2) gift_dir1
-let act3 = retry_follow 15 (gift_go gift_position3) gift_dir1
-let act4 = retry_follow 15 (gift_go gift_position4) gift_dir1
+let act1_red = retry_follow 15 (gift_go_red gift_position4) gift_dir1_red
+let act2_red = retry_follow 15 (gift_go_red gift_position3) gift_dir1_red
+let act3_red = retry_follow 15 (gift_go_red gift_position2) gift_dir1_red
+let act4_red = retry_follow 15 (gift_go_red gift_position1) gift_dir1_red
 
-let home = Follow_path ([{ x = 0.5 ; y = init_y }],
-    Some gift_dir1, false)
 
 let hit_ax12_id id =
   let base, high =
@@ -97,7 +97,7 @@ let hit_ax12_id id =
 
 let ramene p1 p2 dir =
   [ Goto (p1, None);
-    Move_back 0.3;
+    Move_back 0.4;
     Goto (p2, Some dir); ]
 
 let pos1 = { x = 0.4 ; y = 0.7 }
@@ -115,20 +115,51 @@ let inner_loop_blue =
     @ ramene pos1 pos4 haut in
   Node(Loop(node l),l)
 
-let run_strategy =
-  [ act1;
+let sym_pos p = { p with x = 3. -. p.x }
+
+let pos1_red = sym_pos { x = 0.4 ; y = 0.7 }
+let pos2_red = sym_pos { x = 2.6 ; y = 0.7 }
+let pos3_red = sym_pos { x = 2.6 ; y = 1.5 }
+let pos4_red = sym_pos { x = 2.6 ; y = 1.0 }
+
+let inner_loop_red =
+  let l =
+    ramene pos1_red pos2_red haut
+    @ ramene pos1_red pos3_red bas
+    @ ramene pos1_red pos4_red haut in
+  Node(Loop(node l),l)
+
+
+let run_strategy_blue =
+  [ act1_blue;
     Stop;
     hit_ax12_id 2;
-    act2;
+    act2_blue;
     Stop;
     hit_ax12_id 2;
-    act3;
+    act3_blue;
     Stop;
     hit_ax12_id 2;
-    act4;
+    act4_blue;
     Stop;
     hit_ax12_id 2;
     inner_loop_blue;
+ ]
+
+let run_strategy_red =
+  [ act1_red;
+    Stop;
+    hit_ax12_id 1;
+    act2_red;
+    Stop;
+    hit_ax12_id 1;
+    act3_red;
+    Stop;
+    hit_ax12_id 1;
+    act4_red;
+    Stop;
+    hit_ax12_id 1;
+    inner_loop_red;
  ]
 
 let team_gift_position team p =
@@ -147,7 +178,7 @@ type status = {
   (* The state of the team selector. *)
 }
 
-let vmax = 0.6
+let vmax = 0.5
 let omega_max = 3.14 /. 2.
 let accel_tan_max = 1.0
 let accel_rad_max = 1.0
@@ -339,7 +370,11 @@ let approach_lower_border retries pos dir =
 
 
 let launch bus team =
-  let strat = start team @ run_strategy in
+  let s = match team with
+    | `Red -> run_strategy_red
+    | `Blue -> run_strategy_blue
+  in
+  let strat = start team @ s in
   Krobot_bus.send bus (Unix.gettimeofday (),
     Strategy_set strat)
 
