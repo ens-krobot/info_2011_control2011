@@ -360,8 +360,8 @@ let vertice_of_seg { p1 = {px;py} } =
 
 let orientation_circles radius vect p =
   let unit = unitaire vect in
-  let back_left = unitaire ((turn_trigo unit) -| (2. *@ unit)) in
-  let back_right = unitaire ((turn_antitrigo unit) -| (2. *@ unit)) in
+  let back_left = unitaire ((turn_trigo unit) -| (0.5 *@ unit)) in
+  let back_right = unitaire ((turn_antitrigo unit) -| (0.5 *@ unit)) in
   let c1 = p +! (radius +. epsilon_float) *@ back_left in
   let c2 = p +! (radius +. epsilon_float) *@ back_right in
   [{ c = c1; r = radius };

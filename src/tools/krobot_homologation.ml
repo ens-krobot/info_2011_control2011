@@ -18,11 +18,24 @@ open Krobot_geom
 
 type reset = [ `Auto | `Blue | `Red ]
 
-let secure_dist = 0.25
-
-let gift_distance = 0.21
-
 let gift_width = 0.15
+
+let init_y = 0.244
+
+let ax12_2_base_position = 519
+let ax12_2_high_position = 210
+
+let ax12_2_mid_position = 400
+let ax12_1_mid_position = 600
+
+let ax12_1_base_position = 518
+let ax12_1_high_position = 823
+
+let init_blue_pos =
+  Set_odometry (
+    Some (Krobot_config.wheels_position +. 0.001),
+    Some 24.4,
+    Some 0.)
 
 let gifts_positions =
   [ { x = 0.60 ; y = 0. };
@@ -30,14 +43,102 @@ let gifts_positions =
     { x = 1.8 ; y = 0. };
     { x = 2.4 ; y = 0. }; ]
 
+let gift_shift = -. (gift_width /. 2.) -. 0.09
+let gift_position1 = { x = 0.60 ; y = 0. }
+let gift_position2 = { x = 1.2 ; y = 0. }
+let gift_position3 = { x = 1.8 ; y = 0. }
+let gift_position4 = { x = 2.4 ; y = 0. }
+
+let gift_go pos = { x = pos.x +. gift_shift ; y = init_y }
+
+let gitf_go1 = { x = gift_position1.x +. gift_shift ; y = init_y }
+let gift_dir1 = { vx = -.1.; vy = 0. }
+
+let retry_n n t = Node(Retry(n,Node(Simple,[Stop;Wait_for 0.2;t])),[t])
+
+let node t = Node(Simple,t)
+
+let back_and_retry t =
+  Node(Retry(3,
+      node ((Node(Next,[Stop;Move_back 0.1])) :: t)),
+    t)
+
+let retry_follow n dst dir =
+  let follow =
+    Follow_path ([dst], Some dir, false) in
+  let tmp =
+    Node(Retry(n,node [Stop;Wait_for 0.2;follow]),[follow]) in
+  Node(Next,[back_and_retry [tmp]])
+
+let act1 = Follow_path ([gift_go gift_position1], Some gift_dir1, false)
+let act2 = Follow_path ([gift_go gift_position2], Some gift_dir1, false)
+let act3 = Follow_path ([gift_go gift_position3], Some gift_dir1, false)
+let act4 = Follow_path ([gift_go gift_position4], Some gift_dir1, false)
+
+let act1 = retry_follow 15 (gift_go gift_position1) gift_dir1
+let act2 = retry_follow 15 (gift_go gift_position2) gift_dir1
+let act3 = retry_follow 15 (gift_go gift_position3) gift_dir1
+let act4 = retry_follow 15 (gift_go gift_position4) gift_dir1
+
+let home = Follow_path ([{ x = 0.5 ; y = init_y }],
+    Some gift_dir1, false)
+
+let hit_ax12_id id =
+  let base, high =
+    if id = 1
+    then ax12_1_base_position, ax12_1_high_position
+    else ax12_2_base_position, ax12_2_high_position
+  in
+  Node (Simple,
+    [Can (Krobot_message.encode (Ax12_Goto (id, high, 0)));
+     Wait_for 0.3;
+     Can (Krobot_message.encode (Ax12_Goto (id, base, 0)));
+     Wait_for 0.3])
+
+let ramene p1 p2 dir =
+  [ Goto (p1, None);
+    Move_back 0.3;
+    Goto (p2, Some dir); ]
+
+let pos1 = { x = 0.4 ; y = 0.7 }
+let pos2 = { x = 2.6 ; y = 0.7 }
+let pos3 = { x = 2.6 ; y = 1.5 }
+let pos4 = { x = 2.6 ; y = 1.0 }
+
+let haut = { vx = 0. ; vy = 1. }
+let bas = { vx = 0. ; vy = -.1. }
+
+let inner_loop_blue =
+  let l =
+    ramene pos1 pos2 haut
+    @ ramene pos1 pos3 bas
+    @ ramene pos1 pos4 haut in
+  Node(Loop(node l),l)
+
+let run_strategy =
+  [ act1;
+    Stop;
+    hit_ax12_id 2;
+    act2;
+    Stop;
+    hit_ax12_id 2;
+    act3;
+    Stop;
+    hit_ax12_id 2;
+    act4;
+    Stop;
+    hit_ax12_id 2;
+    inner_loop_blue;
+ ]
+
 let team_gift_position team p =
   match team with
-  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.03); y = p.y }
-  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.03); y = p.y }
+  | `Red -> { x = p.x +. (gift_width /. 2. +. 0.09); y = p.y }
+  | `Blue -> { x= p.x -. (gift_width /. 2. +. 0.09); y = p.y }
 
-let gift_destination team p =
-  let p = team_gift_position team p in
-  { x = p.x; y = p.y +. gift_distance }
+(* let gift_destination team p = *)
+(*   let p = team_gift_position team p in *)
+(*   { x = p.x; y = p.y +. gift_distance } *)
 
 type status = {
   bus : Krobot_bus.t;
@@ -46,16 +147,10 @@ type status = {
   (* The state of the team selector. *)
 }
 
-let vmax = 0.3
+let vmax = 0.6
 let omega_max = 3.14 /. 2.
 let accel_tan_max = 1.0
 let accel_rad_max = 1.0
-
-let ax12_2_base_position = 519
-let ax12_2_high_position = 210
-
-let ax12_1_base_position = 518
-let ax12_1_high_position = 823
 
 let gonfle_baloon =
   [Can (Krobot_message.encode (Motor_command (2,3600)));
@@ -64,22 +159,36 @@ let gonfle_baloon =
    Wait_for 0.1]
 
 let start team =
+  (* assert(team = `Blue); *)
   [ Stop_timer;
     Wait_for 0.1;
+    (* init_blue_pos; *)
     Reset_odometry (team:>reset);
     Can (Krobot_message.encode (Drive_activation true));
-    Wait_for_jack true;
     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
-    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100)));
-    Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 100)));
-    Wait_for 1.;
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_mid_position, 0)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_mid_position, 0)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 0)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 0)));
+    Wait_for_jack true;
+    Wait_for 0.4;
     Wait_for_jack false;
     Start_timer (90.,[Stop] @ gonfle_baloon @ [End]);
     Start_match;
     Set_led(`Red,false);
     Set_led(`Green,false);
     Reset_odometry (team:>reset);
+    Set_led(`Red,true);
+    (* init_blue_pos; *)
+    (* Wait_for 0.05; *)
     Wait_for_odometry_reset (team:>reset);
+    Set_led(`Red,true);
     Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max) ]
 
 let end_ =
@@ -175,176 +284,65 @@ let approach_lower_border retries pos dir =
 (*     (\* Follow_path ([pos], Some dir, false); *\) *)
 (*     retry_follow_node pos dir; ] *)
 
-let goto_gift retries team gift =
-  let destination = gift_destination team gift in
-  approach_lower_border retries destination (direction destination team)
-
-let do_gift retries team gift =
-  let destination = gift_destination team gift in
-  let dir = direction destination team in
-  let goto = approach_lower_border retries destination dir in
-  let hit = hit_ax12_dir dir in
-  Node(Next,goto @ hit)
-
-let do_first_gift team gift =
-  let destination = gift_destination team gift in
-  let dir = direction destination team in
-  let goto = go_first_gift destination dir in
-  let hit = hit_ax12_dir dir in
-  Node(Next,goto :: hit)
-
-let gifts_actions retries team =
-  let gifts = match team with
-    | `Red -> List.rev gifts_positions
-    | `Blue -> gifts_positions
-  in
-  let first = List.hd gifts in
-  let rest = List.tl gifts in
-  do_first_gift team first
-  ,(List.map (do_gift retries team) rest)
-
-let random team =
-  let zone = match team with
-    | `Red -> ({x = 0.3; y = 0.4},{x = 0.6; y = 1.5})
-    | `Blue -> ({x = 2.2; y = 0.4},{x = 2.5; y = 1.5}) in
-  let home = match team with
-    | `Red -> ({x = 2.5; y = 0.4},{x = 2.4; y = 1.})
-    | `Blue -> ({x = 0.4; y = 0.4},{x = 0.5; y = 1.}) in
-  let go = Random_move zone in
-  let back' = Random_move home in
-  let back = Node(Retry(3,Node(Simple,[Stop;back'])),[back']) in
-  let r = Node(Simple,[Stop;go;back;Move_back 0.1]) in
-  [Node(Loop(Node(Simple,[Stop;Wait_for 0.1;r])),[r])]
-
-let loop l = Node(Loop(Node(Simple,l)),l)
-
-let strategy gift_retries team =
-  let first_gift, rest_gift = gifts_actions gift_retries team in
-  start team @ [first_gift] @ rest_gift @ random team @ end_
-
-(* let strat_base team = *)
-(*   let n_gift = match team with *)
-(*     | `Red -> 2 *)
-(*     | `Blue -> 1 *)
-(*   in *)
-(*   let gift = List.nth gifts_positions n_gift in *)
+(* let goto_gift retries team gift = *)
 (*   let destination = gift_destination team gift in *)
-(*   let dst = { destination with y = destination.y +. secure_dist } in *)
-(*   [ *)
-(*     Stop_timer; *)
-(*     Wait_for 0.1; *)
-(*     Reset_odometry `Auto; *)
-(*     Can (Krobot_message.encode (Drive_activation true)); *)
-(*     Wait_for_jack true; *)
-(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true))); *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
-(*     Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 100))); *)
-(*     Wait_for 1.; *)
-(*     Wait_for_jack false; *)
-(*     Start_timer (90.,[Stop] @ gonfle_baloon @ [End]); *)
-(*     Start_match; *)
-(*     Set_led(`Red,false); *)
-(*     Set_led(`Green,false); *)
-(*     Reset_odometry `Auto; *)
-(*     Wait_for_odometry_reset `Auto; *)
-(*     Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max); *)
-(*     Goto (dst, Some { vx = 0.; vy = -.1. }); *)
-(*     Stop; *)
-(*     Follow_path ([destination], Some { vx = 0.; vy = 1. }, false); *)
-(*     Stop; *)
-(*     Wait_for 0.1; *)
-(*     Can (Krobot_message.encode (Motor_turn(-.(pi/.2.),0.5,1.))); *)
-(*     (\* Wait_for_motors_moving (true,None); *\) *)
-(*     Wait_for 0.1; *)
-(*     (\* Wait_for_motors_moving (false,None); *\) *)
-(*     Wait_for 0.1; *)
-(*     Wait_for 2.; *)
-(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true))); *)
-(*     Wait_for 0.1; *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100))); *)
-(*     Wait_for 0.1; *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100))); *)
-(*     Wait_for 0.1; *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_high_position, 100))); *)
-(*     Wait_for 3.; *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
-(*     Wait_for 0.1; *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
-(*     Wait_for 0.1; *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
-(*     Wait_for 0.1; *)
-(*     Wait_for 2.; *)
-(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true))); *)
-(*     End; *)
-(*   ] *)
+(*   approach_lower_border retries destination (direction destination team) *)
+
+(* let do_gift retries team gift = *)
+(*   let destination = gift_destination team gift in *)
+(*   let dir = direction destination team in *)
+(*   let goto = approach_lower_border retries destination dir in *)
+(*   let hit = hit_ax12_dir dir in *)
+(*   Node(Next,goto @ hit) *)
+
+(* let do_first_gift team gift = *)
+(*   let destination = gift_destination team gift in *)
+(*   let dir = direction destination team in *)
+(*   let goto = go_first_gift destination dir in *)
+(*   let hit = hit_ax12_dir dir in *)
+(*   Node(Next,goto :: hit) *)
+
+(* let gifts_actions retries team = *)
+(*   let gifts = match team with *)
+(*     | `Red -> List.rev gifts_positions *)
+(*     | `Blue -> gifts_positions *)
+(*   in *)
+(*   let first = List.hd gifts in *)
+(*   let rest = List.tl gifts in *)
+(*   do_first_gift team first *)
+(*   ,(List.map (do_gift retries team) rest) *)
+
+(* let random team = *)
+(*   let zone = match team with *)
+(*     | `Red -> ({x = 0.3; y = 0.4},{x = 0.6; y = 1.5}) *)
+(*     | `Blue -> ({x = 2.2; y = 0.4},{x = 2.5; y = 1.5}) in *)
+(*   let home = match team with *)
+(*     | `Red -> ({x = 2.5; y = 0.4},{x = 2.4; y = 1.}) *)
+(*     | `Blue -> ({x = 0.4; y = 0.4},{x = 0.5; y = 1.}) in *)
+(*   let go = Random_move zone in *)
+(*   let back' = Random_move home in *)
+(*   let back = Node(Retry(3,Node(Simple,[Stop;back'])),[back']) in *)
+(*   let r = Node(Simple,[Stop;go;back;Move_back 0.1]) in *)
+(*   [Node(Loop(Node(Simple,[Stop;Wait_for 0.1;r])),[r])] *)
+
+(* let loop l = Node(Loop(Node(Simple,l)),l) *)
+
+(* let strategy gift_retries team = *)
+(*   let first_gift, rest_gift = gifts_actions gift_retries team in *)
+(*   start team @ [first_gift] @ rest_gift @ random team @ end_ *)
 
 
-(* let strat team = *)
-(*   [Reset_odometry (team:>reset); *)
-(*    Wait_for_odometry_reset (team:>reset)] @ *)
-(*     gifts_actions team *)
+(* let launch bus team = *)
+(*   Krobot_bus.send bus *)
+(*     (Unix.gettimeofday (), *)
+(*      Strategy_set (strategy 20 team)) *)
 
-
-
-(* let { y = init_y },_ = Krobot_config.red_initial_position *)
-
-
-(* let linear a0 an n = *)
-(*   let dx = (an -. a0) /. (float (n-1)) in *)
-(*   let p n = a0 +. (float n) *. dx in *)
-(*   Array.init n p *)
-
-(* let stupid_path init_x = *)
-(*   let l = linear init_x 1.5 10 in *)
-(*   Array.to_list (Array.map (fun x -> {x; y = init_y }) l) *)
-
-(* let stupid_path = function *)
-(*   | `Red -> [{ x = 2.3; y = init_y }] *)
-(*   | `Blue -> [{ x = 0.7; y = init_y }] *)
-
-(* let godx = function *)
-(*   | `Red -> 1. *)
-(*   | `Blue -> -.1. *)
-
-(* let strat_base status = *)
-(*   let ({x = init_x},_) = match status.team with *)
-(*     | `Red -> Krobot_config.red_initial_position *)
-(*     | `Blue -> Krobot_config.blue_initial_position in *)
-(*   (\* let path = stupid_path init_x in *\) *)
-(*   let path = stupid_path status.team in *)
-(*   Printf.printf "update strat\n%!"; *)
-(*   let rec node = *)
-(*     let follow = *)
-(*       Follow_path (path, Some { vx = godx status.team; vy = 0. }, false) *)
-(*     in *)
-(*     (Node (Some node, [follow])) in *)
-(*   [ *)
-(*     Stop_timer; *)
-(*     Wait_for 0.1; *)
-(*     Reset_odometry `Auto; *)
-(*     Can (Krobot_message.encode (Drive_activation true)); *)
-(*     Wait_for_jack true; *)
-(*     Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true))); *)
-(*     Can (Krobot_message.encode (Ax12_Goto (2, ax12_2_base_position, 100))); *)
-(*     Can (Krobot_message.encode (Ax12_Goto (1, ax12_1_base_position, 100))); *)
-(*     Wait_for 1.; *)
-(*     Wait_for_jack false; *)
-(*     Start_timer (90.,[Stop] @ gonfle_baloon @ [End]); *)
-(*     Set_led(`Red,false); *)
-(*     Set_led(`Green,false); *)
-(*     Reset_odometry `Auto; *)
-(*     Wait_for_odometry_reset `Auto; *)
-(*     Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max); *)
-(*     Stop; *)
-(*     node; *)
-(*     Stop; *)
-(*     End; *)
-(*   ] *)
 
 let launch bus team =
-  Krobot_bus.send bus
-    (Unix.gettimeofday (),
-     Strategy_set (strategy 20 team))
+  let strat = start team @ run_strategy in
+  Krobot_bus.send bus (Unix.gettimeofday (),
+    Strategy_set strat)
+
 
 let update_team_led status =
   let m1,m2 =

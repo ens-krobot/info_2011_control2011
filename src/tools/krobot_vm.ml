@@ -395,7 +395,7 @@ let correct_bezier sign objects curve shift_vector =
   let curve = Bezier.mul_d2 curve c2 in
   curve
 
-let turn_radius = 0.1
+let turn_radius = 0.2
 
 let prepare_goto robot dst last_vector =
   let dst_orient = match last_vector with
@@ -715,6 +715,13 @@ let rec exec robot actions =
                 let { Krobot_geom.x; y }, angle = Krobot_config.blue_initial_position in
                 [Krobot_message.Set_odometry( x, y, angle);
                  Set_odometry_indep( x, y, angle )]))
+
+          (* !!! only for all in common *)
+    | Set_odometry( Some x, Some y, Some angle )::rest ->
+      ignore (Lwt_log.info_f "Set_odometry");
+      (rest,
+       Send [Krobot_message.Set_odometry( x, y, angle);
+             Set_odometry_indep( x, y, angle )])
     | Think :: rest ->
         exec robot rest
     | Fail :: rest ->
