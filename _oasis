@@ -257,6 +257,13 @@ Executable "krobot-homologation"
   MainIs: krobot_homologation.ml
   BuildDepends: krobot, lwt.syntax
 
+Executable "krobot-example"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_example.ml
+  BuildDepends: krobot, lwt.syntax
+
 Executable "krobot-can-display"
   Path: src/tools
   Build$: flag(gtk)
