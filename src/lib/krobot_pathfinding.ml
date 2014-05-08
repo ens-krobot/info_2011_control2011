@@ -377,6 +377,20 @@ let add_end_orientation b radius vect =
   let crcls = orientation_circles radius (-. 1. *@ vect) b.dst in
   { b with obstacles = crcls @ b.obstacles }
 
+let grid (box_min, box_max) nx ny =
+  let xmin = box_min.px in
+  let xmax = box_max.px in
+  let ymin = box_min.py in
+  let ymax = box_max.py in
+  let v ix iy =
+    let px = xmin +. (xmax -. xmin) *. ((float (ix+1)) /. (float nx)) in
+    let py = ymin +. (ymax -. ymin) *. ((float (iy+1)) /. (float ny)) in
+    { c = { px; py }; r = 0.0000000001; }
+  in
+  let l =
+    Array.to_list (Array.init (nx-1) (fun ix -> Array.to_list (Array.init (ny-1) (v ix)))) in
+  List.concat l
+
 let find_path ?src_orient ?dst_orient ~src ~dst (box_min,box_max) objects =
   let b = { src = v_of_vertice src;
 	    dst = v_of_vertice dst;
@@ -389,6 +403,9 @@ let find_path ?src_orient ?dst_orient ~src ~dst (box_min,box_max) objects =
   let b = match dst_orient with
     | None -> b
     | Some (radius,vect) -> add_end_orientation b radius (v_of_geom_v vect) in
+
+  let grid_obj = grid b.box 5 5 in
+  let b = { b with obstacles = grid_obj @ b.obstacles } in
 
   (* let b = filter_far_objects b b.src in *)
   if not ( (in_box b.box b.dst) && (check_point b b.dst) && (check_point b b.src) )
