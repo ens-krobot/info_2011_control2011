@@ -94,7 +94,7 @@ and t =
       (** [Set_odometry (x,y,orientation)] set the provided odometry informations *)
   | Calibrate of vertice * float * float * float option * float option * float option
       (** [Calibrate ( approach_position, approach_orientation, distance,
-                       supposed_x, supposed_y, supposed_orientation )
+                       supposed_x, supposed_y, supposed_orientation )]
           Go to approach_position with orientation approach_orientation,
           move of distance,
           at the end reset the odometry to given supposed coordinates
