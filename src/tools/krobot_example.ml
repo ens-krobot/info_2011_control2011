@@ -16,8 +16,22 @@ open Krobot_geom
 
 let strategy_0 = [
   Stop;
+  Reset_odometry `Red;
+  Wait_for_odometry_reset `Red;
   Wait_for 0.1;
-  Goto ({ x = 0.4 ; y = 0.7 }, None);
+  Node (
+    Loop
+      (Node (Simple,
+             [Goto ({ x = 1. ; y = 0.7 }, None);
+              Wait_for 0.1;
+              Goto ({ x = 1. ; y = 1.4 }, Some({ vx = -.1.; vy = 0.}));
+              Wait_for 0.1;
+              Goto ({ x = 2. ; y = 1.4 }, None);
+              Wait_for 0.1;
+              Goto ({ x = 2. ; y = 0.7 }, Some({ vx = 1.; vy = -.0.1}));
+              Wait_for 0.1;
+             ])),
+    []);
   Stop;
 ]
 
