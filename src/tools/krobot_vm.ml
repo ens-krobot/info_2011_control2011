@@ -334,10 +334,11 @@ let build_objects robot =
   let fixed_objects = Krobot_config.fixed_obstacles in
 
     (* do that in a better way when we have time... *)
-  let init_coins = List.map (fun pos ->
+  (*let init_coins = List.map (fun pos ->
     { pos;
       size = Krobot_config.coin_radius })
-    Krobot_config.initial_coins in
+    Krobot_config.initial_coins in*)
+  let init_coins = [] in
 
   let l = robot.objects @ fixed_objects @ init_coins in
 

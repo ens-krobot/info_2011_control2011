@@ -26,21 +26,21 @@ let safety_margin = 0.0
 
 let beacon_radius = 0.2
 
-let coin_radius = 0.06
+let fire_radius = 0.07
 
 open Krobot_geom
 
 let pi = 4. *. atan 1.
 
 let red_initial_position =
-  { x = world_width -. wheels_position -. 0.001;
-    y = (0.10 +. robot_width/.2.); },
-  pi
+  { x = 0.05 +. robot_width/.2.;
+    y = world_height -. wheels_position -. 0.001; },
+  (-.pi/.2.)
 
 let blue_initial_position =
-  { x = wheels_position +. 0.001;
-    y = (0.10 +. robot_width/.2.); },
-  0.
+  { x = (world_width -. robot_width/.2. -. 0.05);
+    y = (world_height -. wheels_position -. 0.001); },
+  (-.pi/.2.)
 
 
 let symetrical p =
@@ -52,56 +52,60 @@ let rec (-->) i j =
   then []
   else i::((i+1) --> j)
 
-let line_obs p1 p2 =
+let line_obs p1 p2 rad =
   let v = vector p1 p2 in
   let d = distance p1 p2 in
-  let n = int_of_float (d /. 0.1) in
-  let l = 0 --> (n-1) in
+  let n = int_of_float (d /. (2.*.rad)) in
+  let l = 0 --> n in
   List.map (fun i ->
     let c = float i /. float n in
     { pos = { x = c *. v.vx +. p1.x;
               y = c *. v.vy +. p1.y;};
-      size = 0.05 } ) l
+      size = rad } ) l
 
 let left_obstacles =
   [
-
-    (* coins at the bottom *)
-    (* we cheat a bit on the size to avoid problems... *)
-    (* { pos = *)
-    (*     { x = 0.0; *)
-    (*       y = 0.0; }; *)
-    (*   size = 0.05 }; *)
-    (* { pos = *)
-    (*     { x = 0.1; *)
-    (*       y = 0.0; }; *)
-    (*   size = 0.05 }; *)
-    (* { pos = *)
-    (*     { x = 0.2; *)
-    (*       y = 0.0; }; *)
-    (*   size = 0.05 }; *)
-    (* { pos = *)
-    (*     { x = 0.3; *)
-    (*       y = 0.0; }; *)
-    (*   size = 0.05 }; *)
-    (* { pos = *)
-    (*     { x = 0.4; *)
-    (*       y = 0.0; }; *)
-    (*   size = 0.05 }; *)
-    (* { pos = *)
-    (*     { x = 0.35; *)
-    (*       y = 0.05; }; *)
-    (*   size = 0.05 }; *)
-  (*] @ (line_obs { x = 0.325; y = 0. } { x = 0.325 +. (0.075 /. 2.); y = 0.75 } )*)
-  ]
-
+    (* Fire holders on the sides of the table *)
+    { pos =
+        { x = 0.009;
+          y = 1.279 };
+      size = 0.009; };
+    { pos =
+        { x = 0.009;
+          y = 1.121 };
+      size = 0.009; };
+    { pos =
+        { x = 1.379;
+          y = 0.009 };
+      size = 0.009; };
+    { pos =
+        { x = 1.221;
+          y = 0.009 };
+      size = 0.009; };
+    (* Trees *)
+    { pos =
+        { x = 0.;
+          y = 0.7 };
+      size = 0.15; };
+    { pos =
+        { x = 0.7;
+          y = 0. };
+      size = 0.15; };
+    (* Side scoring zone *)
+    { pos =
+        { x = 0.;
+          y = 0. };
+      size = 0.25; };
+  ] @ (line_obs {x = 0.41 ; y = 1.71} {x = 0.41 ; y = 2.} 0.03)
+    @ (line_obs {x = 0.41 ; y = 1.71} {x = 1.09 ; y = 1.71} 0.03)
+    @ (line_obs {x = 1.09 ; y = 1.71} {x = 1.09 ; y = 2.} 0.03)
 let fixed_obstacles =
   [
-    (* Cake *)
+    (* Central scoring zone *)
     { pos =
         { x = 1.5;
-          y = 2. };
-      size = 0.5; };
+          y = 0.95 };
+      size = 0.15; };
   ] @ (List.map symetrical left_obstacles) @ left_obstacles
 
 let test_obstacles =
@@ -110,14 +114,23 @@ let test_obstacles =
           y = 1.0 };
       size = 0.1; }; ]
 
-let initial_coins = []
-(*
+let initial_fires =
+  List.map (fun (x, y, a) -> ({x;y},a))
+  [ 0.4, 0.9, 0.;
+    2.6, 0.9, 0.;
+    0.9, 1.4, (pi/.2.);
+    0.9, 0.4, (pi/.2.);
+    2.1, 1.4, (pi/.2.);
+    2.1, 0.4, (pi/.2.);
+    0.018, 1.2, (pi/.2.);
+    2.982, 1.2, (pi/.2.);
+    1.3, 0.018, 0.;
+    1.7, 0.018, 0.; ]
+
+let initial_torches =
   List.map (fun (x, y) -> {x;y})
-  [ 2., 1.5;
-    1., 1.5;
-    (* 0.45, 0.3; *)
-    (* 2.55, 0.3; *) ]
-*)
+  [ 0.9, 0.9;
+    2.1, 0.9; ]
 
 let urg_position = { x = 0.095; y = 0. }
 

@@ -29,9 +29,10 @@ let find ?src_orient ?dst_orient ~src ~dst ~beacon objects =
     objects in
 
   (* do that in a better way when we have time... *)
-  let init_coins = List.map (fun pos -> pos,
-    Krobot_config.coin_radius +. Krobot_config.robot_radius +. 0.01)
-    Krobot_config.initial_coins in
+  (*let init_coins = List.map (fun (pos,_) -> pos,
+    Krobot_config.fire_radius +. Krobot_config.robot_radius +. 0.01)
+    Krobot_config.initial_fires in*)
+  let init_coins = [] in
 
   let l = objects @ init_coins @ fixed_objects in
   let l =

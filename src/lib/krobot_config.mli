@@ -42,8 +42,8 @@ val rotary_beacon_index_pos : float
 val beacon_radius : float
   (** Radius of the ennemy. *)
 
-val coin_radius : float
-  (** Radius of coins. *)
+val fire_radius : float
+  (** Bounding box radius of fires. *)
 
 val red_initial_position : Krobot_geom.vertice * float
   (** position and angle of the robot as red *)
@@ -56,7 +56,9 @@ val fixed_obstacles : Krobot_geom.obj list
 
 val test_obstacles : Krobot_geom.obj list
 
-val initial_coins : Krobot_geom.vertice list
+val initial_fires : (Krobot_geom.vertice * float) list
+
+val initial_torches : Krobot_geom.vertice list
 
 val urg_position : Krobot_geom.vertice
 
