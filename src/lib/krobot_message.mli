@@ -123,9 +123,16 @@ type t =
           independant odometry to the given ones. *)
   | Set_simulation_mode of simulation_mode
       (** Put the cards into a given simulation mode. *)
-  | Elevator of float * float
+  | Elevator_command of float * float
       (** Set the position of the elevators, between 0 and 1. Negative
           positions are ignored. *)
+  | Pump_command of int * int
+      (** Set the voltages applyed to the pumps, between 0 and 3600.
+          Negative values are ignored *)
+  | Elevator_encoders of int * direction * int * direction
+      (** The position and direction of encoders from the lifts. *)
+  | Pump_state of int * int
+      (** The current voltages applyed to the pumps. *)
 
   | Req_motor_status
       (** Request the status of the motors. *)

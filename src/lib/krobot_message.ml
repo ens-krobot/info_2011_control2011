@@ -57,7 +57,10 @@ type t =
   | Set_odometry of float * float * float
   | Set_odometry_indep of float * float * float
   | Set_simulation_mode of simulation_mode
-  | Elevator of float * float
+  | Elevator_command of float * float
+  | Pump_command of int * int
+  | Elevator_encoders of int * direction * int * direction
+  | Pump_state of int * int
   | Req_motor_status
   | Unknown of frame
 
@@ -233,10 +236,23 @@ let to_string = function
       sprintf
         "Set_simulation_mode(%s)"
         (string_of_simulation_mode m)
-  | Elevator(p1, p2) ->
+  | Elevator_command(p1, p2) ->
       sprintf
-        "Elevator(%f, %f)"
+        "Elevator_command(%f, %f)"
         p1 p2
+  | Pump_command(i1, i2) ->
+      sprintf
+        "Pump_command(%d, %d)"
+        i1 i2
+  | Elevator_encoders(pos1, dir1, pos2, dir2) ->
+      sprintf
+        "Elevator_encoders(%d, %s, %d, %s)"
+        pos1 (string_of_direction dir1)
+        pos2 (string_of_direction dir2)
+  | Pump_state(i1, i2) ->
+      sprintf
+        "Pump_state(%d, %d)"
+        i1 i2
   | Req_motor_status ->
       "Req_motor_status"
   | Unknown frame ->
@@ -660,7 +676,7 @@ let encode = function
                  | Sim_no -> "\x00"
                  | Sim_normal -> "\x01"
                  | Sim_HIL -> "\x02")
-  | Elevator(p1, p2) ->
+  | Elevator_command(p1, p2) ->
       let data = String.create 8 in
       put_float32 data 0 p1;
       put_float32 data 4 p2;
@@ -670,6 +686,38 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Pump_command(i1, i2) ->
+    let data = String.create 4 in
+    put_sint16 data 0 i1;
+    put_sint16 data 2 i2;
+    frame
+      ~identifier:232
+      ~kind:Data
+      ~remote:false
+      ~format:F29bits
+      ~data
+  | Elevator_encoders(pos1, dir1, pos2, dir2) ->
+      let data = String.create 6 in
+      put_uint16 data 0 pos1;
+      put_uint16 data 2 pos2;
+      put_uint8 data 4 (match dir1 with Forward -> 0 | Backward -> 1);
+      put_uint8 data 5 (match dir2 with Forward -> 0 | Backward -> 1);
+      frame
+        ~identifier:131
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Pump_state(i1, i2) ->
+    let data = String.create 4 in
+    put_sint16 data 0 i1;
+    put_sint16 data 2 i2;
+    frame
+      ~identifier:132
+      ~kind:Data
+      ~remote:false
+      ~format:F29bits
+      ~data
   | Req_motor_status ->
       frame
         ~identifier:103
@@ -753,6 +801,16 @@ let decode frame =
               (float (get_sint16 frame.data 0) /. 1000.,
                float (get_sint16 frame.data 2) /. 1000.,
                float (get_sint16 frame.data 4) /. 10000.)
+        | 131 ->
+            Elevator_encoders
+              (get_uint16 frame.data 0,
+               (if get_uint8 frame.data 4 = 0 then Forward else Backward),
+               get_uint16 frame.data 2,
+               (if get_uint8 frame.data 5 = 0 then Forward else Backward))
+        | 132 ->
+            Pump_state
+              (get_sint16 frame.data 0,
+               get_sint16 frame.data 2)
         | 201 ->
             Motor_move
               (float (get_sint32 frame.data 0) /. 1000.,
@@ -818,8 +876,13 @@ let decode frame =
             Drive_torque_limit
               (get_uint16 frame.data 0)
         | 231 ->
-            Elevator(get_float32 frame.data 0,
-                     get_float32 frame.data 4)
+            Elevator_command
+              (get_float32 frame.data 0,
+               get_float32 frame.data 4)
+        | 232 ->
+            Pump_command
+              (get_sint16 frame.data 0,
+               get_sint16 frame.data 2)
         | 301 ->
             Beacon_position
               (float (get_uint16 frame.data 0) /. 10000.,
