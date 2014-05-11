@@ -378,13 +378,16 @@ let draw viewer =
 
       (* Draw an arrow on the robot *)
       let d = robot_length /. 2. -. wheels_position in
-      Cairo.move_to ctx 0. 0.;
+      Cairo.move_to ctx (-. wheels_position +. robot_length /. 4.) 0.;
       Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
       Cairo.line_to ctx d (-. robot_length /. 4.);
       Cairo.line_to ctx d (robot_length /. 4.);
       Cairo.line_to ctx (d +. robot_length /. 4.) 0.;
       Cairo.set_source_rgba ctx 0. 0. 0. 0.5;
       Cairo.stroke ctx;
+      Cairo.set_source_rgba ctx 0. 0. 1. 0.5;
+      Cairo.arc ctx 0. 0. 0.03 0. (2.*.pi);
+      Cairo.fill ctx;
 
       Cairo.restore ctx)
     [(viewer.ghost, (1., 1., 1., 0.5));

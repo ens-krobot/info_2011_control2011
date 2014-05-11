@@ -11,11 +11,11 @@ let sqr x = x *. x
 
 let world_height = 2.
 let world_width = 3.
-let robot_length = 0.23
+let robot_length = 0.245
 let robot_width = 0.30
 let wheels_diameter = 0.098
 let wheels_distance = 0.224
-let wheels_position = 0.055
+let wheels_position = 0.165
 let robot_radius =
   let l1 = robot_length -. wheels_position in
   let l2 = robot_width /. 2. in
@@ -34,12 +34,12 @@ let pi = 4. *. atan 1.
 
 let red_initial_position =
   { x = 0.05 +. robot_width/.2.;
-    y = world_height -. wheels_position -. 0.001; },
+    y = world_height -. wheels_position -. 0.054; },
   (-.pi/.2.)
 
 let blue_initial_position =
   { x = (world_width -. robot_width/.2. -. 0.05);
-    y = (world_height -. wheels_position -. 0.001); },
+    y = (world_height -. wheels_position -. 0.054); },
   (-.pi/.2.)
 
 
