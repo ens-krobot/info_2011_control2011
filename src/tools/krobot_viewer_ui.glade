@@ -289,7 +289,7 @@
                     </child>
                     <child>
                       <widget class="GtkButton" id="button_start_blue">
-                        <property name="label" translatable="yes">Goto blue initial position</property>
+                        <property name="label" translatable="yes">Goto Yellow initial position</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
