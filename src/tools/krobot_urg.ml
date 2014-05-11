@@ -22,12 +22,15 @@ let section = Lwt_log.Section.make "krobot(urg)"
    | read/send loop                                                  |
    +-----------------------------------------------------------------+ *)
 
-let min_index = 90
-let max_index = 690
-
-let min_distance = 60
+(* let min_distance = 60 *)
 
 let scale = 0.001
+
+let min_distance = (* in centimeters *)
+  int_of_float (100. *. Krobot_config.urg_min_distance)
+
+let min_angle, max_angle = Krobot_config.urg_angle_limits
+
 
 let convert_pos dist angle =
   let x = float dist *. cos angle *. scale +. Krobot_config.urg_position.x in
@@ -37,13 +40,15 @@ let convert_pos dist angle =
 let convert (b:Urg.point_data) =
   let dim = Bigarray.Array1.dim b in
   let l = ref [] in
-  for i = max 0 min_index to min (dim - 1) max_index do
+  for i = 0 to dim - 1 do
     let data = Nativeint.to_int b.{i} in
     if data > min_distance
     then
       let angle = Krobot_config.urg_angles.(i) in
-      let (x,y) = convert_pos data angle in
-      l := {x;y} :: !l
+      if angle >= min_angle && angle <= max_angle
+      then
+        let (x,y) = convert_pos data angle in
+        l := {x;y} :: !l
   done;
   Array.of_list !l
 

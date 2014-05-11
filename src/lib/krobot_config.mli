@@ -62,5 +62,11 @@ val initial_torches : Krobot_geom.vertice list
 
 val urg_position : Krobot_geom.vertice
 
+val urg_angle_limits : float * float
+  (** angles above which urg points are discarded *)
+
+val urg_min_distance : float
+  (** distance below which urg points are discarded *)
+
 val urg_angles : float array
 (* angles (in radiant) for each index of urg messages *)

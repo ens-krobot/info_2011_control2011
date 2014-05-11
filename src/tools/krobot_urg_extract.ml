@@ -25,7 +25,7 @@ type info = {
 (**********************)
 
 let default_obstacle_diameter = 0.04
-let keep_above_dist = 0.1
+let keep_above_dist = Krobot_config.urg_min_distance
 
 (* let table = Icp_utils.table 2. 3. 200 *)
 let table = Icp_utils.real_table 100
