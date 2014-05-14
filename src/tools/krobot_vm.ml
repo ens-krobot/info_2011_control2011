@@ -535,8 +535,8 @@ let rec exec robot actions =
       let action = prepare_goto robot dst last_vector in
       exec robot (action::rest)
 
-    | Goto (dst,last_vector) :: rest -> begin
-      ignore (Lwt_log.info_f "Goto");
+    | Goto ({x;y} as dst,last_vector) :: rest -> begin
+      ignore (Lwt_log.info_f "Goto (%.3f,%.3f)" x y);
       let action = prepare_goto robot dst last_vector in
       exec robot
         ((Node (Retry (1,Node (Simple, [Stop; Try_something dst; Wait_for 0.1;
