@@ -314,19 +314,31 @@ let bezier_collide dir objects curve c1 c2 shift_vector curve_parameter =
   let curve = Bezier.mul_d1 curve c1 in
   let curve = Bezier.mul_d2 curve c2 in
   let collisions = ref [] in
-  for u = curve_parameter to 255 do
-    let u = float u /. 255. in
+  let last_position = ref { x = nan; y = nan } in
+  let last_angle = ref nan in
+  for n = curve_parameter to 255 do
+    let u = float n /. 255. in
     let vert = translate (Bezier.vertice curve u) shift_vector in
     let tangent = Bezier.dt curve u in
     let angle = atan2 tangent.vy tangent.vx in
     let angle = if dir then angle else angle +. pi in
-    if not (Krobot_collision.robot_in_world vert angle) then
-      collisions := (u, None) :: !collisions;
-    List.iter
-      (fun c ->
-        if Krobot_collision.collision_robot_circle vert angle c.pos c.size then
-          collisions := (u, Some (c.pos, c.size)) :: !collisions)
-      objects
+    let sufficiently_different =
+      (* only compute collisions if we are sufficiently far from the previous point *)
+      let dist = distance vert !last_position in
+      let dangle = abs_float (angle -. !last_angle) in
+      n = curve_parameter || n = 255 || dist > 0.01 || dangle > 0.01 in
+    if sufficiently_different
+    then begin
+      last_position := vert;
+      last_angle := angle;
+      if not (Krobot_collision.robot_in_world vert angle) then
+        collisions := (u, None) :: !collisions;
+      List.iter
+        (fun c ->
+           if Krobot_collision.collision_robot_circle vert angle c.pos c.size then
+             collisions := (u, Some (c.pos, c.size)) :: !collisions)
+        objects
+    end
   done;
   (curve, !collisions)
 
