@@ -95,6 +95,9 @@ type message =
 
   | Match_start
 
+  | Vision_find_target of int * string (* request id, selected camera *)
+  | Vision_find_target_response of int * string * ((int * int) list)
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

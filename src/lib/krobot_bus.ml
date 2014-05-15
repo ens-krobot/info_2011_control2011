@@ -46,6 +46,8 @@ type message =
   | Beacon_raw of (int * int * int * int * int * int
       * int * int * int * int * int)
   | Match_start
+  | Vision_find_target of int * string
+  | Vision_find_target_response of int * string * ((int * int) list)
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -162,6 +164,10 @@ let string_of_message = function
       sprintf "Raw beacon packet"
   | Match_start ->
       sprintf "Match start"
+  | Vision_find_target (id,camera) ->
+      sprintf "Vision find target %i %s" id camera
+  | Vision_find_target_response (id,camera,points) ->
+      sprintf "Vision find target response %i %s %i points" id camera (List.length points)
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |

@@ -360,6 +360,13 @@ Executable "krobot-xbee"
   MainIs: krobot_xbee.ml
   BuildDepends: krobot, lwt.syntax, lwt.unix, str
 
+Executable "krobot-example-bridge"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_example_bridge.ml
+  BuildDepends: krobot, lwt.syntax, lwt.unix, str, lwt.syntax
+
 # +-------------------------------------------------------------------+
 # | Examples                                                          |
 # +-------------------------------------------------------------------+
