@@ -38,6 +38,51 @@ let filter_data keep_above_dist robot_transform data =
   let data = transform back_transform data in
   Icp_utils.far_enougth_filter table_kd keep_above_dist data
 
+let transform_vertice { ath; ax; ay } { x; y } =
+  let co = cos ath in
+  let si = sin ath in
+  let x' = x *. co -. y *. si +. ax in
+  let y' = x *. si +. y *. co +. ay in
+  { x = x'; y = y' }
+
+
+let mark_circles diameter data =
+  let sq_diam = diameter *. diameter in
+  let len = Array.length data in
+  if len = 0
+  then []
+  else
+    let sets = ref [] in
+    let current = ref data.(0) in
+    let curr_set = ref [!current] in
+    for i = 1 to len - 1 do
+      let p = data.(i) in
+      if square_distance p !current <= sq_diam
+      then curr_set := p :: !curr_set
+      else begin
+        sets := !curr_set :: !sets;
+        curr_set := [p];
+        current := p
+      end
+    done;
+    sets := !curr_set :: !sets;
+    !sets
+
+let obstacles transform diameter data =
+  let sets = mark_circles diameter data in
+  List.map (fun l ->
+      transform_vertice transform (baricenter l),
+      diameter)
+    sets
+
+let run_extract info urg =
+  let ts = Unix.gettimeofday () in
+  let trans = { ax = info.position.x; ay = info.position.y;
+                ath = info.orientation } in
+  let obstacles = obstacles trans default_obstacle_diameter urg in
+  Krobot_bus.send info.bus (ts, Objects obstacles)
+
+(*
 let mark_close kd marking dist v marking_val =
   let close_points = Kd_tree.closer_points dist v kd in
   List.iter (fun i -> marking.(i) <- Some marking_val) close_points
@@ -76,13 +121,6 @@ let extract_obstacles trans data =
   let marked = mark_circles default_obstacle_diameter filtered in
   circles_points marked filtered
 
-let transform_vertice { ath; ax; ay } { x; y } =
-  let co = cos ath in
-  let si = sin ath in
-  let x' = x *. co -. y *. si +. ax in
-  let y' = x *. si +. y *. co +. ay in
-  { x = x'; y = y' }
-
 let run_extract info urg =
   let dxl, dyl = List.split (List.map (fun {x;y} -> x,y) (Array.to_list urg)) in
   let data = { dx = Array.of_list dxl; dy = Array.of_list dyl } in
@@ -94,6 +132,7 @@ let run_extract info urg =
       transform_vertice trans v,
       default_obstacle_diameter) obstacles in
   Krobot_bus.send info.bus (ts, Objects (Array.to_list objects))
+*)
 
 (*******************)
 

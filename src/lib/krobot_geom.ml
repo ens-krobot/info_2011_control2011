@@ -92,6 +92,9 @@ let vector_of_polar ~norm ~angle = {
 let distance a b =
   sqrt (sqr (a.x -. b.x) +. sqr (a.y -. b.y))
 
+let square_distance a b =
+  sqr (a.x -. b.x) +. sqr (a.y -. b.y)
+
 let tangents a b c =
   let ba = vector b a /| distance b a and bc = vector b c /| distance b c in
   let v1 = ba -| bc and v2 = bc -| ba in
@@ -108,6 +111,17 @@ let mult m v =
       (Array.mapi (fun i n -> v.(i) *. n) m.(k)))
 
 let normalize v = mul v (1. /. norm v)
+
+let baricenter = function
+  | [] -> failwith "baricenter"
+  | h :: t ->
+    let {x;y} =
+      List.fold_left
+        (fun {x=accx;y=accy} {x;y} ->
+           { x = x +. accx; y = y +. accy })
+        h t in
+    let n = float (1 + List.length t) in
+    { x = x /. n; y = y /. n }
 
 type obj = { pos : vertice; size : float }
 

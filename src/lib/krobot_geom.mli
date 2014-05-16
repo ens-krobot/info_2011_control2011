@@ -47,7 +47,10 @@ val vector_of_polar : norm : float -> angle : float -> vector
 val norm : vector -> float
 val angle : vector -> float
 val distance : vertice -> vertice -> float
+val square_distance : vertice -> vertice -> float
 val normalize : vector -> vector
+
+val baricenter : vertice list -> vertice
 
 val tangents : vertice -> vertice -> vertice -> vector * vector
   (** [tangents a b c] returns the two unitary vectors tangent to the
