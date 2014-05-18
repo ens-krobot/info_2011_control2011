@@ -479,13 +479,15 @@ let min_border_distance x y theta =
     | [] -> None
     | l -> Some (List.fold_left min max_float l)
 
-let distance_to_obj x y theta obj =
-  let x2, y2 = x +. cos theta, y +. sin theta in
+let sq x = x *. x
+
+let distance_to_obj x y (sin_theta, cos_theta) obj =
+  let x2, y2 = x +. cos_theta, y +. sin_theta in
   let x3, y3, r = obj.pos.Krobot_geom.x, obj.pos.Krobot_geom.y, obj.size in
-  let a = (x2 -. x) ** 2. +. (y2 -. y) ** 2. in
+  let a = sq (x2 -. x) +. sq (y2 -. y) in
   let b = 2. *. ( (x2-.x)*.(x-.x3)+.(y2-.y)*.(y-.y3) ) in
-  let c = x3**2. +. y3**2. +. x**2. +. y**2. -. 2. *. (x*.x3+.y*.y3) -. r**2. in
-  let delta = b**2. -. 4. *.a*.c in
+  let c = sq x3 +. sq y3 +. sq x +. sq y -. 2. *. (x*.x3+.y*.y3) -. sq r in
+  let delta = sq b -. 4. *.a*.c in
   if abs_float delta < 0.01 then
     Some (-.b/.(2.*.a))
   else if delta > 0. then
@@ -504,7 +506,9 @@ let distance_to_obj x y theta obj =
 
 let closest_obstacle x y theta objs =
   let border = min_border_distance x y theta in
-  let dist_to_objs = List.map (distance_to_obj x y theta) objs in
+  let sin_theta = sin theta in
+  let cos_theta = cos theta in
+  let dist_to_objs = List.map (distance_to_obj x y (sin_theta, cos_theta)) objs in
   List.fold_left
     (fun min_dist dist -> match dist with
        | Some dist ->
