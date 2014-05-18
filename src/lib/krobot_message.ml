@@ -63,6 +63,8 @@ type t =
   | Pump_state of int * int
   | Effector_status of bool * bool * bool * bool
   | Elevator_positions of float * float
+  | Homing_status of bool * bool
+  | Homing_command of float * float
   | Req_motor_status
   | Unknown of frame
 
@@ -263,6 +265,14 @@ let to_string = function
       sprintf
         "Elevator_positions(%f, %f)"
         p1 p2
+  | Homing_status(l1, l2) ->
+      sprintf
+        "Homing_status(%B, %B)"
+        l1 l2
+  | Homing_command(l1, l2) ->
+      sprintf
+        "Homing_command(%f, %f)"
+        l1 l2
   | Req_motor_status ->
       "Req_motor_status"
   | Unknown frame ->
@@ -752,6 +762,28 @@ let encode = function
         ~remote:false
         ~format:F29bits
         ~data
+  | Homing_status(left, right) ->
+      let data = String.create 1 in
+      let x = 0 in
+      let x = if right then x lor 1 else x in
+      let x = if left then x lor 2 else x in
+      put_uint8 data 0 x;
+      frame
+        ~identifier:135
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Homing_command(left, right) ->
+      let data = String.create 8 in
+      put_float32 data 0 left;
+      put_float32 data 4 right;
+      frame
+        ~identifier:233
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Req_motor_status ->
       frame
         ~identifier:103
@@ -855,6 +887,10 @@ let decode frame =
             Elevator_positions
               (get_float32 frame.data 0,
                get_float32 frame.data 4)
+        | 135 ->
+            let x = get_uint8 frame.data 0 in
+            Homing_status(x land 2 <> 0,
+                          x land 1 <> 0)
         | 201 ->
             Motor_move
               (float (get_sint32 frame.data 0) /. 1000.,
@@ -927,6 +963,10 @@ let decode frame =
             Pump_command
               (get_sint16 frame.data 0,
                get_sint16 frame.data 2)
+        | 233 ->
+            Homing_command
+              (get_float32 frame.data 0,
+               get_float32 frame.data 4)
         | 301 ->
             Beacon_position
               (float (get_uint16 frame.data 0) /. 10000.,

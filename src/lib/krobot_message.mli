@@ -137,6 +137,10 @@ type t =
       (** Status of the 4 motors. *)
   | Elevator_positions of float * float
       (** The current awaited positions of the lifts *)
+  | Homing_status of bool * bool
+      (** Have the elevators been homed yet ? *)
+  | Homing_command of float * float
+      (** Home elevators at given speeds (a speed of 0 won't home) *)
 
   | Req_motor_status
       (** Request the status of the motors. *)
