@@ -15,10 +15,14 @@ open Krobot_bus
 
 let raw = ref false
 let decoded = ref true
+let log = ref false
+let nocan = ref false
 
 let options = Arg.align [
   "-raw", Arg.Set raw, " prints raw CAN frames";
   "-no-decoded", Arg.Clear decoded, " do not prints decoded frames";
+  "-log", Arg.Set log, " prints logs";
+  "-nocan", Arg.Set nocan, " don't prints can messages";
 ]
 
 let usage = "\
@@ -62,6 +66,8 @@ lwt () =
        (fun (timestamp, message) ->
           match message with
             | CAN(source, frame) ->
+              if not !nocan
+              then
                 let msg = Krobot_message.decode frame in
                 lwt () = Lwt_io.printf "%s| %s" (match source with Elec -> "elec" | Info -> "info") (date_string timestamp)in
                 lwt () =
@@ -77,8 +83,11 @@ lwt () =
                     return ()
                 in
                 Lwt_io.printl ""
-            | Trajectory_go ->
-              Lwt_io.printf "trajectory_go"
+              else Lwt.return_unit
+            | Log line ->
+              if !log
+              then Lwt_io.printf "log| %s\n" line
+              else Lwt.return_unit
             | _ -> return ())
        (Krobot_bus.recv bus));
 
