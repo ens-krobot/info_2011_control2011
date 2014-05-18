@@ -21,11 +21,12 @@ let point_in_world_safe v =
 
 type robot_rect = { v1 : vertice; v2 : vertice; v3 : vertice; v4 : vertice }
 
-let rect pos angle =
+let rect =
   let norm_front = sqrt (sqr (robot_width /. 2.) +. sqr (robot_length -. wheels_position)) in
   let norm_back = sqrt (sqr (robot_width /. 2.) +. sqr wheels_position) in
   let a_front = atan2 (robot_width /. 2.) (robot_length -. wheels_position) in
   let a_back = atan2 (robot_width /. 2.) wheels_position in
+  fun pos angle ->
   let v1 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle -. a_front)) in
   let v2 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle +. a_front)) in
   let v3 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle -. (pi -. a_back))) in
