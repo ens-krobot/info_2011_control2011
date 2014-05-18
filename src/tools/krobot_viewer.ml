@@ -62,7 +62,7 @@ type viewer = {
   mutable torches : vertice list;
   (* The torches on the table *)
 
-  mutable collisions : (Bezier.curve * (float * (vertice * float) option) list) option;
+  mutable collisions : Krobot_bus.collision option;
   (* A curve and a list of: [(curve_parameter, (center, radius))] *)
 
   mutable urg : vertice array;
@@ -471,7 +471,7 @@ let draw viewer =
   (match viewer.collisions with
     | None ->
       ()
-    | Some (curve, l) ->
+    | Some (Col_bezier (curve, l)) ->
       Cairo.set_source_rgba ctx 1. 0. 0. 0.5;
       draw_bezier curve;
       List.iter
@@ -496,6 +496,14 @@ let draw viewer =
               Cairo.set_source_rgba ctx 1. 0. 1. 127.;
               Cairo.arc ctx v.x v.y r 0. (2. *. pi);
               Cairo.fill ctx)
+        l
+    | Some (Col_rotation l) ->
+      Cairo.set_source_rgba ctx 1. 0. 0. 0.5;
+      List.iter
+        (fun (v, r) ->
+           Cairo.set_source_rgba ctx 1. 0. 1. 127.;
+           Cairo.arc ctx v.x v.y r 0. (2. *. pi);
+           Cairo.fill ctx)
         l);
 
   let ctx = Cairo_lablgtk.create viewer.ui#scene#misc#window in
@@ -714,8 +722,8 @@ let handle_message viewer (timestamp, message) =
               Krobot_geom.translate viewer.state.pos { vx = v.(0); vy = v.(1) }) l;
         queue_draw viewer*)
 
-    | Collisions (curve, l) ->
-      viewer.collisions <- Some (curve, l);
+    | Collisions col ->
+      viewer.collisions <- Some col;
       queue_draw viewer
 
     | Urg dist ->

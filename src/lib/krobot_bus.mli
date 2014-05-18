@@ -24,6 +24,10 @@ val logger : t -> Lwt_log.logger
 type frame_source = Elec | Info
     (** The source of CAN frames. *)
 
+type collision =
+  | Col_bezier of Krobot_geom.Bezier.curve * (float * (Krobot_geom.vertice * float) option) list
+  | Col_rotation of (Krobot_geom.vertice * float) list
+
 (** Type of message exchanged over the bus. *)
 type message =
   | CAN of frame_source * Krobot_can.frame
@@ -80,8 +84,8 @@ type message =
 
   (** Collisions *)
 
-  | Collisions of Krobot_geom.Bezier.curve * (float * (Krobot_geom.vertice * float) option) list
-      (** A curve and a list of collision. *)
+  | Collisions of collision
+  (** A curve and a list of collision. *)
 
   (** Vision *)
   | Coins of vertice list

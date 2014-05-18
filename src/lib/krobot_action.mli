@@ -11,6 +11,11 @@
 
 open Krobot_geom
 
+type curve =
+  | Curve_bezier of (bool * Bezier.curve)
+  | Curve_rotation of float (* final orientation *)
+  | No_curve
+
 type node_kind =
   | Simple
   | Retry of int * t
@@ -52,8 +57,12 @@ and t =
           vertices. The first float is the sign, the last one is the
           end velocity. *)
   | Move_back of float
-  | Set_curve of (bool * Bezier.curve) option
+  | Set_curve of curve
       (** Set the curve currently being followed. *)
+
+  | Turn of float * float * float
+      (** angle, speed, acceleration *)
+
   | Wait_for_jack of bool
       (** Wait for the jack to be in the given state. *)
   | Wait_for_bezier_moving of bool * float option
@@ -66,6 +75,8 @@ and t =
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
       (** Wait for the curve parameter of the odometry to reach the
           given state. *)
+  | Wait_for_orientation of float * float
+      (** Wait_for_orientation(start,stop) *)
 
   | Try_something of vertice
       (** Try to do something that would bring us clother to the given

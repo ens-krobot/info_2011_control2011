@@ -10,6 +10,11 @@
 open Printf
 open Krobot_geom
 
+type curve =
+  | Curve_bezier of (bool * Bezier.curve)
+  | Curve_rotation of float (* final orientation *)
+  | No_curve
+
 type node_kind =
   | Simple
   | Retry of int * t
@@ -27,12 +32,14 @@ and t =
   | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
   | Move_back of float
-  | Set_curve of (bool * Bezier.curve) option
+  | Set_curve of curve
+  | Turn of float * float * float
   | Wait_for_jack of bool
   | Wait_for_bezier_moving of bool * float option
   | Wait_for_motors_moving of bool * float option
   | Reset_odometry of [ `Red | `Blue | `Auto ]
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
+  | Wait_for_orientation of float * float
   | Try_something of vertice
   | Fail
   | Wait_for_odometry_reset of [ `Red | `Blue | `Auto ]
@@ -98,10 +105,14 @@ let rec to_string = function
         (string_of_vertice r)
         (string_of_vertice s)
         end_velocity
-  | Set_curve(Some (dir,c)) ->
-      sprintf "Set_curve(Some (%b, %s))" dir (Bezier.string_of_curve c)
-  | Set_curve None ->
-      "Set_curve None"
+  | Set_curve(Curve_bezier (dir,c)) ->
+      sprintf "Set_curve(Curve_bezier (%b, %s))" dir (Bezier.string_of_curve c)
+  | Set_curve(Curve_rotation orientation) ->
+      sprintf "Set_curve(Curve_rotation %f)" orientation
+  | Set_curve No_curve ->
+      "Set_curve No_curve"
+  | Turn (angle, speed, acceleration) ->
+      sprintf "Turn(%f,%f,%f)" angle speed acceleration
   | Wait_for_jack st ->
       sprintf "Wait_for_jack %B" st
   | Wait_for_bezier_moving (st, opt) ->
@@ -124,6 +135,8 @@ let rec to_string = function
            | `Lt -> "Lt"
            | `Le -> "Le")
         value
+  | Wait_for_orientation(start,stop) ->
+      sprintf "Wait_for_orientation(%f, %f)" start stop
   | Wait_for_odometry_reset `Red ->
     "Wait_for_odometry_reset `Red"
   | Wait_for_odometry_reset `Blue ->

@@ -20,6 +20,10 @@ let port = 50000
 
 type frame_source = Elec | Info
 
+type collision =
+  | Col_bezier of Krobot_geom.Bezier.curve * (float * (Krobot_geom.vertice * float) option) list
+  | Col_rotation of (Krobot_geom.vertice * float) list
+
 type message =
   | CAN of frame_source * Krobot_can.frame
   | Log of string
@@ -39,7 +43,7 @@ type message =
   | Strategy_path of Bezier.curve list option
   | Strategy_finished
   | Set_fake_beacons of vertice option * vertice option
-  | Collisions of Bezier.curve * (float * (vertice * float) option) list
+  | Collisions of collision
   | Coins of vertice list
   | Urg of vertice array
   | Urg_lines of (vertice*vertice) array
@@ -142,9 +146,14 @@ let string_of_message = function
       sprintf
         "Coins [%s]"
         (String.concat "; " (List.map string_of_vertice coins))
-  | Collisions (curve, l) ->
+  | Collisions (Col_rotation l) ->
       sprintf
-        "Collisions (<curve>, [%s])"
+        "Collisions rotation ([%s])"
+        (String.concat "; "
+           (List.map (fun (v,r) -> sprintf "(%s, %f)" (string_of_vertice v) r) l))
+  | Collisions (Col_bezier (curve, l)) ->
+      sprintf
+        "Collisions bezier (<curve>, [%s])"
         (String.concat "; "
            (List.map
               (fun (u, opt) ->
