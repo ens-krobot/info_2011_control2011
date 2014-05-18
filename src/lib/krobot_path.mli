@@ -24,3 +24,13 @@ val goto_object : src : vertice -> dst : vertice -> beacon : vertice option * ve
 (** [goto_object ~src ~dst ~beacon] returns the goal position to
     move to to reach an object in a position to take it. *)
 *)
+
+val find_with_real_center :
+  pos:vertice ->
+  orientation:float ->
+  ?turn_radius:float ->
+  ?dst_orient:float * vector ->
+  dst : vertice ->
+  beacon : vertice option * vertice option ->
+  obj list ->
+  vertice list option

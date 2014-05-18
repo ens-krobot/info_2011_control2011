@@ -418,14 +418,16 @@ let prepare_goto robot dst last_vector =
     let vect = { vx = cos robot.orientation;
                  vy = sin robot.orientation; } in
     (turn_radius,vect) in
-  match Krobot_path.find ~src_orient ?dst_orient ~src:robot.position ~dst
-      ~beacon:robot.beacon robot.objects with
+  match Krobot_path.find_with_real_center ~pos:robot.position
+          ~orientation:robot.orientation
+          ~turn_radius ?dst_orient ~dst ~beacon:robot.beacon robot.objects with
   | Some vertices ->
     Follow_path (vertices,last_vector, true)
   | None ->
-    let alternate = Krobot_path.find ~src_orient ?dst_orient
-        ~src:robot.position ~dst
-        ~beacon:robot.beacon
+    let alternate = Krobot_path.find_with_real_center ~pos:robot.position
+        ~orientation:robot.orientation
+        ~turn_radius ?dst_orient
+        ~dst ~beacon:robot.beacon
         (ignore_some not_ignore_probal robot.objects) in
     match alternate with
     | Some vertices ->

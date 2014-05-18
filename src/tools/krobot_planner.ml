@@ -49,8 +49,12 @@ type planner = {
    | Motion planning                                                 |
    +-----------------------------------------------------------------+ *)
 
-let find_path planner src dst =
-  Krobot_path.find ~src ~dst ~beacon:planner.beacon []
+let find_path planner dst =
+  Krobot_path.find_with_real_center
+    ~pos:planner.position
+    ~orientation:planner.orientation
+    ~dst ~beacon:planner.beacon []
+  (* Krobot_path.find ~src:planner.position ~dst ~beacon:planner.beacon [] *)
 
 (* +-----------------------------------------------------------------+
    | Primitives                                                      |
@@ -154,7 +158,7 @@ let handle_message planner (timestamp, message) =
     | Trajectory_find_path -> begin
         match planner.vertices with
           | v :: _ ->
-              set_vertices planner (match find_path planner planner.position v with Some p -> p | None -> [])
+              set_vertices planner (match find_path planner v with Some p -> p | None -> [])
           | _ ->
               ()
       end
