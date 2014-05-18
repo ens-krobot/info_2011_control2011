@@ -13,7 +13,7 @@ open Krobot_geom
 
 type curve =
   | Curve_bezier of (bool * Bezier.curve)
-  | Curve_rotation of float (* final orientation *)
+  | Curve_rotation of direction * float (* final orientation *)
   | No_curve
 
 type node_kind =

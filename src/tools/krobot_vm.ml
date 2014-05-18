@@ -354,11 +354,12 @@ let bezier_collide dir objects curve c1 c2 shift_vector curve_parameter =
   done;
   (curve, !collisions)
 
-let rotation_collide position orig_angle end_angle objects =
+let rotation_collide position orig_angle end_angle direction objects =
   let collisions = ref [] in
   let last_angle = ref nan in
   let steps = 100 in
-  let step_angle = (end_angle -. orig_angle) /. (float steps) in
+  let dangle = diff_angle direction ~start:orig_angle ~stop:end_angle in
+  let step_angle = dangle /. (float steps) in
   for n = 0 to steps do
     let angle = orig_angle +. ((float n) *. step_angle) in
     let sufficiently_different =
@@ -378,6 +379,22 @@ let rotation_collide position orig_angle end_angle objects =
     end
   done;
   !collisions
+
+let find_rotation position orig_angle end_angle objects =
+  let dangle_trigo = diff_angle Trigo ~start:orig_angle ~stop:end_angle in
+  let dangle_antitrigo = diff_angle Antitrigo ~start:orig_angle ~stop:end_angle in
+  Lwt_log.ign_info_f "angles %f %f" dangle_trigo dangle_antitrigo;
+  let (first,second) =
+    if dangle_trigo > (-.dangle_antitrigo)
+    then Antitrigo, Trigo
+    else Trigo, Antitrigo in
+  match rotation_collide position orig_angle end_angle first objects with
+  | [] -> Some first
+  | _::_ ->
+    Lwt_log.ign_info "can't turn trigo";
+    match rotation_collide position orig_angle end_angle second objects with
+    | [] -> Some second
+    | _::_ -> None
 
 let build_objects robot =
   let fixed_objects = Krobot_config.fixed_obstacles in
@@ -563,7 +580,8 @@ let rec exec robot actions =
         then pos >= start && pos <= stop
         else pos >= start || pos <= stop in
       if between
-      then (ignore (Lwt_log.info_f "Wait_for_orientation %f %f done" start stop);
+      then (ignore (Lwt_log.info_f "Wait_for_orientation %f <= %f <= %f done"
+                      start robot.orientation stop);
             exec robot rest)
       else (actions, Wait)
 
@@ -805,27 +823,31 @@ let rec exec robot actions =
         (rest, Send[Switch_request(5,false);
                     Motor_turn(angle, speed, acceleration)])
     | Set_orientation orientation :: rest ->
-      ignore (Lwt_log.info_f "set orientation %f" orientation);
-      let objects = build_objects robot in
-      begin match rotation_collide robot.position robot.orientation orientation objects with
-        | _::_ ->
-          ignore (Lwt_log.info_f "can't turn");
-          (rest,Abort)
-        | [] ->
-          let delta = orientation -. robot.orientation in
-          let start, stop =
-            let abs_delta = abs_float delta in
-            orientation -. (abs_delta /. 2.), orientation +. (abs_delta /. 2.) in
-          ignore (Lwt_log.info_f "can turn %f %f" delta (current_time ()));
-          (Stop ::
-           Wait_for 0.05 ::
-           Wait_for_motors_moving(false,None) ::
-           Set_curve (Curve_rotation orientation)::
-           Turn (delta,0.5,1.) ::
-           Wait_for_orientation(start, stop) ::
-           Wait_for_motors_moving(false,None)::rest,
-           Wait)
-      end
+      ignore (Lwt_log.info_f "set orientation %f -> %f" robot.orientation orientation);
+      if abs_float ((positive_angle orientation)
+                    -. (positive_angle robot.orientation)) < 0.05
+      then exec robot rest
+      else
+        let objects = build_objects robot in
+        begin match find_rotation robot.position robot.orientation orientation objects with
+          | None ->
+            ignore (Lwt_log.info_f "can't turn");
+            (rest,Abort)
+          | Some direction ->
+            let delta = diff_angle direction ~start:robot.orientation ~stop:orientation in
+            let start, stop =
+              let abs_delta = abs_float delta in
+              orientation -. (abs_delta /. 4.), orientation +. (abs_delta /. 4.) in
+            ignore (Lwt_log.info_f "can turn %f %f" delta (current_time ()));
+            (Stop ::
+             Wait_for 0.05 ::
+             Wait_for_motors_moving(false,None) ::
+             Set_curve (Curve_rotation (direction,orientation))::
+             Turn (delta,1.5,1.5) ::
+             Wait_for_orientation(start, stop) ::
+             Wait_for_motors_moving(false,None)::rest,
+             Wait)
+        end
     | Calibrate ( approach_position, approach_orientation, distance,
                   supposed_x, supposed_y, supposed_orientation )::rest ->
       Node (Simple,
@@ -957,9 +979,9 @@ let run robot =
           in
           if problem then
             replace robot
-        | Curve_rotation dest_orientation ->
+        | Curve_rotation (direction,dest_orientation) ->
           let collisions = rotation_collide robot.position
-              robot.orientation dest_orientation (build_objects robot) in
+              robot.orientation dest_orientation direction (build_objects robot) in
           match collisions with
           | [] -> ()
           | _ ->

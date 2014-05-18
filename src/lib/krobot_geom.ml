@@ -125,6 +125,19 @@ let baricenter = function
 
 type obj = { pos : vertice; size : float }
 
+type direction = Trigo | Antitrigo
+
+let positive_angle angle =
+  let dpi = 2.*.pi in
+  mod_float (dpi +. (mod_float angle dpi)) dpi
+
+let diff_angle dir ~start ~stop =
+  let d = stop -. start in
+  let d = positive_angle d in
+  match dir with
+  | Trigo -> d
+  | Antitrigo -> -. (2.*.pi -. d)
+
 (* +-----------------------------------------------------------------+
    | Cubic bezier curves                                             |
    +-----------------------------------------------------------------+ *)

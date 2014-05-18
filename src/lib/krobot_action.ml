@@ -12,7 +12,7 @@ open Krobot_geom
 
 type curve =
   | Curve_bezier of (bool * Bezier.curve)
-  | Curve_rotation of float (* final orientation *)
+  | Curve_rotation of direction * float (* final orientation *)
   | No_curve
 
 type node_kind =
@@ -107,8 +107,11 @@ let rec to_string = function
         end_velocity
   | Set_curve(Curve_bezier (dir,c)) ->
       sprintf "Set_curve(Curve_bezier (%b, %s))" dir (Bezier.string_of_curve c)
-  | Set_curve(Curve_rotation orientation) ->
-      sprintf "Set_curve(Curve_rotation %f)" orientation
+  | Set_curve(Curve_rotation (direction,orientation)) ->
+    let dir = match direction with
+      | Trigo -> "Trigo"
+      | Antitrigo -> "Antitrigo" in
+      sprintf "Set_curve(Curve_rotation %s %f)" dir orientation
   | Set_curve No_curve ->
       "Set_curve No_curve"
   | Turn (angle, speed, acceleration) ->

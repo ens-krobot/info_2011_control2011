@@ -61,6 +61,14 @@ val rot_mat : float -> float array array
 val mult : float array array -> float array -> float array
 (** [mult m v] matrix multiplication *)
 
+type direction = Trigo | Antitrigo
+
+val positive_angle : float -> float
+(** return an angle between 0 and 2pi *)
+
+val diff_angle : direction -> start:float -> stop:float -> float
+(** between -2pi and +2pi *)
+
 (** {6 Cubic Bezier curves} *)
 
 module Bezier : sig
