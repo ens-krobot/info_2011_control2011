@@ -19,6 +19,8 @@ let point_in_world_safe v =
   v.x >= safety_margin && v.y >= safety_margin &&
     v.x < world_width -. safety_margin && v.y < world_height -. safety_margin
 
+type robot_rect = { v1 : vertice; v2 : vertice; v3 : vertice; v4 : vertice }
+
 let rect pos angle =
   let norm_front = sqrt (sqr (robot_width /. 2.) +. sqr (robot_length -. wheels_position)) in
   let norm_back = sqrt (sqr (robot_width /. 2.) +. sqr wheels_position) in
@@ -28,16 +30,16 @@ let rect pos angle =
   let v2 = translate pos (vector_of_polar ~norm:norm_front ~angle:(angle +. a_front)) in
   let v3 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle -. (pi -. a_back))) in
   let v4 = translate pos (vector_of_polar ~norm:norm_back ~angle:(angle +. (pi -. a_back))) in
-  (v1, v2, v3, v4)
+  { v1; v2; v3; v4 }
 
 let robot_in_world pos angle =
-  let v1, v2, v3, v4 = rect pos angle in
+  let { v1; v2; v3; v4 } = rect pos angle in
   point_in_world_safe v1
   && point_in_world_safe v2
   && point_in_world_safe v3
   && point_in_world_safe v4
 
-let collision_rect_circle v1 v2 v3 v4 center radius =
+let collision_rect_circle { v1; v2; v3; v4 } center radius =
   let i = normalize (vector v1 v2) in
   let j = normalize (vector v1 v3) in
   let v = vector v1 center in
@@ -59,9 +61,19 @@ let collision_rect_circle v1 v2 v3 v4 center radius =
     | false, true ->
       x >= -. safety_distance && x < len_horz +. safety_distance
 
+let bounding_circle_collision robot_pos object_pos object_radius =
+  let sq_center_distance = square_distance robot_pos object_pos in
+  let radius = robot_radius +. object_radius +. safety_margin in
+  sq_center_distance <= radius *. radius
+
+let collision_robot_circle' pos angle rect center radius =
+  bounding_circle_collision pos center radius &&
+  collision_rect_circle rect center radius
+
 let collision_robot_circle pos angle center radius =
-  let v1, v2, v3, v4 = rect pos angle in
-  collision_rect_circle v1 v2 v3 v4 center radius
+  bounding_circle_collision pos center radius &&
+  (let rect = rect pos angle in
+   collision_rect_circle rect center radius)
 
 let move_possible objects pos angle dist =
   let d_front, d_back =
@@ -82,14 +94,15 @@ let move_possible objects pos angle dist =
     && point_in_world_safe v2
     && point_in_world_safe v3
     && point_in_world_safe v4 then
-    List.for_all (fun obj -> not (collision_rect_circle v1 v2 v3 v4 obj.pos obj.size)) objects
+    List.for_all (fun obj -> not (collision_rect_circle { v1; v2; v3; v4 } obj.pos obj.size)) objects
   else
     false
 
 let possible objects pos angle =
+  let rect = rect pos angle in
   robot_in_world pos angle
   && List.for_all
-    (fun obj -> not (collision_robot_circle pos angle obj.pos obj.size))
+    (fun obj -> not (collision_robot_circle' pos angle rect obj.pos obj.size))
     objects
 
 let rec last_possible objects configs =
