@@ -137,7 +137,7 @@ let urg_position = { x = 0.095; y = 0. }
 
 let urg_angle_limits = -. (pi/.2.), (pi/.2.)
 
-let urg_min_distance = 0.01
+let urg_min_distance = 0.04
 
 let urg_angles =
   [|-2.356194490192344836998472601408; -2.350058567040802071090865865699;

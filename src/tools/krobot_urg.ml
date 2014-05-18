@@ -26,8 +26,8 @@ let section = Lwt_log.Section.make "krobot(urg)"
 
 let scale = 0.001
 
-let min_distance = (* in centimeters *)
-  int_of_float (100. *. Krobot_config.urg_min_distance)
+let min_distance = (* in millimeters *)
+  int_of_float (1000. *. Krobot_config.urg_min_distance)
 
 let min_angle, max_angle = Krobot_config.urg_angle_limits
 
