@@ -61,6 +61,8 @@ type t =
   | Pump_command of int * int
   | Elevator_encoders of int * direction * int * direction
   | Pump_state of int * int
+  | Effector_status of bool * bool * bool * bool
+  | Elevator_positions of float * float
   | Req_motor_status
   | Unknown of frame
 
@@ -253,6 +255,14 @@ let to_string = function
       sprintf
         "Pump_state(%d, %d)"
         i1 i2
+  | Effector_status(m1, m2, m3, m4) ->
+      sprintf
+        "Effector_status(%B, %B, %B, %B)"
+        m1 m2 m3 m4
+  | Elevator_positions(p1, p2) ->
+      sprintf
+        "Elevator_positions(%f, %f)"
+        p1 p2
   | Req_motor_status ->
       "Req_motor_status"
   | Unknown frame ->
@@ -718,6 +728,30 @@ let encode = function
       ~remote:false
       ~format:F29bits
       ~data
+  | Effector_status(m1, m2, m3, m4) ->
+      let data = String.create 1 in
+      let x = 0 in
+      let x = if m1 then x lor 1 else x in
+      let x = if m2 then x lor 2 else x in
+      let x = if m3 then x lor 4 else x in
+      let x = if m4 then x lor 8 else x in
+      put_uint8 data 0 x;
+      frame
+        ~identifier:133
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Elevator_positions(left, right) ->
+      let data = String.create 8 in
+      put_float32 data 0 left;
+      put_float32 data 4 right;
+      frame
+        ~identifier:134
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
   | Req_motor_status ->
       frame
         ~identifier:103
@@ -811,6 +845,16 @@ let decode frame =
             Pump_state
               (get_sint16 frame.data 0,
                get_sint16 frame.data 2)
+        | 133 ->
+            let x = get_uint8 frame.data 0 in
+            Effector_status(x land 1 <> 0,
+                            x land 2 <> 0,
+                            x land 4 <> 0,
+                            x land 8 <> 0)
+        | 134 ->
+            Elevator_positions
+              (get_float32 frame.data 0,
+               get_float32 frame.data 4)
         | 201 ->
             Motor_move
               (float (get_sint32 frame.data 0) /. 1000.,

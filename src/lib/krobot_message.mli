@@ -133,6 +133,10 @@ type t =
       (** The position and direction of encoders from the lifts. *)
   | Pump_state of int * int
       (** The current voltages applyed to the pumps. *)
+  | Effector_status of bool * bool * bool * bool
+      (** Status of the 4 motors. *)
+  | Elevator_positions of float * float
+      (** The current awaited positions of the lifts *)
 
   | Req_motor_status
       (** Request the status of the motors. *)
