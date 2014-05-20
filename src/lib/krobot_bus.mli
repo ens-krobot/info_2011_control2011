@@ -102,6 +102,10 @@ type message =
   | Vision_find_target of int * string (* request id, selected camera *)
   | Vision_find_target_response of int * string * ((int * int) list)
 
+  | Run_ax12_sequence of (string * Krobot_ax12_format.action list)
+      (** log * actions *)
+  | Finished_ax12_sequence of string
+
 val string_of_message : message -> string
   (** Returns a string representation of the given message. *)
 

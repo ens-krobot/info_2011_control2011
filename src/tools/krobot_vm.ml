@@ -31,6 +31,8 @@ type ax12 = {
   mutable ax12_torque : int;
 }
 
+module StringSet = Set.Make(String)
+
 (* Type of robots. *)
 type robot = {
   bus : Krobot_bus.t;
@@ -101,6 +103,8 @@ type robot = {
   mutable elevator_right_moving : bool;
   mutable elevator_left_homed : bool;
   mutable elevator_right_homed : bool;
+
+  mutable received_finished_ax12_sequence : StringSet.t;
 
   ax12_front_low_left : ax12;
   ax12_front_low_right : ax12;
@@ -223,6 +227,10 @@ let handle_message robot (timestamp, message) =
               let v = [|v.x;v.y;1.|] in
               let v = mult (rot_mat robot.orientation) v in
               Krobot_geom.translate robot.position { vx = v.(0); vy = v.(1) }) l
+
+    | Finished_ax12_sequence name ->
+        robot.received_finished_ax12_sequence <-
+          StringSet.add name robot.received_finished_ax12_sequence
 
     | Strategy_append l -> begin
         ignore (Lwt_log.info "append strategy");
@@ -625,6 +633,23 @@ let rec exec robot actions =
           (actions, Wait)
       end
 
+    | Wait_for_finished_ax12_sequence (name, timeout) :: rest ->
+      if StringSet.mem name robot.received_finished_ax12_sequence
+      then (ignore (Lwt_log.info_f "Wait_for_finished_ax12_sequence %s done" name);
+            exec robot rest)
+      else begin match timeout with
+        | Timeout_before offset ->
+          let endt = Unix.gettimeofday () +. offset in
+          (Wait_for_finished_ax12_sequence (name, Timeout_started endt) :: rest, Wait)
+        | Timeout_started endt ->
+          if Unix.gettimeofday () > endt
+          then (ignore (Lwt_log.info_f "Wait_for_lift_status timed out");
+                exec robot rest)
+          else (actions, Wait)
+        | Timeout_none ->
+          (actions, Wait)
+      end
+
     | Wait_for t :: rest ->
         ignore (Lwt_log.info_f "Wait_for %f" t);
         exec robot (Wait_until (Unix.gettimeofday () +. t) :: rest)
@@ -982,6 +1007,11 @@ let rec exec robot actions =
                                 Timeout_none) ] in
       exec robot (act @ rest)
 
+    | Ax12_sequence (name, sequence) :: rest ->
+      robot.received_finished_ax12_sequence <-
+        StringSet.remove name robot.received_finished_ax12_sequence;
+      (rest, Send_bus [Run_ax12_sequence (name, sequence)])
+
     | Start_timer(delay,action) :: rest ->
       ignore (Lwt_log.info_f "Start_timer(%f)" delay);
       let current_time = Unix.gettimeofday () in
@@ -1173,6 +1203,7 @@ lwt () =
     elevator_right_moving = false;
     elevator_left_homed = false;
     elevator_right_homed = false;
+    received_finished_ax12_sequence = StringSet.empty;
   } in
 
   (* Handle krobot message. *)

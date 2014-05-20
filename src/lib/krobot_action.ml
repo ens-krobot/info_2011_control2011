@@ -66,6 +66,8 @@ and t =
   | Set_odometry of float option * float option * float option
   | Calibrate of vertice * float * float * float option * float option * float option
   | Elevator_homing
+  | Ax12_sequence of string * Krobot_ax12_format.action list
+  | Wait_for_finished_ax12_sequence of string * timeout
   | End
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
@@ -196,5 +198,9 @@ let rec to_string = function
   | End -> "End"
   | Start_match -> "Start_match"
   | Elevator_homing -> "Elevator_homming"
+  | Ax12_sequence (name,_) -> Printf.sprintf "Ax12_sequence %s" name
+  | Wait_for_finished_ax12_sequence (name, timeout) ->
+    Printf.sprintf "Wait_for_finished_ax12_sequence %s %s"
+      name (string_of_timeout timeout)
 
 and list_to_string l = String.concat "; " (List.map to_string l)

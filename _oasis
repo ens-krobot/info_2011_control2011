@@ -59,7 +59,8 @@ Library krobot
     Krobot_pathfinding,
     Krobot_config,
     Krobot_path,
-    Krobot_action
+    Krobot_action,
+    Krobot_ax12_format
   CSources:
     krobot_message_stubs.c
 
@@ -278,6 +279,13 @@ Executable "krobot-ax12-control"
   CompiledObject: best
   MainIs: krobot_ax12_control.ml
   BuildDepends: krobot.can, lwt.syntax
+
+Executable "krobot-ax12-bus-control"
+  Path: src/tools
+  Install: true
+  CompiledObject: best
+  MainIs: krobot_ax12_bus_control.ml
+  BuildDepends: krobot, lwt.syntax
 
 Executable "krobot-dump-ax12"
   Path: src/tools

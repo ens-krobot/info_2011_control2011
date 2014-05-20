@@ -127,6 +127,11 @@ and t =
 
   | Elevator_homing
 
+  | Ax12_sequence of string * Krobot_ax12_format.action list
+      (** name * actions *)
+
+  | Wait_for_finished_ax12_sequence of string * timeout
+
   | End (** send strategy finished *)
 
 val to_string : t -> string

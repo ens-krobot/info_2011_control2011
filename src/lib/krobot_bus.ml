@@ -52,6 +52,9 @@ type message =
   | Match_start
   | Vision_find_target of int * string
   | Vision_find_target_response of int * string * ((int * int) list)
+  | Run_ax12_sequence of (string * Krobot_ax12_format.action list)
+      (** log * actions *)
+  | Finished_ax12_sequence of string
 
 type t = {
   oc : Lwt_io.output_channel;
@@ -177,6 +180,10 @@ let string_of_message = function
       sprintf "Vision find target %i %s" id camera
   | Vision_find_target_response (id,camera,points) ->
       sprintf "Vision find target response %i %s %i points" id camera (List.length points)
+  | Run_ax12_sequence (log,_) ->
+      sprintf "Run_ax12_sequence %s" log
+  | Finished_ax12_sequence log ->
+      sprintf "Finished_ax12_sequence %s" log
 
 (* +-----------------------------------------------------------------+
    | Sending/receiving messages                                      |
