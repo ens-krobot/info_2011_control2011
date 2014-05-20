@@ -97,6 +97,11 @@ type robot = {
 
   mutable delayed_action : (float * Krobot_action.t list) option;
 
+  mutable elevator_left_moving : bool;
+  mutable elevator_right_moving : bool;
+  mutable elevator_left_homed : bool;
+  mutable elevator_right_homed : bool;
+
   ax12_front_low_left : ax12;
   ax12_front_low_right : ax12;
   ax12_front_high_left : ax12;
@@ -186,6 +191,14 @@ let handle_message robot (timestamp, message) =
                 | 4 -> set robot.ax12_front_high_right
                 | _ -> ()
             end
+
+          | Effector_status(l,r,_,_) ->
+            robot.elevator_left_moving <- l;
+            robot.elevator_right_moving <- r
+
+          | Homing_status(l,r) ->
+            robot.elevator_left_homed <- l;
+            robot.elevator_right_homed <- r
 
           | _ ->
               ()
@@ -585,6 +598,33 @@ let rec exec robot actions =
             exec robot rest)
       else (actions, Wait)
 
+    | Wait_for_lift_status (
+        { moving_left; moving_right; homed_left; homed_right } as status,
+                                                                  timeout) :: rest ->
+      let aux b = function
+        | None -> true
+        | Some b' -> b = b' in
+      let correct =
+        aux robot.elevator_left_moving moving_left &&
+        aux robot.elevator_right_moving moving_right &&
+        aux robot.elevator_left_homed homed_left &&
+        aux robot.elevator_right_homed homed_right in
+      if correct
+      then (ignore (Lwt_log.info_f "Wait_for_lift_status done");
+            exec robot rest)
+      else begin match timeout with
+        | Timeout_before offset ->
+          let endt = Unix.gettimeofday () +. offset in
+          (Wait_for_lift_status (status, Timeout_started endt) :: rest, Wait)
+        | Timeout_started endt ->
+          if Unix.gettimeofday () > endt
+          then (ignore (Lwt_log.info_f "Wait_for_lift_status timed out");
+                exec robot rest)
+          else (actions, Wait)
+        | Timeout_none ->
+          (actions, Wait)
+      end
+
     | Wait_for t :: rest ->
         ignore (Lwt_log.info_f "Wait_for %f" t);
         exec robot (Wait_until (Unix.gettimeofday () +. t) :: rest)
@@ -888,6 +928,54 @@ let rec exec robot actions =
             ((Wait_for 0.1) :: rest, Wait)
         end
 
+    | Elevator_homing :: rest ->
+      let act =
+        [ Can (Krobot_message.encode (Homing_command (pi,pi)));
+          Wait_for_lift_status ({ moving_left = None;
+                                  moving_right = None;
+                                  homed_left = Some false;
+                                  homed_right = Some false },
+                                Timeout_before 0.5);
+          Wait_for_lift_status ({ moving_left = None;
+                                  moving_right = None;
+                                  homed_left = Some true;
+                                  homed_right = Some true },
+                                Timeout_none);
+          Can (Krobot_message.encode (Elevator_command (0.01,0.01)));
+          Wait_for_lift_status ({ moving_left = Some true;
+                                  moving_right = Some true;
+                                  homed_left = None;
+                                  homed_right = None },
+                                Timeout_before 0.5);
+          Wait_for_lift_status ({ moving_left = Some false;
+                                  moving_right = Some false;
+                                  homed_left = None;
+                                  homed_right = None },
+                                Timeout_none);
+          Can (Krobot_message.encode (Homing_command (pi/.4.,pi/.4.)));
+          Wait_for_lift_status ({ moving_left = None;
+                                  moving_right = None;
+                                  homed_left = Some false;
+                                  homed_right = Some false },
+                                Timeout_before 0.5);
+          Wait_for_lift_status ({ moving_left = None;
+                                  moving_right = None;
+                                  homed_left = Some true;
+                                  homed_right = Some true },
+                                Timeout_none);
+          Can (Krobot_message.encode (Elevator_command (0.03,0.03)));
+          Wait_for_lift_status ({ moving_left = Some true;
+                                  moving_right = Some true;
+                                  homed_left = None;
+                                  homed_right = None },
+                                Timeout_before 0.5);
+          Wait_for_lift_status ({ moving_left = Some false;
+                                  moving_right = Some false;
+                                  homed_left = None;
+                                  homed_right = None },
+                                Timeout_none) ] in
+      exec robot (act @ rest)
+
     | Start_timer(delay,action) :: rest ->
       ignore (Lwt_log.info_f "Start_timer(%f)" delay);
       let current_time = Unix.gettimeofday () in
@@ -1078,6 +1166,10 @@ lwt () =
     replace = false;
     init_time = None;
     delayed_action = None;
+    elevator_left_moving = false;
+    elevator_right_moving = false;
+    elevator_left_homed = false;
+    elevator_right_homed = false;
   } in
 
   (* Handle krobot message. *)

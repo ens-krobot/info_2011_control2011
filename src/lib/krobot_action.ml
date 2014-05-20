@@ -15,6 +15,17 @@ type curve =
   | Curve_rotation of direction * float (* final orientation *)
   | No_curve
 
+type lift_status =
+  { moving_left : bool option;
+    moving_right : bool option;
+    homed_left : bool option;
+    homed_right : bool option }
+
+type timeout =
+  | Timeout_before of float
+  | Timeout_started of float
+  | Timeout_none
+
 type node_kind =
   | Simple
   | Retry of int * t
@@ -40,6 +51,7 @@ and t =
   | Reset_odometry of [ `Red | `Blue | `Auto ]
   | Wait_for_odometry of [ `Eq | `Gt | `Ge | `Lt | `Le ] * int
   | Wait_for_orientation of float * float
+  | Wait_for_lift_status of lift_status * timeout
   | Try_something of vertice
   | Fail
   | Wait_for_odometry_reset of [ `Red | `Blue | `Auto ]
@@ -53,6 +65,7 @@ and t =
   | Set_orientation of float
   | Set_odometry of float option * float option * float option
   | Calibrate of vertice * float * float * float option * float option * float option
+  | Elevator_homing
   | End
 
 let string_of_vertice { x; y } = sprintf "{ x = %f; y = %f }" x y
@@ -65,6 +78,12 @@ let string_of_option f = function
 let string_of_face = function
   | `Front -> "`Front"
   | `Back -> "`Back"
+
+
+let string_of_timeout = function
+  | Timeout_before f -> Printf.sprintf "Timeout_before %f" f
+  | Timeout_started f -> Printf.sprintf "Timeout_started %f" f
+  | Timeout_none -> Printf.sprintf "Timeout_none"
 
 let rec to_string = function
   | Node (Simple,l) ->
@@ -146,6 +165,14 @@ let rec to_string = function
     "Wait_for_odometry_reset `Blue"
   | Wait_for_odometry_reset `Auto ->
     "Wait_for_odometry_reset `Auto"
+  | Wait_for_lift_status ({ moving_left; moving_right; homed_left; homed_right },
+                          timeout) ->
+    let aux = function
+      | None -> "None"
+      | Some b -> Printf.sprintf "Some %B" b in
+    Printf.sprintf "Wait_for_lift_status ({%s, %s, %s, %s}, %s)"
+      (aux moving_left) (aux moving_right) (aux homed_left) (aux homed_right)
+      (string_of_timeout timeout)
   | Wait_for t ->
       sprintf "Wait_for %f" t
   | Wait_until t ->
@@ -168,5 +195,6 @@ let rec to_string = function
   | Calibrate (_,_,_,_,_,_) -> "Calibrate"
   | End -> "End"
   | Start_match -> "Start_match"
+  | Elevator_homing -> "Elevator_homming"
 
 and list_to_string l = String.concat "; " (List.map to_string l)

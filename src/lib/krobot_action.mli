@@ -16,6 +16,17 @@ type curve =
   | Curve_rotation of direction * float (* final orientation *)
   | No_curve
 
+type timeout =
+  | Timeout_before of float
+  | Timeout_started of float
+  | Timeout_none
+
+type lift_status =
+  { moving_left : bool option;
+    moving_right : bool option;
+    homed_left : bool option;
+    homed_right : bool option }
+
 type node_kind =
   | Simple
   | Retry of int * t
@@ -77,6 +88,7 @@ and t =
           given state. *)
   | Wait_for_orientation of float * float
       (** Wait_for_orientation(start,stop) *)
+  | Wait_for_lift_status of lift_status * timeout
 
   | Try_something of vertice
       (** Try to do something that would bring us clother to the given
@@ -112,6 +124,9 @@ and t =
 
           i.e.: calibrate using a border
       *)
+
+  | Elevator_homing
+
   | End (** send strategy finished *)
 
 val to_string : t -> string
