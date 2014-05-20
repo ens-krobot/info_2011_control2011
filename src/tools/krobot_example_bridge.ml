@@ -35,13 +35,13 @@ let run_and_send request_id ident bus oc ic =
    | Launch process                                                  |
    +-----------------------------------------------------------------+ *)
 
-let command = "", [|"demo"|]
+let command program = "", [|program|]
 
 let handler : (float * Krobot_bus.message -> unit) ref = ref (fun _ -> ())
 
 let handle_message ident oc ic (timestamp, message) =
   match message with
-    | Kill "example-bridge" ->
+    | Kill "bridge" ->
         exit 0
     | _ -> !handler (timestamp, message)
 
@@ -58,31 +58,25 @@ let callback ident bus (process: Lwt_process.process) : 'a Lwt.t =
   let oc = process#stdin in
   let ic = process#stdout in
   handler := (process_handler ident oc ic bus);
-  lwt _ = process#status in
+  lwt status = process#status in
+  lwt () = match status with
+    | Unix.WEXITED i -> Lwt_log.warning_f "process exited with code %i" i
+    | Unix.WSIGNALED i -> Lwt_log.warning_f "process killed with signal %i" i
+    | Unix.WSTOPPED i -> Lwt_log.warning_f "process stoped with signal %i" i in
   handler := (fun _ -> ());
   Lwt.return ()
 
-let rec launch ident bus =
-  lwt () = Lwt_process.with_process command (callback ident bus) in
-  lwt () = Lwt_log.warning "process died" in
-  launch ident bus
+let rec launch program ident bus =
+  lwt () = Lwt_log.info_f "launch %s" program in
+  lwt () = Lwt_process.with_process (command program) (callback ident bus) in
+  lwt () = Lwt_unix.sleep 0.2 in
+  launch program ident bus
 
 (* +-----------------------------------------------------------------+
    | Command-line arguments                                          |
    +-----------------------------------------------------------------+ *)
 
-let fork = ref true
-
-let options = Arg.align [
-  "-no-fork", Arg.Clear fork, " Run in foreground";
-]
-
-let usage = "\
-Usage: krobot-example-bridge [options]
-options are:"
-
-lwt () =
-  Arg.parse options ignore usage;
+let run program fork =
 
   (* Display all informative messages. *)
   Lwt_log.append_rule "*" Lwt_log.Info;
@@ -91,10 +85,10 @@ lwt () =
   lwt bus = Krobot_bus.get () in
 
   (* Fork if not prevented. *)
-  if !fork then Krobot_daemon.daemonize bus;
+  if fork then Krobot_daemon.daemonize bus;
 
   (* Kill any running homologation. *)
-  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "example-bridge") in
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "bridge") in
 
   (* Handle krobot message. *)
   E.keep (E.map handle_message (Krobot_bus.recv bus));
@@ -102,4 +96,24 @@ lwt () =
   let ident = "example" in
 
   (* loop forever. *)
-  launch ident bus
+  launch program ident bus
+
+let fork = ref true
+let program = ref None
+
+let options = Arg.align [
+  "-no-fork", Arg.Clear fork, " Run in foreground";
+  "-e", Arg.String (fun s -> program := Some s), " Program to run";
+]
+
+let usage = "\
+Usage: krobot-example-bridge [options]
+options are:"
+
+let () =
+  Arg.parse options ignore usage;
+  match !program with
+  | None ->
+    Printf.eprintf "a program must be specified using -e option"
+  | Some program ->
+    Lwt_unix.run (run program !fork)
