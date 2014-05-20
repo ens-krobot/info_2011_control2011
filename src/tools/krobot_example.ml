@@ -14,7 +14,7 @@ open Krobot_bus
 open Krobot_action
 open Krobot_geom
 
-let strategy_0 = [
+let strategy_0 () = [
   Stop;
   Reset_odometry `Red;
   Wait_for_odometry_reset `Red;
@@ -35,7 +35,16 @@ let strategy_0 = [
   Stop;
 ]
 
-let strategy_1 = []
+let strategy_1 () =
+  let timed_actions = Krobot_ax12_format.read_timed_actions_file Sys.argv.(2) in
+  let actions = Krobot_ax12_format.to_actions timed_actions in
+  [Ax12_sequence("direct", actions);
+   Set_led (`Red,false);
+   Set_led (`Green,true);
+   Wait_for_finished_ax12_sequence("direct", Timeout_none);
+   Set_led (`Red,true);
+   Set_led (`Green,false);
+   End]
 
 let strategy = [|
   strategy_0;
@@ -45,7 +54,7 @@ let strategy = [|
 let launch i =
   lwt bus = Krobot_bus.get () in
   Krobot_bus.send bus (Unix.gettimeofday (),
-                       Strategy_set strategy.(i))
+                       Strategy_set (strategy.(i) ()))
 
 let () =
   let strat =
