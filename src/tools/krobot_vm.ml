@@ -637,14 +637,14 @@ let rec exec robot actions =
     | Set_curve No_curve :: rest ->
         reset robot;
         exec robot rest
-    | Set_curve(Curve_bezier curve) :: rest ->
-        robot.curve <- Curve_bezier curve;
+    | Set_curve((Curve_bezier _ | Curve_rotation _) as curve) :: rest ->
+        robot.curve <- curve;
         exec robot rest
 
-    | Move_back dist :: rest ->
+    | Move_straight dist :: rest ->
       let move_vect =
         { vx = cos robot.orientation;
-          vy = sin robot.orientation } *| (-.dist)
+          vy = sin robot.orientation } *| dist
       in
       let dest = translate robot.position move_vect in
       exec robot ((Follow_path([dest],None,false))::rest)
@@ -847,12 +847,18 @@ let rec exec robot actions =
                 [Krobot_message.Set_odometry( x, y, angle);
                  Set_odometry_indep( x, y, angle )]))
 
-          (* !!! only for all in common *)
-    | Set_odometry( Some x, Some y, Some angle )::rest ->
+    | Set_odometry( x, y, orientation )::rest ->
       ignore (Lwt_log.info_f "Set_odometry");
+      let aux v = function
+        | None -> v
+        | Some w -> w in
+      let x = aux robot.position.x x in
+      let y = aux robot.position.y y in
+      let orientation = aux robot.orientation orientation in
       (rest,
-       Send [Krobot_message.Set_odometry( x, y, angle);
-             Set_odometry_indep( x, y, angle )])
+       Send [Krobot_message.Set_odometry( x, y, orientation);
+             Set_odometry_indep( x, y, orientation )])
+
     | Think :: rest ->
         exec robot rest
     | Fail :: rest ->
@@ -994,9 +1000,6 @@ let rec exec robot actions =
 
     | Start_match :: rest ->
       (rest, Send_bus [Match_start])
-
-    | _ :: rest ->
-        exec robot rest
 
 (* +-----------------------------------------------------------------+
    | Main loop                                                       |

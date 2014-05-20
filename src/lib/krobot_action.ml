@@ -42,7 +42,7 @@ and t =
   | Set_limits of float * float * float * float
   | Follow_path of vertice list * vector option * bool
   | Bezier of float * vertice * vertice * vertice * vertice * float
-  | Move_back of float
+  | Move_straight of float
   | Set_curve of curve
   | Turn of float * float * float
   | Wait_for_jack of bool
@@ -99,8 +99,8 @@ let rec to_string = function
       "Stop"
   | Think ->
       "Think"
-  | Move_back f ->
-      sprintf "Move_back %f" f
+  | Move_straight f ->
+      sprintf "Move_straight %f" f
   | Random_move (v1,v2) ->
       sprintf "Random move %s %s" (string_of_vertice v1) (string_of_vertice v2)
   | Goto (v,vect) ->

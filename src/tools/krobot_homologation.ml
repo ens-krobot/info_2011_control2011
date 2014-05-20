@@ -62,7 +62,7 @@ let node t = Node(Simple,t)
 
 let back_and_retry t =
   Node(Retry(3,
-      node ((Node(Next,[Stop;Move_back 0.1])) :: t)),
+      node ((Node(Next,[Stop;Move_straight (-0.1)])) :: t)),
     t)
 
 let retry_follow n dst dir =
@@ -97,7 +97,7 @@ let hit_ax12_id id =
 
 let ramene p1 p2 dir =
   [ Goto (p1, None);
-    Move_back 0.4;
+    Move_straight (-0.4);
     Goto (p2, Some dir); ]
 
 let pos1 = { x = 0.4 ; y = 0.7 }

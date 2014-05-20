@@ -67,7 +67,7 @@ and t =
       (** Follow the bezier curve determined by the given four
           vertices. The first float is the sign, the last one is the
           end velocity. *)
-  | Move_back of float
+  | Move_straight of float
   | Set_curve of curve
       (** Set the curve currently being followed. *)
 
