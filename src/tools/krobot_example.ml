@@ -46,9 +46,58 @@ let strategy_1 () =
    Set_led (`Green,false);
    End]
 
+let strategy_2 () =
+
+  let move_loop =
+    let (init_vertice, theta) = Krobot_config.red_initial_position in
+    let move =
+      Follow_path ([{init_vertice with y = init_vertice.y -. 0.5}],
+                   Some { vx = 0.; vy = -1. },
+                   false) in
+    (* loop infinitely until move succeed *)
+    Node(Retry (-1,move), [Fail])
+  in
+  [
+  Stop;
+  Reset_odometry `Red;
+  Wait_for_odometry_reset `Red;
+  Wait_for 0.1;
+  Set_led (`Green,true);
+  Set_led (`Red,true);
+  Wait_for_jack true;
+  Set_led (`Red,false);
+  Wait_for 0.4;
+  Elevator_homing;
+  Wait_for_jack false;
+  Set_led (`Red,true);
+  Set_led (`Green,false);
+
+  Start_timer (30.,[Stop; End]);
+
+  move_loop;
+
+  Node (
+    Loop
+      (Node (Simple,
+             [Goto ({ x = 1. ; y = 0.7 }, None);
+              Wait_for 0.1;
+              Goto ({ x = 1. ; y = 1.4 }, Some({ vx = -.1.; vy = 0.}));
+              Wait_for 0.1;
+              Goto ({ x = 2. ; y = 1.4 }, None);
+              Wait_for 0.1;
+              Goto ({ x = 2. ; y = 0.7 }, Some({ vx = 1.; vy = -.0.1}));
+              Wait_for 0.1;
+             ])),
+    []);
+
+  Stop;
+  End
+]
+
 let strategy = [|
   strategy_0;
-  strategy_1
+  strategy_1;
+  strategy_2
 |]
 
 let launch i =

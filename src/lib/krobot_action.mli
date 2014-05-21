@@ -28,10 +28,21 @@ type lift_status =
     homed_right : bool option }
 
 type node_kind =
-  | Simple
+  | Simple (* if the argument fails, the node fails *)
   | Retry of int * t
+  (* Retry(0,_) is equivalent to Simple
+     Node(Retry(n,failer), normal)
+     if normal fails, executes Node(Retry((n-1),failer), [failer])
+     i.e. executes normal 1 time, but if it fails, excute failer instead,
+     at most n times.
+     if n < 0 then retry failer infinitely (after trying normal 1 time)
+  *)
   | Loop of t
-  | Next
+      (* If the argument terminates with succeed, execute Node(Loop t,[t])
+         otherwise fail.
+         i.e. Node(Loop t,arg) executes arg 1 time and t infinitely after *)
+  | Next (* if the argument fails, just drop the rest
+            of the argument and continue with the next action *)
 
 (** Type of actions. *)
 and t =
