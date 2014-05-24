@@ -591,7 +591,7 @@ lwt () =
   (* Open the krobot bus. *)
   lwt bus = Krobot_bus.get () in
 
-  if (!go_hil or !go_simu or !go_normal) then begin
+  if (!go_hil || !go_simu || !go_normal) then begin
     if !go_normal then
       ignore(Krobot_message.send bus (Unix.gettimeofday (), Set_simulation_mode Sim_no))
     else if !go_hil then
