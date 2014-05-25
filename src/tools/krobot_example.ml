@@ -94,10 +94,48 @@ let strategy_2 () =
   End
 ]
 
+let strategy_3 () =
+  let keyframes = Krobot_ax12_format.read_keyframes_file Sys.argv.(2) in
+  let sequence = [(0,0); (0, 100)] in
+  [Ax12_framed_sequence("goto_start_sequence", keyframes, sequence);
+   Set_led (`Red,false);
+   Set_led (`Green,true);
+   Wait_for_finished_ax12_sequence("goto_start_sequence", Timeout_none);
+   Set_led (`Red,true);
+   Set_led (`Green,false);
+   End]
+
+let strategy_4 () =
+  let keyframes = Krobot_ax12_format.read_keyframes_file Sys.argv.(2) in
+  let num_keyframes = Krobot_ax12_format.IntMap.cardinal keyframes in
+  let rec make_sequence seq id =
+    if id < 0 then
+      seq
+    else
+      make_sequence ((id, 100)::seq) (id-1)
+  in
+  let sequence = make_sequence [(0, 100)] (num_keyframes-1) in
+  let rec print_seq = function
+    | [] ->
+      Printf.printf "\n%!"
+    | (id, speed)::t ->
+      (Printf.printf "(%d, %d) " id speed;
+       print_seq t) in
+  print_seq sequence;
+  [Ax12_framed_sequence("framed_seq", keyframes, sequence);
+   Set_led (`Red,false);
+   Set_led (`Green,true);
+   Wait_for_finished_ax12_sequence("framed_seq", Timeout_none);
+   Set_led (`Red,true);
+   Set_led (`Green,false);
+   End]
+
 let strategy = [|
   strategy_0;
   strategy_1;
-  strategy_2
+  strategy_2;
+  strategy_3;
+  strategy_4
 |]
 
 let launch i =
