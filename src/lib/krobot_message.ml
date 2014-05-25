@@ -25,6 +25,8 @@ type t =
   | Battery2_voltages of float * float * float * float
   | Beacon_position of float * float * float * float
   | Beacon_lowlevel_position of float * float * int
+  | Beacon_angles of float * float * float * float
+  | Beacon_widths of float * float * float * float
   | Switch1_status of bool * bool * bool * bool * bool * bool * bool * bool
   | Switch2_status of bool * bool * bool * bool * bool * bool * bool * bool
   | Switch_request of int * bool
@@ -109,6 +111,14 @@ let to_string = function
         angle
         width
         period
+  | Beacon_angles(a1, a2, a3, a4) ->
+      sprintf
+        "Beacon_angles(%f, %f, %f, %f)"
+        a1 a2 a3 a4
+  | Beacon_widths(w1, w2, w3, w4) ->
+      sprintf
+        "Beacon_widths(%f, %f, %f, %f)"
+        w1 w2 w3 w4
   | Switch1_status(s1, s2, s3, s4, s5, s6, s7, s8) ->
       sprintf
         "Switch1_status(%B, %B, %B, %B, %B, %B, %B, %B)"
@@ -519,11 +529,35 @@ let encode = function
         ~data
   | Beacon_lowlevel_position(angle, width, period) ->
       let data = String.create 8 in
-      put_uint16 data 0 (truncate (angle));
+      put_uint16 data 0 (truncate (angle *. 10000.));
       put_uint16 data 2 (truncate (width *. 10000.));
       put_uint32 data 4 period;
       frame
         ~identifier:302
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Beacon_angles(a1, a2, a3, a4) ->
+      let data = String.create 8 in
+      put_uint16 data 0 (truncate (a1 *. 10000.));
+      put_uint16 data 2 (truncate (a2 *. 10000.));
+      put_uint16 data 4 (truncate (a3 *. 10000.));
+      put_uint16 data 6 (truncate (a4 *. 10000.));
+      frame
+        ~identifier:304
+        ~kind:Data
+        ~remote:false
+        ~format:F29bits
+        ~data
+  | Beacon_widths(w1, w2, w3, w4) ->
+      let data = String.create 8 in
+      put_uint16 data 0 (truncate (w1 *. 100000.));
+      put_uint16 data 2 (truncate (w2 *. 100000.));
+      put_uint16 data 4 (truncate (w3 *. 100000.));
+      put_uint16 data 6 (truncate (w4 *. 100000.));
+      frame
+        ~identifier:305
         ~kind:Data
         ~remote:false
         ~format:F29bits
@@ -978,6 +1012,18 @@ let decode frame =
               (float (get_uint16 frame.data 0),
                float (get_uint16 frame.data 2) (*/. 10000*),
                get_uint32 frame.data 4)
+        | 304 ->
+            Beacon_angles
+              (float (get_uint16 frame.data 0) /. 10000.,
+               float (get_uint16 frame.data 2) /. 10000.,
+               float (get_uint16 frame.data 4) /. 10000.,
+               float (get_uint16 frame.data 6) /. 10000.)
+        | 305 ->
+            Beacon_widths
+              (float (get_uint16 frame.data 0) /. 100000.,
+               float (get_uint16 frame.data 2) /. 100000.,
+               float (get_uint16 frame.data 4) /. 100000.,
+               float (get_uint16 frame.data 6) /. 100000.)
         | 311 ->
             Switch1_status
               (get_uint8 frame.data 0 <> 0,

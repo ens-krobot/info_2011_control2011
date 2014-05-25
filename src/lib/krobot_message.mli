@@ -25,6 +25,10 @@ type t =
       (** The position of the beacon relative to the robot *)
   | Beacon_lowlevel_position of float * float * int
       (** The position of the beacon as internally stored (for calibration) *)
+  | Beacon_angles of float * float * float * float
+      (** The angles of the beacons seen by the robot *)
+  | Beacon_widths of float * float * float * float
+      (** The widths of the beacons seen by the robot *)
   | Switch1_status of bool * bool * bool * bool * bool * bool * bool * bool
       (** The status of the first 8 switches
           1 : start
