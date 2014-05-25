@@ -43,6 +43,15 @@ let blue_initial_position =
     y = (world_height -. wheels_position -. 0.054); },
   (-.pi/.2.)
 
+let red_fixed_beacons = [
+  { x = -. 0.062; y = world_height +. 0.062 };
+  { x = -. 0.062; y = -. 0.062 };
+  { x = world_width +. 0.062; y = world_height /. 2.}]
+
+let blue_fixed_beacons = [
+  { x = world_width +. 0.062; y = world_height +. 0.062 };
+  { x = world_width +. 0.062; y = -. 0.062 };
+  { x = -. 0.062; y = world_height /. 2.}]
 
 let symetrical p =
   { p with pos = { p.pos with x = world_width -. p.pos.x } }

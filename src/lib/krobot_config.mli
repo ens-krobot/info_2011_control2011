@@ -13,7 +13,13 @@ val world_width : float
   (** The width of the board. *)
 
 val world_height : float
-  (** THe height of the board. *)
+  (** The height of the board. *)
+
+val red_fixed_beacons : Krobot_geom.vertice list
+  (** Positions of the fixed beacons for the red team *)
+
+val blue_fixed_beacons : Krobot_geom.vertice list
+  (** Positions of the fixed beacons for the blue team *)
 
 val robot_length : float
 val robot_width : float
