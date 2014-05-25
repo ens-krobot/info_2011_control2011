@@ -67,6 +67,7 @@ and t =
   | Calibrate of vertice * float * float * float option * float option * float option
   | Elevator_homing
   | Ax12_sequence of string * Krobot_ax12_format.action list
+  | Ax12_framed_sequence of string * Krobot_ax12_format.keyframe_dict * (int * int) list
   | Wait_for_finished_ax12_sequence of string * timeout
   | End
 
@@ -199,6 +200,7 @@ let rec to_string = function
   | Start_match -> "Start_match"
   | Elevator_homing -> "Elevator_homming"
   | Ax12_sequence (name,_) -> Printf.sprintf "Ax12_sequence %s" name
+  | Ax12_framed_sequence (name,_,_) -> Printf.sprintf "Ax12_framed_sequence %s" name
   | Wait_for_finished_ax12_sequence (name, timeout) ->
     Printf.sprintf "Wait_for_finished_ax12_sequence %s %s"
       name (string_of_timeout timeout)

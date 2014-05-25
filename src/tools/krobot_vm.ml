@@ -643,7 +643,7 @@ let rec exec robot actions =
           (Wait_for_finished_ax12_sequence (name, Timeout_started endt) :: rest, Wait)
         | Timeout_started endt ->
           if Unix.gettimeofday () > endt
-          then (ignore (Lwt_log.info_f "Wait_for_lift_status timed out");
+          then (ignore (Lwt_log.info_f "Wait_for_finished_ax12_sequence timed out");
                 exec robot rest)
           else (actions, Wait)
         | Timeout_none ->
@@ -1011,6 +1011,11 @@ let rec exec robot actions =
       robot.received_finished_ax12_sequence <-
         StringSet.remove name robot.received_finished_ax12_sequence;
       (rest, Send_bus [Run_ax12_sequence (name, sequence)])
+
+    | Ax12_framed_sequence (name, frame_dict, sequence) :: rest ->
+      robot.received_finished_ax12_sequence <-
+        StringSet.remove name robot.received_finished_ax12_sequence;
+      (rest, Send_bus [Run_ax12_framed_sequence (name, frame_dict, sequence)])
 
     | Start_timer(delay,action) :: rest ->
       ignore (Lwt_log.info_f "Start_timer(%f)" delay);
