@@ -65,7 +65,7 @@ let log () =
                    let info = { id;pos;speed;torque;time } in
                    (*if not (is_previous info)
                    then print_info info*)
-                   infos := IntMap.add id info !previous;
+                   infos := IntMap.add id info !infos;
                    (*print_info info;*)
                    if !messages_to_receive > 0 then messages_to_receive := !messages_to_receive - 1
                  | _ -> ()
@@ -88,15 +88,17 @@ let rec loop_request key_idx =
   Printf.eprintf "Waiting for keyframe %d : press ENTER... %!" key_idx;
   lwt _ = Lwt_io.read_line Lwt_io.stdin in
   let rec retry_messages () =
+    messages_to_receive := (List.length !ax12_id);
     lwt () = Lwt_list.iter_s (fun i ->
       lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State i))) in
       Lwt_unix.sleep !ax12_delay)
         !ax12_id in
+    lwt () = Lwt_unix.sleep 0.1 in
     lwt timeout = wait_for_messages keyframe_timeout in
     match timeout with
       | No_timeout ->
         (if (IntMap.cardinal !infos) != (List.length !ax12_id) then
-           (Printf.eprintf "Com. error, retrying...\n%!";
+           (Printf.eprintf "Not all AX-12 responded, retrying...\n%!";
             retry_messages ())
          else
            Lwt.return ())
