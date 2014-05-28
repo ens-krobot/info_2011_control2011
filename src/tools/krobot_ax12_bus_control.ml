@@ -4,7 +4,7 @@ open Krobot_message
 open Krobot_ax12_format
 
 let ax12_positions = ref IntMap.empty
-let frame_prec = 2
+let frame_prec = 5
 
 let run_action bus = function
   | Sleep t -> Lwt_unix.sleep t
@@ -45,8 +45,11 @@ let run_frame bus cur_frame next_frame speed =
       diffs
   end in
   let check_end_mvt () =
-    let end_reached,_ = List.fold_left
+    let end_reached, _ =
+      List.fold_left
         (fun (end_reached,check_sth) (id, pos) ->
+           (*let ax12_real_position = if IntMap.mem id !ax12_positions then IntMap.find id !ax12_positions else -1 in
+           Printf.printf "Checking id %d with pos %d against pos %d (%B,%B)\n%!" id pos ax12_real_position end_reached check_sth;*)
            if check_sth then
              if IntMap.mem id !ax12_positions then
                if abs ((IntMap.find id !ax12_positions)-pos) <= frame_prec then
@@ -56,10 +59,11 @@ let run_frame bus cur_frame next_frame speed =
              else
                (false,false)
            else
-             (false,false))
+             (end_reached,check_sth))
         (true,true)
         next_frame_l in
-    end_reached in
+    end_reached
+  in
   let ask_ax12_positions () =
     let request_state_list = match next_frame_l with
       | t::q -> [t]
@@ -72,10 +76,10 @@ let run_frame bus cur_frame next_frame speed =
       request_state_list
   in
   let rec wait_for_mvt () =
-    lwt () = Lwt_unix.sleep 1. in
+    lwt () = Lwt_unix.sleep 0.2 in
     if not (check_end_mvt ()) then
       lwt () = ask_ax12_positions () in
-      lwt () = Lwt_unix.sleep 0.2 in
+      lwt () = Lwt_unix.sleep 0.1 in
       wait_for_mvt ()
     else
       Lwt.return_unit
