@@ -45,29 +45,37 @@ let run_frame bus cur_frame next_frame speed =
       diffs
   end in
   let check_end_mvt () =
-    List.fold_left
-      (fun end_reached (id, pos) ->
-         if IntMap.mem id !ax12_positions then
-           if abs ((IntMap.find id !ax12_positions)-pos) <= frame_prec then
-             end_reached
+    let end_reached,_ = List.fold_left
+        (fun (end_reached,check_sth) (id, pos) ->
+           if check_sth then
+             if IntMap.mem id !ax12_positions then
+               if abs ((IntMap.find id !ax12_positions)-pos) <= frame_prec then
+                 (end_reached,false)
+               else
+                 (false,false)
+             else
+               (false,false)
            else
-             false
-         else
-           false)
-      true
-      next_frame_l in
+             (false,false))
+        (true,true)
+        next_frame_l in
+    end_reached in
   let ask_ax12_positions () =
+    let request_state_list = match next_frame_l with
+      | t::q -> [t]
+      | [] -> []
+    in
     Lwt_list.iter_s
       (fun (id, _) ->
          lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State id))) in
          Lwt_unix.sleep 0.01)
-      next_frame_l
+      request_state_list
   in
   let rec wait_for_mvt () =
     lwt () = Lwt_unix.sleep 1. in
     if not (check_end_mvt ()) then
       lwt () = ask_ax12_positions () in
-      lwt () = Lwt_unix.sleep 0.1 in
+      lwt () = Lwt_unix.sleep 0.2 in
       wait_for_mvt ()
     else
       Lwt.return_unit
