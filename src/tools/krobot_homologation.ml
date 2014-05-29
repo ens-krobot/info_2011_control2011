@@ -31,12 +31,10 @@ let omega_max = 3.14 /. 2.
 let accel_tan_max = 1.0
 let accel_rad_max = 1.0
 
-(*
-let keyframes_right = Krobot_ax12_format.read_keyframes_file "/home/krobot/data/keyframes_right_2014.data"
-let keyframes_left = Krobot_ax12_format.read_keyframes_file "/home/krobot/data/keyframes_left_2014.data"
-*)
-let keyframes_right = Krobot_ax12_format.read_keyframes_file "/tmp/keyframes.data"
-let keyframes_left = Krobot_ax12_format.read_keyframes_file "/tmp/keyframes.data"
+
+let keyframes_right = Krobot_ax12_format.read_keyframes_file "/home/krobot/calibration_data/keyframes_right_2014.data"
+let keyframes_left = Krobot_ax12_format.read_keyframes_file "/home/krobot/calibration_data/keyframes_left_2014.data"
+
 
 (* Helpers *)
 
@@ -47,15 +45,15 @@ let do_until_success action =
 let move_to_first_fire initial_position =
   let (init_vertice, theta) = initial_position in
   let move =
-    Follow_path ([{init_vertice with y = init_vertice.y -. 0.6}],
+    Follow_path ([{init_vertice with y = init_vertice.y -. 0.65}],
                  Some { vx = 0.; vy = -1. },
                  false) in
   do_until_success move
 
-let move_back_from_first_fire initial_position =
+let move_after_first_fire initial_position =
   let (init_vertice, theta) = initial_position in
   let move =
-    Follow_path ([{init_vertice with y = init_vertice.y -. 0.3}],
+    Follow_path ([{init_vertice with y = init_vertice.y -. 0.4}],
                  Some { vx = 0.; vy = -1. },
                  false) in
   do_until_success move
@@ -74,20 +72,88 @@ let grab_fire keyframes name led =
           Set_led (led, true);
         ])
 
+let prepare_to_push_on_side keyframes name led =
+  let sequence = [(0, 100); (* Initial position *)
+                  (1, 100); (* Gets out - horizontal mvt*)
+                  (5, 100); (* Gets out - vertical mvt*)
+                  (6, 100); (* Pushing position *)
+                 ] in
+  Node (Simple,
+        [ Ax12_framed_sequence(name, keyframes, sequence);
+          Set_led (led, false);
+          Wait_for_finished_ax12_sequence(name, Timeout_none);
+          Set_led (led, true);
+        ])
+
+let push_on_side keyframes name led =
+  let sequence = [(6, 100); (* Pushing position *)
+                  (7, 200); (* Push *)
+                  (5, 100); (* Gets out - vertical mvt*)
+                  (1, 100); (* Gets out - horizontal mvt*)
+                  (0, 100); (* Back in storage *)
+                 ] in
+  Node (Simple,
+        [ Ax12_framed_sequence(name, keyframes, sequence);
+          Set_led (led, false);
+          Wait_for_finished_ax12_sequence(name, Timeout_none);
+          Set_led (led, true);
+        ])
+
 let grab_fire_rightside = grab_fire keyframes_right "grab_fire_rightside" `Red
 
 let grab_fire_leftside = grab_fire keyframes_left "grab_fire_leftside" `Green
 
+let prepare_to_push_rightside =
+  prepare_to_push_on_side keyframes_right "prepare_pushing_right" `Red
+
+let prepare_to_push_leftside =
+  prepare_to_push_on_side keyframes_left "prepare_pushing_left" `Green
+
+let push_rightside = push_on_side keyframes_right "push_right" `Red
+
+let push_leftside = push_on_side keyframes_left "push_left" `Green
+
 (* Match strategy *)
 
 let run_strategy_blue =
-  [ move_to_first_fire Krobot_config.blue_initial_position;
+  let init_pos = Krobot_config.blue_initial_position in
+  [ move_to_first_fire init_pos;
     Stop;
     Wait_for 1.;
+    grab_fire_rightside;
     Stop;
-    grab_fire_leftside;
+    move_after_first_fire init_pos;
     Stop;
-    (*do_until_success ();*)
+    Wait_for 1.;
+    do_until_success (Set_orientation (pi/.2. +. pi/.4.));
+    Stop;
+    Wait_for 1.;
+    do_until_success (Follow_path ([{x = 0.2 +. 0.2;
+                                     y = 1.505 -. 0.2}],
+                                   Some { vx = 1.; vy = -1. },
+                                   false));
+    Stop;
+    Wait_for 1.;
+    do_until_success (Follow_path ([{x = 0.4 +. Krobot_config.wheels_position;
+                                     y = 0.9 +. 0.26}],
+                                   Some { vx = 1.; vy = 0. },
+                                   false));
+    Stop;
+    Wait_for 1.;
+    prepare_to_push_leftside; (* Move arm into position *)
+    Stop;
+    do_until_success (Follow_path ([{x = 0.4; y = 0.9 +. 0.26}],
+                                    Some { vx = 1.; vy = 0.},
+                                   false));
+    Stop;
+    Wait_for 1.;
+    push_rightside; (* push fire *)
+    Stop;
+    do_until_success (Follow_path ([{x = 0.4 +. Krobot_config.wheels_position;
+                                    y = 0.9 +. 0.26}],
+                                  Some {vx = 1.; vy = 0.},
+                                  false));
+    Stop;
   ]
 
 let run_strategy_red =
@@ -95,11 +161,40 @@ let run_strategy_red =
   [ move_to_first_fire init_pos;
     Stop;
     Wait_for 1.;
+    grab_fire_leftside;
     Stop;
-    grab_fire_rightside;
+    move_after_first_fire init_pos;
     Stop;
-    (*move_back_from_first_fire init_pos;*)
-    (*do_until_success ();*)
+    Wait_for 1.;
+    do_until_success (Set_orientation (pi/.2. +. pi/.4.));
+    Stop;
+    Wait_for 1.;
+    do_until_success (Follow_path ([{x = 0.2 +. 0.2;
+                                     y = 1.505 -. 0.2}],
+                                   Some { vx = 1.; vy = -1. },
+                                   false));
+    Stop;
+    Wait_for 1.;
+    do_until_success (Follow_path ([{x = 0.4 +. Krobot_config.wheels_position;
+                                     y = 0.9 +. 0.26}],
+                                   Some { vx = 1.; vy = 0. },
+                                   false));
+    Stop;
+    Wait_for 1.;
+    prepare_to_push_rightside; (* Move arm into position *)
+    Stop;
+    do_until_success (Follow_path ([{x = 0.4; y = 0.9 +. 0.26}],
+                                    Some { vx = 1.; vy = 0.},
+                                   false));
+    Stop;
+    Wait_for 1.;
+    push_rightside; (* push fire *)
+    Stop;
+    do_until_success (Follow_path ([{x = 0.4 +. Krobot_config.wheels_position;
+                                    y = 0.9 +. 0.26}],
+                                  Some {vx = 1.; vy = 0.},
+                                  false));
+    Stop;
   ]
 
 (* Starting code before main strategy *)
