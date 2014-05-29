@@ -22,19 +22,23 @@ let run_frame bus cur_frame next_frame speed =
          let all_zeros = if diff == 0 then all_zeros else false in
          all_zeros, ((cur_id, diff, next_pos)::acc))
       (true, []) cur_frame_l next_frame_l in
-  lwt () = if all_zeros then
-    Lwt_list.iter_s
+  let max_infos = if all_zeros then begin
+    ignore(Lwt_list.iter_s
       (fun (cur_id, _, next_pos) ->
          let c = Ax12_Goto (cur_id, next_pos, speed) in
          Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode c)))
-      diffs
+      diffs);
+    match next_frame_l with
+      | [] -> None
+      | t::q -> Some t
+    end
   else begin
-    let max_diff = List.fold_left
-        (fun max_diff (cur_id, diff, next_pos) ->
-           if diff > max_diff then diff else max_diff)
-        0
+    let max_diff, max_id, max_pos = List.fold_left
+        (fun (max_diff,max_id,max_pos) (cur_id, diff, next_pos) ->
+           if diff > max_diff then (diff,cur_id,next_pos) else (max_diff,max_id,max_pos))
+        (0,-1,-1)
         diffs in
-    Lwt_list.iter_s
+    ignore(Lwt_list.iter_s
       (fun (cur_id, diff, next_pos) ->
          if diff > 0 then
            let axe_speed = speed * diff / max_diff in
@@ -42,10 +46,21 @@ let run_frame bus cur_frame next_frame speed =
            Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode c))
          else
            Lwt.return_unit)
-      diffs
+      diffs);
+    Some (max_id,max_pos)
   end in
   let check_end_mvt () =
-    let end_reached, _ =
+    match max_infos with
+      | None -> true
+      | Some (max_id,pos) ->
+        if IntMap.mem max_id !ax12_positions then
+          (if abs ((IntMap.find max_id !ax12_positions) - pos) <= frame_prec then
+             true
+           else
+             false)
+        else
+          false
+    (*let end_reached, _ =
       List.fold_left
         (fun (end_reached,check_sth) (id, pos) ->
            (*let ax12_real_position = if IntMap.mem id !ax12_positions then IntMap.find id !ax12_positions else -1 in
@@ -62,18 +77,12 @@ let run_frame bus cur_frame next_frame speed =
              (end_reached,check_sth))
         (true,true)
         next_frame_l in
-    end_reached
+    end_reached*)
   in
   let ask_ax12_positions () =
-    let request_state_list = match next_frame_l with
-      | t::q -> [t]
-      | [] -> []
-    in
-    Lwt_list.iter_s
-      (fun (id, _) ->
-         lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State id))) in
-         Lwt_unix.sleep 0.01)
-      request_state_list
+    match max_infos with
+      | None -> Lwt.return_unit
+      | Some (id,_) -> Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State id)))
   in
   let rec wait_for_mvt () =
     lwt () = Lwt_unix.sleep 0.2 in
@@ -84,6 +93,7 @@ let run_frame bus cur_frame next_frame speed =
     else
       Lwt.return_unit
   in
+  ax12_positions := IntMap.empty;
   wait_for_mvt ()
 
 let rec run_actions bus = function
