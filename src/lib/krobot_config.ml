@@ -142,6 +142,9 @@ let initial_torches =
   [ 0.9, 0.9;
     2.1, 0.9; ]
 
+let rear_sharp_lower_threshold = 1500
+let rear_sharp_upper_threshold = 1600
+
 let urg_position = { x = 0.095; y = 0. }
 
 let urg_angle_limits = -. (pi/.2.), (pi/.2.)

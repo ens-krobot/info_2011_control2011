@@ -66,6 +66,9 @@ val initial_fires : (Krobot_geom.vertice * float) list
 
 val initial_torches : Krobot_geom.vertice list
 
+val rear_sharp_lower_threshold : int
+val rear_sharp_upper_threshold : int
+
 val urg_position : Krobot_geom.vertice
 
 val urg_angle_limits : float * float

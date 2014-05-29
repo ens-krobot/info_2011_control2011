@@ -18,6 +18,9 @@ type info = {
   mutable orientation : float;
   (* The orientation of the robot. *)
 
+  mutable rear_sharp : int;
+  (* The measured value from the rear sharp *)
+
   mutable urg : Krobot_geom.vertice array;
 }
 
@@ -79,7 +82,17 @@ let run_extract info urg =
   let ts = Unix.gettimeofday () in
   let trans = { ax = info.position.x; ay = info.position.y;
                 ath = info.orientation } in
-  let obstacles = obstacles trans default_obstacle_diameter urg in
+  let urg_obstacles = obstacles trans default_obstacle_diameter urg in
+  let sharp_obstacles =
+    if info.rear_sharp < Krobot_config.rear_sharp_lower_threshold
+    || info.rear_sharp > Krobot_config.rear_sharp_upper_threshold then
+      (Printf.printf "Obstacle detected on rear sharp\n%!";
+      [(transform_vertice trans {x = -.Krobot_config.wheels_position -. default_obstacle_diameter -. 0.005; y = 0.}),
+       default_obstacle_diameter])
+    else
+      []
+  in
+  let obstacles = sharp_obstacles @ urg_obstacles in
   Krobot_bus.send info.bus (ts, Objects obstacles)
 
 (*
@@ -157,6 +170,8 @@ let handle_message info (timestamp, message) =
           | Odometry(x, y, theta) ->
               info.position <- { x; y };
               info.orientation <- math_mod_float theta (2. *. pi)
+          | Adc1_values(_, _, rear_sharp, _) ->
+              info.rear_sharp <- rear_sharp
           | _ ->
               ()
       end
@@ -201,6 +216,7 @@ let run bus =
     bus = bus;
     position = { x = 0.; y = 0. };
     orientation = 0.;
+    rear_sharp = (Krobot_config.rear_sharp_lower_threshold + Krobot_config.rear_sharp_upper_threshold)/2;
     urg = [||];
   } in
 
