@@ -86,9 +86,8 @@ let run_extract info urg =
   let sharp_obstacles =
     if info.rear_sharp < Krobot_config.rear_sharp_lower_threshold
     || info.rear_sharp > Krobot_config.rear_sharp_upper_threshold then
-      (Printf.printf "Obstacle detected on rear sharp\n%!";
       [(transform_vertice trans {x = -.Krobot_config.wheels_position -. default_obstacle_diameter -. 0.005; y = 0.}),
-       default_obstacle_diameter])
+       default_obstacle_diameter]
     else
       []
   in
