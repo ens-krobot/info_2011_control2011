@@ -33,7 +33,7 @@ open Krobot_geom
 
 let pi = 4. *. atan 1.
 
-let red_initial_position =
+(*let red_initial_position =
   { x = 0.05 +. robot_width/.2.;
     y = world_height -. wheels_position -. 0.001; },
   (-.pi/.2.)
@@ -41,7 +41,17 @@ let red_initial_position =
 let blue_initial_position =
   { x = (world_width -. robot_width/.2. -. 0.05);
     y = (world_height -. wheels_position -. 0.001); },
-  (-.pi/.2.)
+  (-.pi/.2.)*)
+
+let red_initial_position =
+  { x = 0.05 +. robot_width/.2.;
+    y = world_height -. 0.095; },
+  (pi/.2.)
+
+let blue_initial_position =
+  { x = (world_width -. robot_width/.2. -. 0.05);
+    y = (world_height -. 0.095); },
+  (pi/.2.)
 
 let red_fixed_beacons = [
   { x = -. 0.062; y = world_height +. 0.062 };
