@@ -26,7 +26,8 @@ let run_frame bus cur_frame next_frame speed =
     ignore(Lwt_list.iter_s
       (fun (cur_id, _, next_pos) ->
          let c = Ax12_Goto (cur_id, next_pos, speed) in
-         Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode c)))
+         lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode c))
+         in Lwt_unix.sleep 0.01)
       diffs);
     match next_frame_l with
       | [] -> None
@@ -43,7 +44,8 @@ let run_frame bus cur_frame next_frame speed =
          if diff > 0 then
            let axe_speed = speed * diff / max_diff in
            let c = Ax12_Goto (cur_id, next_pos, axe_speed) in
-           Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode c))
+           lwt () = Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode c)) in
+           Lwt_unix.sleep 0.1
          else
            Lwt.return_unit)
       diffs);
@@ -85,10 +87,10 @@ let run_frame bus cur_frame next_frame speed =
       | Some (id,_) -> Krobot_bus.send bus (Unix.gettimeofday (), CAN (Info, Krobot_message.encode (Ax12_Request_State id)))
   in
   let rec wait_for_mvt () =
-    lwt () = Lwt_unix.sleep 0.2 in
+    lwt () = Lwt_unix.sleep 0.5 in
     if not (check_end_mvt ()) then
       lwt () = ask_ax12_positions () in
-      lwt () = Lwt_unix.sleep 0.1 in
+      lwt () = Lwt_unix.sleep 0.2 in
       wait_for_mvt ()
     else
       Lwt.return_unit
