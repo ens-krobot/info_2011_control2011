@@ -18,6 +18,233 @@ open Krobot_geom
 
 type reset = [ `Auto | `Blue | `Red ]
 
+type status = {
+  bus : Krobot_bus.t;
+  (* The bus used to communicate with the robot. *)
+  mutable team : [ `Red | `Blue ];
+  (* The state of the team selector. *)
+}
+
+(* Parameters *)
+let vmax = 0.3
+let omega_max = 3.14 /. 2.
+let accel_tan_max = 1.0
+let accel_rad_max = 1.0
+
+(*
+let keyframes_right = Krobot_ax12_format.read_keyframes_file "/home/krobot/data/keyframes_right_2014.data"
+let keyframes_left = Krobot_ax12_format.read_keyframes_file "/home/krobot/data/keyframes_left_2014.data"
+*)
+let keyframes_right = Krobot_ax12_format.read_keyframes_file "/tmp/keyframes.data"
+let keyframes_left = Krobot_ax12_format.read_keyframes_file "/tmp/keyframes.data"
+
+(* Helpers *)
+
+let do_until_success action =
+  (* loop infinitely until action succeed *)
+  Node(Retry (-1,action), [Fail])
+
+let move_to_first_fire initial_position =
+  let (init_vertice, theta) = initial_position in
+  let move =
+    Follow_path ([{init_vertice with y = init_vertice.y -. 0.6}],
+                 Some { vx = 0.; vy = -1. },
+                 false) in
+  do_until_success move
+
+let move_back_from_first_fire initial_position =
+  let (init_vertice, theta) = initial_position in
+  let move =
+    Follow_path ([{init_vertice with y = init_vertice.y -. 0.3}],
+                 Some { vx = 0.; vy = -1. },
+                 false) in
+  do_until_success move
+
+let grab_fire keyframes name led =
+  let sequence = [(0, 100); (* Initial position *)
+                  (1, 100); (* Gets out*)
+                  (2, 100); (* Prepares to grab *)
+                  (3, 255); (* Grabs *)
+                  (4, 100); (* Gets out *)
+                  (0, 100); (* Back in storage *)] in
+  Node (Simple,
+        [ Ax12_framed_sequence(name, keyframes, sequence);
+          Set_led (led, false);
+          Wait_for_finished_ax12_sequence(name, Timeout_none);
+          Set_led (led, true);
+        ])
+
+let grab_fire_rightside = grab_fire keyframes_right "grab_fire_rightside" `Red
+
+let grab_fire_leftside = grab_fire keyframes_left "grab_fire_leftside" `Green
+
+(* Match strategy *)
+
+let run_strategy_blue =
+  [ move_to_first_fire Krobot_config.blue_initial_position;
+    Stop;
+    Wait_for 1.;
+    Stop;
+    grab_fire_leftside;
+    Stop;
+    (*do_until_success ();*)
+  ]
+
+let run_strategy_red =
+  let init_pos = Krobot_config.red_initial_position in
+  [ move_to_first_fire init_pos;
+    Stop;
+    Wait_for 1.;
+    Stop;
+    grab_fire_rightside;
+    Stop;
+    (*move_back_from_first_fire init_pos;*)
+    (*do_until_success ();*)
+  ]
+
+(* Starting code before main strategy *)
+let start team =
+  let ax12_keyframes = match team with
+    | `Red -> keyframes_right
+    | `Blue -> keyframes_left
+  in
+  let ax12_init =
+    let seq = [(0, 100); (* Initial position *)
+               (0, 50); (* Go to initial position *)
+               (4, 100); (* Move a little bit outside *)
+               (0, 200); (* Back in storage *)] in
+    Node (Simple,
+          [ Ax12_framed_sequence("init_ax12", ax12_keyframes, seq);
+            Wait_for_finished_ax12_sequence("init_ax12", Timeout_none);
+          ])
+  in
+  (* assert(team = `Blue); *)
+  [ Stop_timer;
+    Wait_for 0.1;
+    (* init_blue_pos; *)
+    Reset_odometry (team:>reset);
+    Can (Krobot_message.encode (Drive_activation true));
+    (*Can (Krobot_message.encode (Ax12_Set_Torque_Enable (2,true)));
+    Wait_for 0.1;
+    Can (Krobot_message.encode (Ax12_Set_Torque_Enable (1,true)));
+    Wait_for 0.1;*)
+    Wait_for_jack true;
+    ax12_init;
+    Wait_for 0.5;
+    Wait_for_jack false;
+    Start_timer (90.,[Stop; End]);
+    Start_match;
+    Set_led(`Red,false);
+    Set_led(`Green,false);
+    Reset_odometry (team:>reset);
+    Set_led(`Red,true);
+    (* init_blue_pos; *)
+    (* Wait_for 0.05; *)
+    Wait_for_odometry_reset (team:>reset);
+    Set_led(`Red,true);
+    Set_limits (vmax,omega_max,accel_tan_max,accel_rad_max) ]
+
+(* Team selection and strategy update code *)
+
+let launch bus team =
+  let s = match team with
+    | `Red -> run_strategy_red
+    | `Blue -> run_strategy_blue
+  in
+  let strat = start team @ s in
+  Krobot_bus.send bus (Unix.gettimeofday (),
+    Strategy_set strat)
+
+
+let update_team_led status =
+  let m1,m2 =
+    if status.team = `Red then
+      Switch_request(7,false), Switch_request(6,true)
+    else
+      Switch_request(7,true), Switch_request(6,false)
+  in
+  lwt () = Krobot_message.send status.bus (Unix.gettimeofday (),m1) in
+  Krobot_message.send status.bus (Unix.gettimeofday (), m2)
+
+lwt bus = Krobot_bus.get ()
+
+let handle_message status (timestamp, message) =
+  match message with
+    | CAN(_, frame) -> begin
+        match decode frame with
+          | Switch1_status(jack, team, emergency, _, _, _, _, _) ->
+            let team = if team then `Red else `Blue in
+            if team <> status.team
+            then
+              begin
+                status.team <- team;
+                ignore (update_team_led status);
+                ignore (launch bus status.team)
+              end
+          | _ ->
+              ()
+      end
+
+    (* | Strategy_finished -> *)
+    (*   ignore (loop bus) *)
+
+    | Kill "homologation" ->
+        exit 0
+
+    | _ ->
+        ()
+
+(* +-----------------------------------------------------------------+
+   | Command-line arguments                                          |
+   +-----------------------------------------------------------------+ *)
+
+let fork = ref true
+
+let options = Arg.align [
+  "-no-fork", Arg.Clear fork, " Run in foreground";
+]
+
+let usage = "\
+Usage: krobot-homologation [options]
+options are:"
+
+lwt () =
+  Arg.parse options ignore usage;
+
+  (* Display all informative messages. *)
+  Lwt_log.append_rule "*" Lwt_log.Info;
+
+  (* Open the krobot bus. *)
+  lwt bus = Krobot_bus.get () in
+
+  (* Fork if not prevented. *)
+  if !fork then Krobot_daemon.daemonize bus;
+
+  (* Kill any running homologation. *)
+  lwt () = Krobot_bus.send bus (Unix.gettimeofday (), Krobot_bus.Kill "homologation") in
+
+  let status = {
+    bus;
+    team = `Red;
+  } in
+
+  (* Handle krobot message. *)
+  E.keep (E.map (handle_message status) (Krobot_bus.recv bus));
+
+  (* Wait forever. *)
+  fst (wait ())
+
+(* Old program
+
+open Lwt
+open Lwt_react
+open Krobot_message
+open Krobot_bus
+open Krobot_action
+open Krobot_geom
+
+type reset = [ `Auto | `Blue | `Red ]
+
 let gift_width = 0.15
 
 let init_y = 0.244
@@ -456,3 +683,5 @@ lwt () =
 
   (* Wait forever. *)
   fst (wait ())
+
+*)
